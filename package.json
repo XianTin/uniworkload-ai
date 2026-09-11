@@ -11,8 +11,10 @@
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.16.0",
+    "pdfjs-dist": "^6.3.289",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

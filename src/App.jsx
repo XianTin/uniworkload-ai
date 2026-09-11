@@ -244,6 +244,8 @@ export default function App() {
             <IngestionModule
               onAddNewOrder={handleAddNewOrder}
               onNotify={showToast}
+              facultyList={facultyList}
+              activeFaculty={activeFaculty}
             />
           </div>
         )}
