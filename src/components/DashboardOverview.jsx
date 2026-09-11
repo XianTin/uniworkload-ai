@@ -281,7 +281,7 @@ export default function DashboardOverview({
             <UploadCloud className="w-4 h-4" />
           </div>
           <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-            โมดูลที่ ๑: นำเข้า & สกัด AI
+            โมดูลที่ 1: นำเข้า & สกัด AI
           </h4>
           <p className="text-[11px] text-slate-500 mt-1">
             อัปโหลดคำสั่งสแกน/รูปถ่าย สกัดชื่ออาจารย์และวันเวลานัดหมายอัตโนมัติ
@@ -296,7 +296,7 @@ export default function DashboardOverview({
             <Layers className="w-4 h-4" />
           </div>
           <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-            โมดูลที่ ๒: ตู้ลิ้นชักแฟ้มหลักฐาน
+            โมดูลที่ 2: ตู้ลิ้นชักแฟ้มหลักฐาน
           </h4>
           <p className="text-[11px] text-slate-500 mt-1">
             แนบภาพถ่ายหน้างานจริง กรองช่วงวันที่อิสระ และพิมพ์ใบสรุป Dossier
@@ -311,7 +311,7 @@ export default function DashboardOverview({
             <Calendar className="w-4 h-4" />
           </div>
           <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-            โมดูลที่ ๓: ปฏิทินภาระงาน 2 ทาง
+            โมดูลที่ 3: ปฏิทินภาระงาน 2 ทาง
           </h4>
           <p className="text-[11px] text-slate-500 mt-1">
             มุมมองปฏิทินเดือน/วาระงาน ซิงค์แจ้งเตือนมือถือตามมาตรฐาน RFC 5545
@@ -326,7 +326,7 @@ export default function DashboardOverview({
             <FileText className="w-4 h-4" />
           </div>
           <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-            โมดูลที่ ๔: e-Portfolio Copilot
+            โมดูลที่ 4: e-Portfolio Copilot
           </h4>
           <p className="text-[11px] text-slate-500 mt-1">
             ถอดรหัสแบบฟอร์มจริง มรภ.นครสวรรค์ ครบ 5 ช่อง พร้อม 1-Click Copy

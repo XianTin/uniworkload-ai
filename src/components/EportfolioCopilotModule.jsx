@@ -62,7 +62,7 @@ export default function EportfolioCopilotModule({
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 text-xs font-semibold mb-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>โมดูลที่ ๔: e-Portfolio Copilot (ถอดรหัสฟอร์มจริง มรภ.นครสวรรค์)</span>
+              <span>โมดูลที่ 4: e-Portfolio Copilot (ถอดรหัสฟอร์มจริง มรภ.นครสวรรค์)</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">
               ผู้ช่วยจัดเตรียมข้อมูลและคัดลอกลงระบบ e-Portfolio
@@ -174,7 +174,7 @@ export default function EportfolioCopilotModule({
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                      ช่องที่ ๑: ปีการประเมิน
+                      ช่องที่ 1: ปีการประเมิน
                     </span>
                     <span className="text-sm font-semibold text-slate-900 font-mono">
                       {currentOrder.ePortfolio.year}
@@ -196,7 +196,7 @@ export default function EportfolioCopilotModule({
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                      ช่องที่ ๒: รอบการประเมินที่
+                      ช่องที่ 2: รอบการประเมินที่
                     </span>
                     <span className="text-sm font-semibold text-slate-900">
                       {currentOrder.ePortfolio.round}
@@ -218,7 +218,7 @@ export default function EportfolioCopilotModule({
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5 max-w-lg">
                     <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                      ช่องที่ ๓: หัวข้อภาระงาน
+                      ช่องที่ 3: หัวข้อภาระงาน
                     </span>
                     <p className="text-xs font-semibold text-slate-900 leading-relaxed">
                       {currentOrder.ePortfolio.topic}
@@ -240,7 +240,7 @@ export default function EportfolioCopilotModule({
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5 max-w-lg">
                     <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                      ช่องที่ ๔: อ้างอิงภาระงาน
+                      ช่องที่ 4: อ้างอิงภาระงาน
                     </span>
                     <span className="text-xs font-semibold text-slate-900 block">
                       {currentOrder.ePortfolio.workloadRef}
@@ -262,7 +262,7 @@ export default function EportfolioCopilotModule({
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                      ช่องที่ ๕: แนบเอกสารหลักฐาน (Attachment)
+                      ช่องที่ 5: แนบเอกสารหลักฐาน (Attachment)
                     </span>
                     <div className="flex flex-wrap gap-2 pt-1">
                       {currentOrder.evidenceFiles.map(f => (

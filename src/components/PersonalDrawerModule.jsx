@@ -81,27 +81,27 @@ export default function PersonalDrawerModule({
       case 'user_test_2567':
         setStartDate('2024-01-01');
         setEndDate('2024-06-25');
-        onNotify?.('เลือกช่วงวันที่: ๑ มกราคม ๒๕๖๗ – ๒๕ มิถุนายน ๒๕๖๗', 'info');
+        onNotify?.('เลือกช่วงวันที่: 1 มกราคม 2567 – 25 มิถุนายน 2567', 'info');
         break;
       case 'year_2567':
         setStartDate('2024-01-01');
         setEndDate('2024-12-31');
-        onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. ๒๕๖๗', 'info');
+        onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. 2567', 'info');
         break;
       case 'year_2568':
         setStartDate('2025-01-01');
         setEndDate('2025-12-31');
-        onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. ๒๕๖๘', 'info');
+        onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. 2568', 'info');
         break;
       case 'year_2569':
         setStartDate('2026-01-01');
         setEndDate('2026-12-31');
-        onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. ๒๕๖๙ (ปัจจุบัน)', 'info');
+        onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. 2569 (ปัจจุบัน)', 'info');
         break;
       case 'round2_2569':
         setStartDate('2026-04-01');
         setEndDate('2026-09-30');
-        onNotify?.('เลือกช่วงรอบประเมินที่ ๒ / ๒๕๖๙ (๑ เม.ย. ๖๙ - ๓๐ ก.ย. ๖๙)', 'info');
+        onNotify?.('เลือกช่วงรอบประเมินที่ 2 / 2569 (1 เม.ย. 69 - 30 ก.ย. 69)', 'info');
         break;
       case 'reset':
         setStartDate('');
@@ -216,7 +216,7 @@ export default function PersonalDrawerModule({
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold mb-1.5 border border-purple-100">
               <Layers className="w-3.5 h-3.5 text-purple-600" />
-              <span>โมดูลที่ ๒: Smart Dispatch & Personal Evidence Drawer</span>
+              <span>โมดูลที่ 2: Smart Dispatch & Personal Evidence Drawer</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>ตู้ลิ้นชักแฟ้มหลักฐานส่วนบุคคล:</span>
@@ -359,7 +359,7 @@ export default function PersonalDrawerModule({
           {isCategoryPanelOpen && (
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-150 space-y-2">
               <div className="flex items-center justify-between text-[11px] text-slate-500">
-                <span className="font-semibold text-slate-700">เลือกจำแนกตามเกณฑ์ ก.พอ. ๑–๖:</span>
+                <span className="font-semibold text-slate-700">เลือกจำแนกตามเกณฑ์ ก.พอ. 1–6:</span>
                 {selectedCategory !== 'all' && (
                   <button
                     onClick={() => setSelectedCategory('all')}

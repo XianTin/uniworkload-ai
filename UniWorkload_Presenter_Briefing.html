@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>UniWorkload AI - Presenter Briefing & Technical Fact Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 8mm 11mm 8mm 11mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: 'Prompt', 'Sarabun', 'TH Sarabun New', sans-serif;
+    font-size: 9pt;
+    line-height: 1.35;
+    color: #0f172a;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  /* Page Wrapper */
+  .page {
+    page-break-after: always;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .page:last-child {
+    page-break-after: avoid;
+  }
+
+  /* Header Card */
+  .header-card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #1e3a8a 50%, #0d9488 100%);
+    color: #ffffff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 7px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3px;
+  }
+
+  .header-badge {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .header-status {
+    font-size: 7.5pt;
+    color: #a7f3d0;
+    font-weight: 500;
+  }
+
+  .header-title {
+    font-size: 13.5pt;
+    font-weight: 700;
+    margin: 0 0 2px 0;
+    line-height: 1.25;
+    color: #ffffff;
+  }
+
+  .header-sub {
+    font-size: 8.5pt;
+    color: #cbd5e1;
+    margin: 0 0 5px 0;
+    font-weight: 400;
+  }
+
+  .header-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 5px;
+    font-size: 7.8pt;
+    color: #e2e8f0;
+  }
+
+  .header-meta-item strong {
+    color: #fef08a;
+    display: block;
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  /* Section Cards */
+  .section-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 7px 10px;
+    margin-bottom: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1.5px solid #f1f5f9;
+    padding-bottom: 3px;
+    margin-bottom: 6px;
+  }
+
+  .section-title {
+    font-size: 9.8pt;
+    font-weight: 700;
+    color: #1e3a8a;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+  }
+
+  .section-tag {
+    font-size: 7pt;
+    padding: 1px 6px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  /* Pain Points Grid */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .pain-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    border-top: 3px solid #ef4444;
+  }
+
+  .pain-card.sol-card {
+    border-top-color: #0d9488;
+  }
+
+  .pain-title {
+    font-weight: 700;
+    color: #b91c1c;
+    font-size: 8.2pt;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pain-desc {
+    font-size: 7.8pt;
+    color: #475569;
+    line-height: 1.3;
+  }
+
+  .sol-tag {
+    margin-top: 4px;
+    background: #ecfdf5;
+    color: #047857;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 7pt;
+    font-weight: 600;
+    display: inline-block;
+  }
+
+  /* Modules Grid */
+  .modules-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .mod-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 3.5px solid #2563eb;
+    border-radius: 5px;
+    padding: 6px 8px;
+  }
+
+  .mod-box.accent-teal {
+    border-left-color: #0d9488;
+  }
+
+  .mod-box.accent-purple {
+    border-left-color: #7c3aed;
+  }
+
+  .mod-box.accent-amber {
+    border-left-color: #d97706;
+  }
+
+  .mod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+  }
+
+  .mod-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+
+  .mod-badge {
+    font-size: 6.8pt;
+    background: #e2e8f0;
+    color: #334155;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .mod-desc {
+    font-size: 7.7pt;
+    color: #334155;
+    line-height: 1.3;
+  }
+
+  .mod-features {
+    margin: 3px 0 0 0;
+    padding-left: 14px;
+    font-size: 7.4pt;
+    color: #475569;
+  }
+
+  .mod-features li {
+    margin-bottom: 1.5px;
+  }
+
+  /* Full Width AI Box */
+  .ai-copilot-banner {
+    background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
+    border: 1px solid #c7d2fe;
+    border-left: 4px solid #6366f1;
+    border-radius: 6px;
+    padding: 6px 9px;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .ai-info-title {
+    font-weight: 700;
+    color: #4338ca;
+    font-size: 8.5pt;
+    margin-bottom: 1px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ai-info-desc {
+    font-size: 7.6pt;
+    color: #3730a3;
+  }
+
+  /* Table Styles */
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.8pt;
+    margin: 4px 0;
+  }
+
+  table.data-table th, table.data-table td {
+    border: 1px solid #cbd5e1;
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  table.data-table th {
+    background: #f1f5f9;
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 7.6pt;
+  }
+
+  table.data-table tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+
+  .click-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-weight: 600;
+    font-size: 7.2pt;
+    display: inline-block;
+  }
+
+  .time-badge {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 7.2pt;
+    white-space: nowrap;
+  }
+
+  /* Highlights Grid */
+  .highlights-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .hl-box {
+    background: #faf5ff;
+    border: 1px solid #e9d5ff;
+    border-radius: 5px;
+    padding: 5px 6px;
+    text-align: center;
+  }
+
+  .hl-number {
+    font-size: 13pt;
+    font-weight: 800;
+    color: #7e22ce;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  .hl-label {
+    font-size: 7.2pt;
+    font-weight: 600;
+    color: #3b0764;
+    line-height: 1.2;
+  }
+
+  /* Q&A Cards */
+  .qna-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 5px;
+    page-break-inside: avoid;
+  }
+
+  .q-box {
+    font-size: 8.2pt;
+    font-weight: 700;
+    color: #991b1b;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .a-box {
+    font-size: 7.8pt;
+    color: #1e293b;
+    line-height: 1.35;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-left: 3px solid #0d9488;
+    padding: 4px 7px;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .a-box strong {
+    color: #0f766e;
+  }
+
+  /* Checklist Box */
+  .checklist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 7.6pt;
+  }
+
+  .chk-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 4px 6px;
+    border-radius: 4px;
+    color: #166534;
+  }
+
+  /* Footer */
+  .page-footer {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 4px;
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7pt;
+    color: #64748b;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== หน้าที่ 1: ภาพรวมโครงงานและสถาปัตยกรรม ==================== -->
+<div class="page">
+  <div>
+    <!-- Header -->
+    <div class="header-card">
+      <div class="header-top">
+        <span class="header-badge">Senior Capstone Project • Presenter Briefing & Technical Fact Sheet</span>
+        <span class="header-status">● Interactive Prototype v2.0.0 Ready</span>
+      </div>
+      <div class="header-title">ระบบปฏิทินภาระงานและจัดเก็บหลักฐานอัจฉริยะ (UniWorkload AI)</div>
+      <div class="header-sub">Intelligent Workload Calendar and Evidence Management System for Academic e-Portfolio</div>
+      <div class="header-meta-grid">
+        <div class="header-meta-item"><strong>คณะ / สถาบัน</strong>มรภ.นครสวรรค์ (วิทยาการจัดการ)</div>
+        <div class="header-meta-item"><strong>หลักสูตร</strong>เทคโนโลยีสารสนเทศ (IT)</div>
+        <div class="header-meta-item"><strong>ผู้จัดทำโครงงาน</strong>tie (@XianTin) & คู่โครงงาน</div>
+        <div class="header-meta-item"><strong>Tech Stack</strong>React 18, Vite, Tailwind, RFC 5545</div>
+      </div>
+    </div>
+
+    <!-- Section 1: Pain Points & Solution -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>🎯 ปัญหาหลัก 3 ประการ และแนวทางแก้ไข (Pain Points vs. System Solution)</span>
+        </div>
+        <span class="section-tag">Core Value Proposition</span>
+      </div>
+      <div class="pain-grid">
+        <div class="pain-card">
+          <div class="pain-title">1. คำสั่งราชการกระจัดกระจาย</div>
+          <div class="pain-desc">เอกสารส่งผ่านไลน์ อีเมล เว็บไซต์มหาลัย ทำให้อาจารย์ลืมกำหนดการและวันจัดกิจกรรม</div>
+          <div class="sol-tag">✓ AI OCR สกัดวันที่ + แจ้งเตือนปฏิทิน</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-title">2. รูปถ่ายและหลักฐานสูญหาย</div>
+          <div class="pain-desc">เมื่อถึงรอบประเมินต้องเสียเวลาหลายวันค้นหารูปถ่ายหน้างานและไฟล์คำสั่งในโทรศัพท์</div>
+          <div class="sol-tag">✓ Personal Evidence Drawer + Lightbox</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-title">3. กรอกซ้ำซ้อนใน e-Portfolio</div>
+          <div class="pain-desc">ต้องคัดลอกและพิมพ์ข้อมูลเดิมลงฟอร์มประเมินของมหาวิทยาลัยทีละช่อง เสียเวลาอย่างมาก</div>
+          <div class="sol-tag">✓ 1-Click Copy ข้อมูลครบ 5 ช่อง</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: 4 Core Modules + AI Copilot -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>⚙️ สถาปัตยกรรม 4 โมดูลหลัก + 1 ผู้ช่วยอัจฉริยะ (Core System Architecture)</span>
+        </div>
+        <span class="section-tag">Feature Breakdown</span>
+      </div>
+      <div class="modules-container">
+        <!-- Module 1 -->
+        <div class="mod-box">
+          <div class="mod-header">
+            <span class="mod-title">1. Multi-Channel Ingestion & AI OCR</span>
+            <span class="mod-badge">นำเข้า & สกัดข้อมูล</span>
+          </div>
+          <div class="mod-desc">รองรับไฟล์คำสั่งทุกประเภท ทั้ง PDF, ภาพถ่ายกล้องมือถือ และภาพแคปเจอร์จากกลุ่มไลน์</div>
+          <ul class="mod-features">
+            <li><strong>Thai Numerals Normalization:</strong> แปลงเลขไทย (๑ ๒ ๓) เป็นอารบิก (1 2 3) อัตโนมัติ</li>
+            <li><strong>Confidence Score:</strong> คำนวณเปอร์เซ็นต์ความเชื่อมั่นของการสกัดข้อมูล</li>
+            <li><strong>Quick Verification Drawer:</strong> ให้อาจารย์/ธุรการตรวจทานยืนยันได้ใน 5-10 วินาที</li>
+          </ul>
+        </div>
+
+        <!-- Module 2 -->
+        <div class="mod-box accent-teal">
+          <div class="mod-header">
+            <span class="mod-title">2. Personal Evidence Drawer</span>
+            <span class="mod-badge">ตู้ลิ้นชักแฟ้มส่วนบุคคล</span>
+          </div>
+          <div class="mod-desc">กระจายงานเข้าบัญชีอาจารย์อัตโนมัติตามรายชื่อ พร้อมคัดกรองตามเกณฑ์มาตรฐาน</div>
+          <ul class="mod-features">
+            <li><strong>ก.พอ. Categories:</strong> แบ่งหมวดงานสอน, วิจัย, บริการวิชาการ, ศิลปวัฒนธรรม, กรรมการ</li>
+            <li><strong>Photo Gallery & Lightbox:</strong> อัปโหลดรูป ลากวาง และกดดูภาพขยายเต็มจอ</li>
+            <li><strong>Custom Date Range Filter:</strong> กรองช่วงวันที่อิสระ เช่น 1 ม.ค. 67 ถึง 25 มิ.ย. 67</li>
+            <li><strong>Dossier Summary:</strong> พิมพ์ใบสรุปแฟ้มพร้อมแนบรูปปะหน้าส่งกรรมการได้ทันที</li>
+          </ul>
+        </div>
+
+        <!-- Module 3 -->
+        <div class="mod-box accent-purple">
+          <div class="mod-header">
+            <span class="mod-title">3. Smart Dual Calendar & iCal Sync</span>
+            <span class="mod-badge">ปฏิทิน 2 ทาง (RFC 5545)</span>
+          </div>
+          <div class="mod-desc">ดูวาระงานภาพรวมบนเว็บ และซิงค์ตารางงานอัตโนมัติเข้าสู่สมาร์ทโฟนของอาจารย์</div>
+          <ul class="mod-features">
+            <li><strong>Web Calendar & Agenda:</strong> ปฏิทินรายเดือน แสดงสถานะภาระงาน และกดยืนยันการปฏิบัติหน้าที่</li>
+            <li><strong>Open Standard RFC 5545:</strong> ซิงค์เข้า Google Calendar, Apple Calendar (iOS), Mac, Outlook</li>
+            <li><strong>Zero App / Zero Login:</strong> ใช้วิธี Calendar Feed ไม่ต้องดาวน์โหลดแอปเพิ่ม และไม่หลุดล็อกอิน</li>
+          </ul>
+        </div>
+
+        <!-- Module 4 -->
+        <div class="mod-box accent-amber">
+          <div class="mod-header">
+            <span class="mod-title">4. e-Portfolio Copilot</span>
+            <span class="mod-badge">เตรียมข้อมูลประเมินผล</span>
+          </div>
+          <div class="mod-desc">ถอดรหัสโครงสร้างระบบ e-Portfolio ของ มรภ.นครสวรรค์ เมนู "แฟ้มภาระงานอื่น ๆ" ครบถ้วน</div>
+          <ul class="mod-features">
+            <li><strong>5 มาตรฐานฟิลด์จริง:</strong> ปีประเมิน, รอบประเมิน, หัวข้อภาระงาน, อ้างอิงภาระงาน, แนบหลักฐาน</li>
+            <li><strong>1-Click Copy Data:</strong> ปุ่มคัดลอกแยกช่อง และปุ่มคัดลอกชุดข้อมูลรวมวางในระบบได้ใน 10 วิ</li>
+            <li><strong>สถานะความพร้อม:</strong> แถบแจ้งเตือนว่างานใดแนบหลักฐานครบแล้ว หรืองานใดยังขาดเอกสาร</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- AI Copilot Extra -->
+      <div class="ai-copilot-banner">
+        <div>
+          <div class="ai-info-title">
+            <span>🤖 ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)</span>
+          </div>
+          <div class="ai-info-desc">
+            สืบค้นข้อมูลด้วยภาษาธรรมชาติ เช่น <em>"มีคำสั่งไหนที่ยังไม่ได้แนบรูปหลักฐาน?"</em>, <em>"สรุปภาระงานช่วงต้นปี"</em> และ <strong>ช่วยร่างหนังสือบันทึกข้อความราชการ</strong> ส่งรายงานผลภาระงานอัตโนมัติ
+          </div>
+        </div>
+        <span class="section-tag" style="background:#e0e7ff; color:#3730a3; white-space:nowrap;">Smart Assistant</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 1 Footer -->
+  <div class="page-footer">
+    <span>UniWorkload AI: Intelligent Workload Calendar & Evidence Management</span>
+    <span>หน้า 1 จาก 3 (ภาพรวมและสถาปัตยกรรม)</span>
+  </div>
+</div>
+
+<!-- ==================== หน้าที่ 2: ลำดับการนำเสนอและคลิกสาธิต ==================== -->
+<div class="page">
+  <div>
+    <!-- Page 2 Header Bar -->
+    <div class="header-card" style="padding: 6px 12px; margin-bottom: 6px;">
+      <div class="header-top" style="margin: 0;">
+        <span class="header-badge">Presentation Walkthrough Flow</span>
+        <span style="font-size: 8pt; color: #cbd5e1;">ระยะเวลานำเสนอรวม: 8 – 10 นาที</span>
+      </div>
+    </div>
+
+    <!-- Section 3: Walkthrough Table -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>🎬 ลำดับขั้นตอนการนำเสนอทีละช่วง พร้อมจุดคลิกสาธิตบน Prototype</span>
+        </div>
+        <span class="section-tag">Demo Sequence</span>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 14%;">ช่วง / เวลา</th>
+            <th style="width: 25%;">จุดคลิกบนหน้าจอ Prototype</th>
+            <th style="width: 33%;">ประเด็นสำคัญที่ต้องพูด (Script Core)</th>
+            <th style="width: 28%;">คีย์เวิร์ดที่เน้น / ผลลัพธ์ที่โชว์</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>1. เปิดประเด็น</strong><br>
+              <span class="time-badge">⏱ 1.5 นาที</span>
+            </td>
+            <td>
+              <span class="click-badge">หน้าหลัก Dashboard</span><br>
+              ชี้แถบสรุปสถิติภาระงาน
+            </td>
+            <td>
+              เกริ่นปัญหาของอาจารย์และธุรการ: คำสั่งแต่งตั้งหายในไลน์, รูปลืมถ่าย/หาไม่เจอตอนประเมิน, และความยุ่งยากในการกรอก e-Portfolio ซ้ำซ้อน
+            </td>
+            <td>
+              • Pain Points 3 ข้อ<br>
+              • ความสำคัญของรอบประเมิน (มี.ค. / ก.ย.)
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>2. นำเข้า & OCR</strong><br>
+              <span class="time-badge">⏱ 2.0 นาที</span>
+            </td>
+            <td>
+              <span class="click-badge">แท็บ "นำเข้าคำสั่ง & OCR"</span> ➔<br>
+              คลิกปุ่ม <span class="click-badge">โหลดตัวอย่างคำสั่ง ๑๒๙๙</span> ➔<br>
+              คลิก <span class="click-badge">ตรวจทาน & ยืนยันบันทึก</span>
+            </td>
+            <td>
+              สาธิตการรับไฟล์ PDF หรือรูปแคปแชตไลน์ ระบบสกัดเลขที่คำสั่ง, วันที่จัดงาน และ<strong>แปลงเลขไทยเป็นเลขอารบิก</strong> พร้อมเปิด Drawer ตรวจทานใน 5-10 วินาที
+            </td>
+            <td>
+              • Thai Numeral Normalization<br>
+              • Confidence Score<br>
+              • Quick Verification Drawer
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>3. ตู้ลิ้นชัก & ปฏิทิน</strong><br>
+              <span class="time-badge">⏱ 2.0 นาที</span>
+            </td>
+            <td>
+              <span class="click-badge">แท็บ "ตู้ลิ้นชักส่วนบุคคล"</span> ➔<br>
+              คลิกตัวกรอง <span class="click-badge">หมวด ก.พอ.</span> ➔<br>
+              คลิกรูป <span class="click-badge">เปิดดู Lightbox</span> ➔<br>
+              สลับไปแท็บ <span class="click-badge">ปฏิทินงาน & iCal</span>
+            </td>
+            <td>
+              งานกระจายเข้าตู้อาจารย์อัตโนมัติ โชว์การจัดหมวดหมู่ ก.พอ., ตัวกรองวันที่กำหนดเองได้, คลังรูปหลักฐาน และการสร้าง <strong>iCal Feed URL (RFC 5545)</strong> นำไปกด Subscribe ในมือถือได้ทันที
+            </td>
+            <td>
+              • Personal Evidence Drawer<br>
+              • Custom Date Range Filter<br>
+              • RFC 5545 Mobile Sync (ไม่ต้องลงแอป)
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>4. e-Portfolio</strong><br>
+              <span class="time-badge">⏱ 2.0 นาที</span>
+            </td>
+            <td>
+              <span class="click-badge">แท็บ "e-Portfolio Copilot"</span> ➔<br>
+              กดปุ่ม <span class="click-badge">1-Click Copy ทั้งหมด</span> หรือคัดลอกแยกฟิลด์
+            </td>
+            <td>
+              อธิบายว่าโครงสร้างฟิลด์จำลองจากเมนู "แฟ้มภาระงานอื่น ๆ" ของ มรภ.นครสวรรค์ ครบ 5 ช่อง ระบบเตรียมข้อความให้อัตโนมัติ พร้อมกด Copy ไป Paste ได้ภายใน 10 วินาที
+            </td>
+            <td>
+              • เมนู "แฟ้มภาระงานอื่น ๆ"<br>
+              • ลดเวลาทำเอกสารประเมิน<br>
+              • 1-Click Clipboard Copy
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>5. บอทโนห์รัน</strong><br>
+              <span class="time-badge">⏱ 1.5 นาที</span>
+            </td>
+            <td>
+              กดปุ่ม <span class="click-badge">โนห์รัน AI Copilot</span> ➔<br>
+              คลิกชิป <span class="click-badge">⚠️ งานที่ยังขาดรูป</span> ➔<br>
+              คลิกชิป <span class="click-badge">📝 ร่างหนังสือ</span>
+            </td>
+            <td>
+              แสดงความสามารถในการสืบค้นด้วยภาษาธรรมชาติ บอทตอบทันทีว่ามีงานไหนยังไม่แนบรูป พร้อมความสามารถพิเศษในการ<strong>ช่วยร่างบันทึกข้อความราชการ</strong>ส่งรายงานผล
+            </td>
+            <td>
+              • Natural Language Query<br>
+              • Auto Memo Drafting<br>
+              • Interactive Response Card
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>6. สรุป & ขอคำแนะนำ</strong><br>
+              <span class="time-badge">⏱ 1.0 นาที</span>
+            </td>
+            <td>
+              กลับหน้า <span class="click-badge">Dashboard ภาพรวม</span>
+            </td>
+            <td>
+              กล่าวสรุปว่าต้นแบบนี้พิสูจน์แล้วว่าช่วยแก้ปัญหาได้จริง และพร้อมพัฒนาฐานข้อมูลจริง (PostgreSQL + Backend API) ในบทถัดไป จึงขอรับคำแนะนำจากอาจารย์ที่ปรึกษา
+            </td>
+            <td>
+              • สรุปคุณค่าของระบบ<br>
+              • ความพร้อมในการพัฒนาต่อยอด
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 4: Highlights Stats -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>💎 จุดเด่นและตัวเลขทางสถิติที่ควรพูดเพื่อสร้างความประทับใจ (Key Numbers)</span>
+        </div>
+        <span class="section-tag">Performance Gains</span>
+      </div>
+      <div class="highlights-grid">
+        <div class="hl-box">
+          <div class="hl-number">5-10s</div>
+          <div class="hl-label">เวลาตรวจสอบคำสั่งใน Quick Drawer</div>
+        </div>
+        <div class="hl-box">
+          <div class="hl-number">100%</div>
+          <div class="hl-label">มาตรฐานสากล RFC 5545 ซิงค์มือถือทุกค่าย</div>
+        </div>
+        <div class="hl-box">
+          <div class="hl-number">10s</div>
+          <div class="hl-label">คัดลอกข้อมูลลงฟอร์ม e-Portfolio เสร็จสิ้น</div>
+        </div>
+        <div class="hl-box">
+          <div class="hl-number">0 App</div>
+          <div class="hl-label">ไม่ต้องโหลดแอปเพิ่ม ไม่เปลืองพื้นที่เครื่อง</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 2 Footer -->
+  <div class="page-footer">
+    <span>UniWorkload AI: Intelligent Workload Calendar & Evidence Management</span>
+    <span>หน้า 2 จาก 3 (ลำดับการนำเสนอและจุดสาธิต)</span>
+  </div>
+</div>
+
+<!-- ==================== หน้าที่ 3: โพยตอบคำถามและ Checklist ==================== -->
+<div class="page">
+  <div>
+    <!-- Page 3 Header Bar -->
+    <div class="header-card" style="padding: 6px 12px; margin-bottom: 6px;">
+      <div class="header-top" style="margin: 0;">
+        <span class="header-badge">Defense Q&A & Readiness Checklist</span>
+        <span style="font-size: 8pt; color: #cbd5e1;">คู่มือตอบคำถามอาจารย์กรรมการ</span>
+      </div>
+    </div>
+
+    <!-- Section 5: Q&A Defense Sheet -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>🛡️ โพยแนวทางการตอบข้อซักถามของอาจารย์ที่ปรึกษา / กรรมการ (Q&A Cheat Sheet)</span>
+        </div>
+        <span class="section-tag">High-Value Defense</span>
+      </div>
+
+      <!-- Q1 -->
+      <div class="qna-card">
+        <div class="q-box">
+          <span>❓ คำถามที่ 1: "ทำไมถึงเลือกใช้ iCal (RFC 5545) แทนที่จะต่อ API กับ Google Calendar โดยตรง?"</span>
+        </div>
+        <div class="a-box">
+          <strong>แนวทางตอบ:</strong> "เพราะมาตรฐาน <strong>RFC 5545 เป็น Open Standard สากล</strong> ครับ หากใช้ Google Calendar API ระบบจะผูกติดกับบัญชี Google เท่านั้น และต้องขอสิทธิ์ OAuth ซึ่งเสี่ยงต่อการที่อาจารย์จะกังวลเรื่องความเป็นส่วนตัว แต่ iCal Feed เป็น Read-Only Calendar Subscription ที่ปลอดภัย รองรับทั้ง <strong>iPhone (Apple Calendar), Android, Mac, iPad และ Outlook</strong> โดยที่อาจารย์ไม่ต้องอนุญาตสิทธิ์ใดๆ และไม่มีปัญหาเซสชันหลุดครับ"
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="qna-card">
+        <div class="q-box">
+          <span>❓ คำถามที่ 2: "ความแม่นยำของ OCR ภาษาไทย โดยเฉพาะฟอนต์ราชการและตัวเลขไทย เป็นอย่างไร?"</span>
+        </div>
+        <div class="a-box">
+          <strong>แนวทางตอบ:</strong> "เอกสารราชการไทยใช้ฟอนต์มาตรฐานที่มีโครงสร้างแน่นอน เช่น TH Sarabun PSK จึงสามารถทำ Image Pre-processing (Binarization และ Denoising) ควบคู่กับ Regular Expression เพื่อ<strong>แปลงเลขไทยเป็นเลขอารบิกได้แม่นยำสูง</strong> และที่สำคัญเราออกแบบ <strong>Quick Verification Drawer</strong> ให้อาจารย์หรือธุรการใช้เวลาเพียง 5–10 วินาทีตรวจทานก่อนกดบันทึก เพื่อการันตีความถูกต้องของข้อมูล 100% ครับ"
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="qna-card">
+        <div class="q-box">
+          <span>❓ คำถามที่ 3: "ระบบรองรับการแบ่งสิทธิ์ (Role-Based Access Control) อย่างไร?"</span>
+        </div>
+        <div class="a-box">
+          <strong>แนวทางตอบ:</strong> "ระบบแบ่งออกเป็น 2 สิทธิ์หลัก (RBAC) ชัดเจนครับ คือ <strong>เจ้าหน้าที่ธุรการ/Admin</strong> มีสิทธิ์นำเข้าเอกสารคำสั่งส่วนกลางและกระจายงานเข้าสู่บัญชีอาจารย์ในสาขา ส่วน <strong>คณาจารย์ (Lecturer)</strong> จะเข้าถึงเฉพาะ 'ตู้ลิ้นชักส่วนบุคคล' ปฏิทินงาน และแฟ้มหลักฐานของตนเอง เพื่อความเป็นส่วนตัวและความปลอดภัยของข้อมูลครับ"
+        </div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="qna-card">
+        <div class="q-box">
+          <span>❓ คำถามที่ 4: "ถ้าในหนึ่งคำสั่งมีชื่ออาจารย์หลายคน ระบบจะกระจายงานอย่างไร?"</span>
+        </div>
+        <div class="a-box">
+          <strong>แนวทางตอบ:</strong> "ระบบมีฐานข้อมูล Master Data รายชื่อคณาจารย์ในคณะ เมื่อ OCR อ่านเอกสาร ระบบจะจับคู่ชื่อ-นามสกุล และบทบาทหน้าที่ (เช่น ประธานกรรมการ, กรรมการ, กรรมการและเลขานุการ) แล้วสร้าง Task แจกจ่ายไปยังตู้ลิ้นชักของอาจารย์ทุกท่านที่ถูกระบุชื่อในคำสั่งนั้นพร้อมกันในคลิกเดียวครับ"
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 6: Checklist Before Presenting -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span>📋 Checklist การเตรียมความพร้อมก่อนขึ้นนำเสนอ (Presenter Checklist)</span>
+        </div>
+        <span class="section-tag">Readiness Check</span>
+      </div>
+      <div class="checklist-grid">
+        <div class="chk-item">
+          <span>✔</span>
+          <div><strong>เปิดรัน Prototype:</strong> สั่งรัน <code>npm run dev</code> และเปิดเว็บ <code>http://localhost:5173</code> เตรียมไว้ล่วงหน้า</div>
+        </div>
+        <div class="chk-item">
+          <span>✔</span>
+          <div><strong>ซูมหน้าจอเหมาะสม:</strong> ตั้งค่าเบราว์เซอร์ให้พอดีกับโปรเจกเตอร์ (แนะนำ Fullscreen หรือ Zoom 90–100%)</div>
+        </div>
+        <div class="chk-item">
+          <span>✔</span>
+          <div><strong>จังหวะคลิกสาธิต:</strong> ให้พูดเปิดประเด็นก่อน 1 ประโยคแล้วค่อยคลิก เพื่อให้อาจารย์โฟกัสที่คำพูดก่อนการเคลื่อนไหวของจอ</div>
+        </div>
+        <div class="chk-item">
+          <span>✔</span>
+          <div><strong>ท่าทีและน้ำเสียง:</strong> พูดด้วยความมั่นใจ เน้นย้ำว่าระบบนี้เกิดขึ้นจากการรับฟังปัญหาจริงของอาจารย์ในมหาวิทยาลัย</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 3 Footer -->
+  <div class="page-footer">
+    <span>UniWorkload AI: Intelligent Workload Calendar & Evidence Management</span>
+    <span>หน้า 3 จาก 3 (โพยตอบคำถามและ Checklist)</span>
+  </div>
+</div>
+
+</body>
+</html>

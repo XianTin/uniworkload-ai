@@ -89,7 +89,7 @@ export default function IngestionModule({ onAddNewOrder, onNotify }) {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-50 text-sky-700 text-xs font-semibold mb-2">
             <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-            <span>โมดูลที่ ๑: Multi-Channel Ingestion & AI Thai OCR Parser</span>
+            <span>โมดูลที่ 1: Multi-Channel Ingestion & AI Thai OCR Parser</span>
           </div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">
             ระบบนำเข้าและสกัดข้อมูลคำสั่งราชการอัจฉริยะ
@@ -106,7 +106,7 @@ export default function IngestionModule({ onAddNewOrder, onNotify }) {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
         >
           <ScanLine className="w-4 h-4 text-blue-600" />
-          <span>โหลดตัวอย่างคำสั่งจริง (มรภ.นว. ๑๒๙๙/๒๕๖๙)</span>
+          <span>โหลดตัวอย่างคำสั่งจริง (มรภ.นว. 1299/2569)</span>
         </button>
       </div>
 
@@ -176,7 +176,7 @@ export default function IngestionModule({ onAddNewOrder, onNotify }) {
               รองรับ .PDF, .PNG, .JPG (ระบบ AI Vision พร้อมตรวจจับภาษาไทยและเลขไทยอัตโนมัติ)
             </p>
             <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px]">
-              <span>จำลองไฟล์: คำสั่งโครงการวิจัยชุมชน ๒๕๖๙</span>
+              <span>จำลองไฟล์: คำสั่งโครงการวิจัยชุมชน 2569</span>
             </div>
           </div>
 
@@ -187,7 +187,7 @@ export default function IngestionModule({ onAddNewOrder, onNotify }) {
               <span>เทคโนโลยีการสกัดข้อมูล (AI Parser Spec)</span>
             </div>
             <ul className="list-disc pl-4 space-y-1 text-slate-500 text-[11px]">
-              <li>แปลงเลขไทย (๑ ๒ ๓) เป็นเลขอารบิกสำหรับฐานข้อมูลและปฏิทิน</li>
+              <li>แปลงเลขไทย (1 2 3) เป็นเลขอารบิกสำหรับฐานข้อมูลและปฏิทิน</li>
               <li>ตรวจจับคำนำหน้า (ศ., รศ., ผศ., อ., ดร.) และจับคู่บัญชีอาจารย์อัตโนมัติ</li>
               <li>คำนวณวัน-เวลา และปักหมุด iCal Feed ให้อาจารย์โดยไม่ต้องคีย์ซ้ำ</li>
             </ul>

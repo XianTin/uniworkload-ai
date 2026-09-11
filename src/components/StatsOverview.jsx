@@ -32,7 +32,7 @@ export default function StatsOverview({ activeFaculty, onOpenIngest, onNavigateT
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-sky-300 text-xs font-medium backdrop-blur-md">
               <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span>รอบการประเมินปัจจุบัน: รอบที่ ๒ / ๒๕๖๙ (๑ เม.ย. – ๓๐ ก.ย. ๒๕๖๙)</span>
+              <span>รอบการประเมินปัจจุบัน: รอบที่ 2 / 2569 (1 เม.ย. – 30 ก.ย. 2569)</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
               ยินดีต้อนรับ, {activeFaculty.name}

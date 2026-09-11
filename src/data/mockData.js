@@ -68,12 +68,12 @@ export const INITIAL_ORDERS = [
   // --- ปีการศึกษา 2569 (ปัจจุบัน) ---
   {
     id: "ord-1042",
-    orderNumber: "คก. ๑๐๔๒/๒๕๖๙",
+    orderNumber: "คก. 1042/2569",
     title: "แต่งตั้งคณะกรรมการจัดโครงการสัมมนาเชิงปฏิบัติการ นวัตกรรม AI เพื่อธุรกิจดิจิทัล 2026",
     signDate: "2026-08-15",
     eventDate: "2026-09-18",
     eventTime: "08:30 - 16:30 น.",
-    location: "ห้องประชุม ๑๔๑๐๒ ชั้น ๔ อาคารวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์",
+    location: "ห้องประชุม 14102 ชั้น 4 อาคารวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์",
     category: "บริการวิชาการแก่สังคม",
     categoryCode: "service",
     categoryColor: "emerald",
@@ -84,7 +84,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "upcoming", // upcoming | done | pending_evidence
     evidenceFiles: [
-      { id: "ev-1", name: "คำสั่งแต่งตั้ง_๑๐๔๒_๒๕๖๙.pdf", size: "1.2 MB", type: "pdf", uploadedAt: "2026-08-16" }
+      { id: "ev-1", name: "คำสั่งแต่งตั้ง_1042_2569.pdf", size: "1.2 MB", type: "pdf", uploadedAt: "2026-08-16" }
     ],
     actualPhotos: [],
     ePortfolio: {
@@ -97,12 +97,12 @@ export const INITIAL_ORDERS = [
   },
   {
     id: "ord-0895",
-    orderNumber: "มรภ.นว. ๐๘๙๕/๒๕๖๙",
+    orderNumber: "มรภ.นว. 0895/2569",
     title: "แต่งตั้งคณะกรรมการตรวจประเมินคุณภาพการศึกษาภายในระดับหลักสูตร ประจำปีการศึกษา 2568",
     signDate: "2026-07-20",
     eventDate: "2026-09-08",
     eventTime: "09:00 - 15:00 น.",
-    location: "ห้องประชุมเกียรติยศ ชั้น ๓ อาคาร ๑๔",
+    location: "ห้องประชุมเกียรติยศ ชั้น 3 อาคาร 14",
     category: "ประกันคุณภาพการศึกษา",
     categoryCode: "qa",
     categoryColor: "blue",
@@ -112,37 +112,37 @@ export const INITIAL_ORDERS = [
     ],
     status: "done",
     evidenceFiles: [
-      { id: "ev-2", name: "คำสั่ง_๐๘๙๕_๒๕๖๙_AQA.pdf", size: "2.4 MB", type: "pdf", uploadedAt: "2026-07-22" }
+      { id: "ev-2", name: "คำสั่ง_0895_2569_AQA.pdf", size: "2.4 MB", type: "pdf", uploadedAt: "2026-07-22" }
     ],
     actualPhotos: [
       {
         id: "ph-1",
         name: "ภาพบรรยากาศการตรวจประเมิน_0809.jpg",
-        size: "3.8 MB",
-        url: "https://images.unsplash.com/photo-1577962917302-cd874c4e31d2?w=800&auto=format&fit=crop&q=80",
+        size: "2.8 MB",
+        url: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80",
         uploadedAt: "2026-09-08",
-        note: "ร่วมประชุมตรวจเอกสารและสัมภาษณ์ผู้แทนอาจารย์ประจำหลักสูตร"
+        note: "อ.ธนภัทร และคณะกรรมการร่วมประชุมเปิดการตรวจประเมินหลักสูตร"
       },
       {
         id: "ph-2",
-        name: "ภาพถ่ายพร้อมคณะกรรมการตรวจประเมิน.jpg",
-        size: "2.9 MB",
-        url: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&auto=format&fit=crop&q=80",
+        name: "ภาพสรุปผลคะแนนการประเมิน.jpg",
+        size: "1.9 MB",
+        url: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80",
         uploadedAt: "2026-09-08",
-        note: "บันทึกภาพร่วมกับผู้ประเมินภายนอกและทีมงานหลักสูตร"
+        note: "การนำเสนอผลการประเมินตนเอง (SAR) ต่อผู้ประเมินภายนอก"
       }
     ],
     ePortfolio: {
       year: "2569",
       round: "รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)",
-      topic: "กรรมการและเลขานุการ คณะกรรมการตรวจประเมินคุณภาพการศึกษาภายในระดับหลักสูตร วิทยาการจัดการ มรภ.นครสวรรค์",
-      workloadRef: "งานด้านการประกันคุณภาพการศึกษาและมาตรฐานวิชาการ (กพอ.6)",
+      topic: "กรรมการและเลขานุการ ตรวจประเมินคุณภาพการศึกษาภายในระดับหลักสูตร 2568",
+      workloadRef: "ภาระงานด้านการประกันคุณภาพการศึกษา (กพอ.6)",
       status: "completed"
     }
   },
   {
     id: "ord-1120",
-    orderNumber: "คก. ๑๑๒๐/๒๕๖๙",
+    orderNumber: "คก. 1120/2569",
     title: "มอบหมายภารกิจอาจารย์นิเทศก์ ติดตามนักศึกษาฝึกงานและสหกิจศึกษา ภาคการศึกษาที่ 1/2569",
     signDate: "2026-08-28",
     eventDate: "2026-09-25",
@@ -157,7 +157,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "upcoming",
     evidenceFiles: [
-      { id: "ev-3", name: "คำสั่งนิเทศก์สหกิจ_๑๑๒๐_๒๕๖๙.pdf", size: "1.7 MB", type: "pdf", uploadedAt: "2026-08-30" }
+      { id: "ev-3", name: "คำสั่งนิเทศก์สหกิจ_1120_2569.pdf", size: "1.7 MB", type: "pdf", uploadedAt: "2026-08-30" }
     ],
     actualPhotos: [],
     ePortfolio: {
@@ -170,12 +170,12 @@ export const INITIAL_ORDERS = [
   },
   {
     id: "ord-0750",
-    orderNumber: "มรภ.นว. ๐๗๕๐/๒๕๖๙",
+    orderNumber: "มรภ.นว. 0750/2569",
     title: "คณะกรรมการดำเนินงานปฐมนิเทศนักศึกษาใหม่ ประจำปีการศึกษา 2569",
     signDate: "2026-06-10",
     eventDate: "2026-06-25",
     eventTime: "08:00 - 12:00 น.",
-    location: "หอประชุมใหญ่ อาคาร ๔ มหาวิทยาลัยราชภัฏนครสวรรค์",
+    location: "หอประชุมใหญ่ อาคาร 4 มหาวิทยาลัยราชภัฏนครสวรรค์",
     category: "บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย",
     categoryCode: "admin",
     categoryColor: "purple",
@@ -186,7 +186,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "done",
     evidenceFiles: [
-      { id: "ev-4", name: "คำสั่งปฐมนิเทศ_๐๗๕๐_๒๕๖๙.pdf", size: "1.9 MB", type: "pdf", uploadedAt: "2026-06-12" }
+      { id: "ev-4", name: "คำสั่งปฐมนิเทศ_0750_2569.pdf", size: "1.9 MB", type: "pdf", uploadedAt: "2026-06-12" }
     ],
     actualPhotos: [
       {
@@ -210,7 +210,7 @@ export const INITIAL_ORDERS = [
   // --- ปีการศึกษา 2567 (รองรับช่วง 1 มกราคม 2567 – 25 มิถุนายน 2567 ตามตัวอย่าง) ---
   {
     id: "ord-2567-01",
-    orderNumber: "มรภ.นว. ๐๑๕๒/๒๕๖๗",
+    orderNumber: "มรภ.นว. 0152/2567",
     title: "แต่งตั้งคณะกรรมการจัดกิจกรรมสัมมนาเครือข่ายความร่วมมือทางวิชาการและวิจัยระดับชาติ 2567",
     signDate: "2024-01-20",
     eventDate: "2024-02-14",
@@ -225,7 +225,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "done",
     evidenceFiles: [
-      { id: "ev-2567-1", name: "คำสั่ง_๐๑๕๒_๒๕๖๗.pdf", size: "1.8 MB", type: "pdf", uploadedAt: "2024-01-22" }
+      { id: "ev-2567-1", name: "คำสั่ง_0152_2567.pdf", size: "1.8 MB", type: "pdf", uploadedAt: "2024-01-22" }
     ],
     actualPhotos: [
       {
@@ -255,7 +255,7 @@ export const INITIAL_ORDERS = [
   },
   {
     id: "ord-2567-02",
-    orderNumber: "คก. ๐๓๑๘/๒๕๖๗",
+    orderNumber: "คก. 0318/2567",
     title: "แต่งตั้งคณะทำงานขับเคลื่อนงานวิจัยชุมชนและฐานข้อมูลดิจิทัลภูมิปัญญาท้องถิ่นปากน้ำโพ",
     signDate: "2024-04-18",
     eventDate: "2024-05-20",
@@ -271,7 +271,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "done",
     evidenceFiles: [
-      { id: "ev-2567-2", name: "คำสั่งแต่งตั้งคณะทำงานวิจัย_๐๓๑๘_๒๕๖๗.pdf", size: "1.4 MB", type: "pdf", uploadedAt: "2024-04-20" }
+      { id: "ev-2567-2", name: "คำสั่งแต่งตั้งคณะทำงานวิจัย_0318_2567.pdf", size: "1.4 MB", type: "pdf", uploadedAt: "2024-04-20" }
     ],
     actualPhotos: [
       {
@@ -293,12 +293,12 @@ export const INITIAL_ORDERS = [
   },
   {
     id: "ord-2567-03",
-    orderNumber: "มรภ.นว. ๐๕๔๐/๒๕๖๗",
-    title: "คณะกรรมการพัฒนาปรับปรุงหลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเทคโนโลยีสารสนเทศ พ.ศ. ๒๕๖๗",
+    orderNumber: "มรภ.นว. 0540/2567",
+    title: "คณะกรรมการพัฒนาปรับปรุงหลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเทคโนโลยีสารสนเทศ พ.ศ. 2567",
     signDate: "2024-05-28",
     eventDate: "2024-06-12",
     eventTime: "09:00 - 17:00 น.",
-    location: "ห้องประชุมสารสนเทศ อาคาร ๑๔ ชั้น ๒",
+    location: "ห้องประชุมสารสนเทศ อาคาร 14 ชั้น 2",
     category: "การจัดการเรียนการสอน",
     categoryCode: "teaching",
     categoryColor: "amber",
@@ -308,7 +308,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "done",
     evidenceFiles: [
-      { id: "ev-2567-3", name: "คำสั่งพัฒนาหลักสูตร_๐๕๔๐_๒๕๖๗.pdf", size: "2.1 MB", type: "pdf", uploadedAt: "2024-06-01" }
+      { id: "ev-2567-3", name: "คำสั่งพัฒนาหลักสูตร_0540_2567.pdf", size: "2.1 MB", type: "pdf", uploadedAt: "2024-06-01" }
     ],
     actualPhotos: [
       {
@@ -330,8 +330,8 @@ export const INITIAL_ORDERS = [
   },
   {
     id: "ord-2567-04",
-    orderNumber: "มรภ.นว. ๐๙๙๒/๒๕๖๗",
-    title: "คณะกรรมการจัดงานวันสถาปนามหาวิทยาลัยราชภัฏนครสวรรค์และพิธีทำบุญตักบาตร ประจำปี ๒๕๖๗",
+    orderNumber: "มรภ.นว. 0992/2567",
+    title: "คณะกรรมการจัดงานวันสถาปนามหาวิทยาลัยราชภัฏนครสวรรค์และพิธีทำบุญตักบาตร ประจำปี 2567",
     signDate: "2024-10-10",
     eventDate: "2024-10-25",
     eventTime: "07:30 - 12:00 น.",
@@ -345,7 +345,7 @@ export const INITIAL_ORDERS = [
     ],
     status: "done",
     evidenceFiles: [
-      { id: "ev-2567-4", name: "คำสั่งวันสถาปนา_๐๙๙๒_๒๕๖๗.pdf", size: "1.5 MB", type: "pdf", uploadedAt: "2024-10-12" }
+      { id: "ev-2567-4", name: "คำสั่งวันสถาปนา_0992_2567.pdf", size: "1.5 MB", type: "pdf", uploadedAt: "2024-10-12" }
     ],
     actualPhotos: [
       {
@@ -370,24 +370,24 @@ export const INITIAL_ORDERS = [
 export const DEMO_RAW_ORDERS = [
   {
     id: "raw-ocr-1",
-    filename: "คำสั่งแต่งตั้ง_โครงการวิจัยชุมชน_๒๕๖๙.pdf",
+    filename: "คำสั่งแต่งตั้ง_โครงการวิจัยชุมชน_2569.pdf",
     source: "PDF Official Document",
     detectedConfidence: 98.4,
-    detectedText: `คำสั่งมหาวิทยาลัยราชภัฏนครสวรรค์ ที่ ๑๒๙๙/๒๕๖๙
+    detectedText: `คำสั่งมหาวิทยาลัยราชภัฏนครสวรรค์ ที่ 1299/2569
 เรื่อง แต่งตั้งคณะทำงานขับเคลื่อนโครงการยกระดับเศรษฐกิจชุมชนด้วยนวัตกรรมดิจิทัล
 
 ด้วย มหาวิทยาลัยราชภัฏนครสวรรค์ มีพันธกิจในการพัฒนาท้องถิ่น...
-กำหนดจัดขึ้นในวันที่ ๒๘ กันยายน ๒๕๖๙ เวลา ๐๙.๐๐ - ๑๖.๓๐ น.
+กำหนดจัดขึ้นในวันที่ 28 กันยายน 2569 เวลา 09.00 - 16.30 น.
 ณ ศูนย์การเรียนรู้ชุมชนบ้านเกยไชย อ.ชุมแสง จ.นครสวรรค์
 
 จึงแต่งตั้งบุคลากรดังต่อไปนี้:
-๑. ผศ.ดร.สมชาย ใจดี — หัวหน้าคณะทำงาน
-๒. อ.ธนภัทร สุขเกษม — คณะทำงานฝ่ายระบบสารสนเทศชุมชน
-๓. อ.วรัญญา ประเสริฐสุข — คณะทำงานฝ่ายสื่อประชาสัมพันธ์ชุมชน
+1. ผศ.ดร.สมชาย ใจดี — หัวหน้าคณะทำงาน
+2. อ.ธนภัทร สุขเกษม — คณะทำงานฝ่ายระบบสารสนเทศชุมชน
+3. อ.วรัญญา ประเสริฐสุข — คณะทำงานฝ่ายสื่อประชาสัมพันธ์ชุมชน
 
-สั่ง ณ วันที่ ๑ กันยายน พ.ศ. ๒๕๖๙`,
+สั่ง ณ วันที่ 1 กันยายน พ.ศ. 2569`,
     parsedData: {
-      orderNumber: "มรภ.นว. ๑๒๙๙/๒๕๖๙",
+      orderNumber: "มรภ.นว. 1299/2569",
       title: "แต่งตั้งคณะทำงานขับเคลื่อนโครงการยกระดับเศรษฐกิจชุมชนด้วยนวัตกรรมดิจิทัล",
       signDate: "2026-09-01",
       eventDate: "2026-09-28",

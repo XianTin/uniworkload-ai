@@ -53,8 +53,8 @@ export default function App() {
     if (addSampleOrder) {
       const sampleOrder = {
         id: `ord-${Date.now().toString().slice(-4)}`,
-        orderNumber: `คก. ๑๐๕๕/๒๕๖๙`,
-        title: `แต่งตั้งคณะกรรมการพัฒนาระบบเทคโนโลยีดิจิทัลและนวัตกรรม ประจำปีการศึกษา ๒๕๖๙`,
+        orderNumber: `คก. 1055/2569`,
+        title: `แต่งตั้งคณะกรรมการพัฒนาระบบเทคโนโลยีดิจิทัลและนวัตกรรม ประจำปีการศึกษา 2569`,
         signDate: new Date().toISOString().split('T')[0],
         eventDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
         eventTime: "09:00 - 16:30 น.",
@@ -167,8 +167,8 @@ export default function App() {
   const handleAddSampleOrderForActiveFaculty = () => {
     const sampleOrder = {
       id: `ord-${Date.now().toString().slice(-4)}`,
-      orderNumber: `คก. ๑๐๖๖/๒๕๖๙`,
-      title: `แต่งตั้งคณะกรรมการพัฒนานวัตกรรมการจัดการเรียนรู้ในศตวรรษที่ ๒๑ ประจำปีการศึกษา ๒๕๖๙`,
+      orderNumber: `คก. 1066/2569`,
+      title: `แต่งตั้งคณะกรรมการพัฒนานวัตกรรมการจัดการเรียนรู้ในศตวรรษที่ 21 ประจำปีการศึกษา 2569`,
       signDate: new Date().toISOString().split('T')[0],
       eventDate: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0],
       eventTime: "09:00 - 16:30 น.",

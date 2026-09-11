@@ -47,7 +47,7 @@ export default function DualCalendarModule({
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold mb-1.5">
               <CalendarIcon className="w-3.5 h-3.5 text-blue-600" />
-              <span>โมดูลที่ ๓: Smart Dual Calendar (Web & Mobile Sync)</span>
+              <span>โมดูลที่ 3: Smart Dual Calendar (Web & Mobile Sync)</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">
               ปฏิทินภาระงานและตารางคำสั่งราชการ
@@ -94,7 +94,7 @@ export default function DualCalendarModule({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-bold text-slate-800 font-sans">
-              กันยายน ๒๕๖๙ (September 2026)
+              กันยายน 2569 (September 2026)
             </h3>
             <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
               <button className="p-1 hover:bg-white rounded-md text-slate-600 transition-colors cursor-pointer">
