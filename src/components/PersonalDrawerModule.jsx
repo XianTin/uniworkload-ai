@@ -11,15 +11,19 @@ import {
   Image as ImageIcon, 
   Plus, 
   ArrowUpRight, 
-  ShieldCheck,
-  UserCheck,
-  CalendarRange,
-  RotateCcw,
-  Sparkles,
-  Printer,
-  Maximize2,
-  Trash2,
-  AlertCircle
+  ShieldCheck, 
+  UserCheck, 
+  CalendarRange, 
+  RotateCcw, 
+  Sparkles, 
+  Printer, 
+  Maximize2, 
+  Trash2, 
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Tag
 } from 'lucide-react';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
@@ -62,15 +66,19 @@ export default function PersonalDrawerModule({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Expandable filter panels toggle (tidy collapsible design)
+  const [isCategoryPanelOpen, setIsCategoryPanelOpen] = useState(false);
+  const [isDatePanelOpen, setIsDatePanelOpen] = useState(false);
+
   // Modals state
   const [selectedOrderForEvidence, setSelectedOrderForEvidence] = useState(null);
-  const [lightboxData, setLightboxData] = useState(null); // { photo, order }
+  const [lightboxData, setLightboxData] = useState(null);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
 
   // Quick Preset Handlers
   const applyPresetDate = (preset) => {
     switch (preset) {
-      case 'user_test_2567': // "1 มกราคม 2567 ถึง 25 มิถุนายน 2567"
+      case 'user_test_2567':
         setStartDate('2024-01-01');
         setEndDate('2024-06-25');
         onNotify?.('เลือกช่วงวันที่: ๑ มกราคม ๒๕๖๗ – ๒๕ มิถุนายน ๒๕๖๗', 'info');
@@ -89,11 +97,6 @@ export default function PersonalDrawerModule({
         setStartDate('2026-01-01');
         setEndDate('2026-12-31');
         onNotify?.('เลือกช่วงวันที่: ตลอดปี พ.ศ. ๒๕๖๙ (ปัจจุบัน)', 'info');
-        break;
-      case 'round1_2569':
-        setStartDate('2025-10-01');
-        setEndDate('2026-03-31');
-        onNotify?.('เลือกช่วงรอบประเมินที่ ๑ / ๒๕๖๙ (๑ ต.ค. ๖๘ - ๓๑ มี.ค. ๖๙)', 'info');
         break;
       case 'round2_2569':
         setStartDate('2026-04-01');
@@ -129,12 +132,10 @@ export default function PersonalDrawerModule({
   // Main filtered orders list
   const filteredOrders = useMemo(() => {
     return assignedOrders.filter((order) => {
-      // Status filter
       if (filterStatus === 'upcoming' && order.status !== 'upcoming') return false;
       if (filterStatus === 'done' && order.status !== 'done') return false;
       if (filterStatus === 'missing_photo' && (order.actualPhotos?.length > 0)) return false;
 
-      // Category filter
       if (selectedCategory !== 'all') {
         const matchesCategory = order.category === selectedCategory || 
           order.categoryCode === selectedCategory ||
@@ -142,12 +143,10 @@ export default function PersonalDrawerModule({
         if (!matchesCategory) return false;
       }
 
-      // Date range filter (using eventDate or signDate)
       const orderDate = order.eventDate || order.signDate;
       if (startDate && orderDate < startDate) return false;
       if (endDate && orderDate > endDate) return false;
 
-      // Search term
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         const matchNumber = order.orderNumber.toLowerCase().includes(q);
@@ -161,7 +160,7 @@ export default function PersonalDrawerModule({
     });
   }, [assignedOrders, filterStatus, selectedCategory, startDate, endDate, searchTerm]);
 
-  // Calculate summary metrics for the currently filtered view
+  // Summary metrics
   const metrics = useMemo(() => {
     const total = filteredOrders.length;
     const completed = filteredOrders.filter(o => o.status === 'done').length;
@@ -184,7 +183,7 @@ export default function PersonalDrawerModule({
     : WORKLOAD_CATEGORIES.find(c => c.name === selectedCategory || c.id === selectedCategory)?.name || selectedCategory;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Modals */}
       <EvidenceUploadModal
         isOpen={Boolean(selectedOrderForEvidence)}
@@ -211,11 +210,11 @@ export default function PersonalDrawerModule({
         onNotify={onNotify}
       />
 
-      {/* Header & Controls Panel */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-5">
+      {/* Header Panel */}
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold mb-1.5 border border-purple-100">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold mb-1.5 border border-purple-100">
               <Layers className="w-3.5 h-3.5 text-purple-600" />
               <span>โมดูลที่ ๒: Smart Dispatch & Personal Evidence Drawer</span>
             </div>
@@ -224,252 +223,325 @@ export default function PersonalDrawerModule({
               <span className="text-blue-700">{activeFaculty.name}</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              จำแนกคำสั่งตามหมวดหมู่ ก.พอ. กรองช่วงวันที่ประเมินอิสระ และแนบภาพถ่ายหน้างานพร้อมส่งต่อระบบ e-Portfolio
+              จัดเก็บคำสั่งราชการ แนบภาพถ่ายหน้างานจริง กรองช่วงวันที่อิสระ และส่งต่อ e-Portfolio มรภ.นครสวรรค์
             </p>
           </div>
 
-          {/* Quick Metrics & Dossier Action */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setIsDossierOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-sky-400" />
-              <span>พิมพ์ใบสรุปแฟ้มหลักฐาน (Dossier)</span>
+              <span>พิมพ์ใบสรุปแฟ้ม (Dossier)</span>
             </button>
+
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-3 text-xs">
               <div>
-                <span className="text-slate-400 text-[10px] block">คำสั่งที่พบ:</span>
+                <span className="text-slate-400 text-[10px] block">คำสั่ง:</span>
                 <span className="font-bold text-slate-800 font-mono">{metrics.total} ฉบับ</span>
               </div>
               <div className="w-px h-6 bg-slate-200"></div>
               <div>
-                <span className="text-slate-400 text-[10px] block">ภาพถ่ายแนบ:</span>
+                <span className="text-slate-400 text-[10px] block">ภาพถ่าย:</span>
                 <span className="font-bold text-emerald-600 font-mono">{metrics.photoCount} ภาพ</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* --- Category Selector Bar --- */}
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-indigo-600" />
-              <span>จำแนกตามหมวดหมู่งาน (Workload Category)</span>
-            </span>
-            <span className="text-[11px] text-slate-400">
-              คลิกหมวดหมู่เพื่อกรองรายการ
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {WORKLOAD_CATEGORIES.map((cat) => {
-              const count = cat.id === 'all' 
-                ? categoryCounts.all 
-                : (categoryCounts[cat.name] || 0);
-              const isActive = selectedCategory === cat.id || selectedCategory === cat.name;
-
-              return (
+        {/* --- Unified Filter Toolbar --- */}
+        <div className="mt-5 pt-4 border-t border-slate-100 space-y-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="ค้นหาเลขคำสั่ง, ชื่อกิจกรรม, สถานที่..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
+              />
+              {searchTerm && (
                 <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id === 'all' ? 'all' : cat.name)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-blue-600 text-white font-semibold shadow-xs shadow-blue-500/20'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/70'
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Status Tabs & Filter Toggles */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Status Segmented Control */}
+              <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                <button
+                  onClick={() => setFilterStatus('all')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium ${
+                    filterStatus === 'all'
+                      ? 'bg-white text-blue-700 shadow-xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <span>{cat.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-600'
-                  }`}>
-                    {count}
-                  </span>
+                  ทั้งหมด ({assignedOrders.length})
                 </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* --- Custom Date Range Filter --- */}
-        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                <CalendarRange className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-800">
-                  กำหนดช่วงวันที่แสดงผล (Custom Date Range Filter)
-                </h4>
-                <p className="text-[11px] text-slate-500">
-                  เลือกวันเริ่มต้นและสิ้นสุดได้เองอย่างอิสระ หรือคลิกปุ่มลัดรอบการประเมิน
-                </p>
-              </div>
-            </div>
-
-            {hasDateFilter && (
-              <button
-                onClick={() => applyPresetDate('reset')}
-                className="inline-flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 font-semibold bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>รีเซ็ตช่วงวันที่</span>
-              </button>
-            )}
-          </div>
-
-          {/* Date pickers & Presets */}
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-            {/* Pickers */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
-                <span className="text-slate-400 text-[11px]">ตั้งแต่วันที่:</span>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="text-xs text-slate-800 font-medium outline-hidden bg-transparent cursor-pointer"
-                />
+                <button
+                  onClick={() => setFilterStatus('upcoming')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium ${
+                    filterStatus === 'upcoming'
+                      ? 'bg-white text-amber-700 shadow-xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  รอดำเนินการ
+                </button>
+                <button
+                  onClick={() => setFilterStatus('done')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium ${
+                    filterStatus === 'done'
+                      ? 'bg-white text-emerald-700 shadow-xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  เสร็จสิ้น
+                </button>
+                <button
+                  onClick={() => setFilterStatus('missing_photo')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium ${
+                    filterStatus === 'missing_photo'
+                      ? 'bg-white text-rose-700 shadow-xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ⚠️ ขาดรูป
+                </button>
               </div>
 
-              <span className="text-slate-400 font-semibold text-xs">ถึง</span>
-
-              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
-                <span className="text-slate-400 text-[11px]">ถึงวันที่:</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="text-xs text-slate-800 font-medium outline-hidden bg-transparent cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* Quick Preset Buttons */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* Highlighted exact user requirement button */}
+              {/* Toggle Category Drawer */}
               <button
-                onClick={() => applyPresetDate('user_test_2567')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[11px] font-bold transition-all border border-amber-300 shadow-2xs cursor-pointer"
-                title="เลือกวันที่ 1 มกราคม 2567 ถึง 25 มิถุนายน 2567"
+                onClick={() => setIsCategoryPanelOpen(!isCategoryPanelOpen)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                  isCategoryPanelOpen || selectedCategory !== 'all'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs font-semibold'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
               >
-                <Sparkles className="w-3 h-3 text-amber-700" />
-                <span>ช่วงทดสอบ (1 ม.ค. 67 – 25 มิ.ย. 67)</span>
+                <Tag className="w-3.5 h-3.5" />
+                <span>หมวดหมู่งาน</span>
+                {selectedCategory !== 'all' && (
+                  <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                )}
+                {isCategoryPanelOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
 
+              {/* Toggle Date Range Drawer */}
               <button
-                onClick={() => applyPresetDate('year_2567')}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors cursor-pointer"
+                onClick={() => setIsDatePanelOpen(!isDatePanelOpen)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                  isDatePanelOpen || hasDateFilter
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-2xs font-semibold'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
               >
-                ปี 2567
-              </button>
-
-              <button
-                onClick={() => applyPresetDate('year_2568')}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors cursor-pointer"
-              >
-                ปี 2568
-              </button>
-
-              <button
-                onClick={() => applyPresetDate('year_2569')}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors cursor-pointer"
-              >
-                ปี 2569
-              </button>
-
-              <button
-                onClick={() => applyPresetDate('round2_2569')}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 transition-colors cursor-pointer"
-              >
-                รอบ 2/2569 (ปัจจุบัน)
+                <CalendarRange className="w-3.5 h-3.5" />
+                <span>ช่วงวันที่</span>
+                {hasDateFilter && (
+                  <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                )}
+                {isDatePanelOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
             </div>
           </div>
 
-          {/* Active Range Notice Banner */}
-          <div className="bg-white/80 border border-slate-200 rounded-xl px-3.5 py-2 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-slate-600 text-[11px]">
-                กำลังแสดงผล: <strong className="text-slate-900">{formattedRangeText}</strong>
-              </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-blue-700 font-semibold text-[11px]">
-                หมวด: {activeCategoryName}
-              </span>
+          {/* Expandable Category Bar */}
+          {isCategoryPanelOpen && (
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-150 space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span className="font-semibold text-slate-700">เลือกจำแนกตามเกณฑ์ ก.พอ. ๑–๖:</span>
+                {selectedCategory !== 'all' && (
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className="text-blue-600 hover:underline cursor-pointer"
+                  >
+                    ดูทุกหมวด
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {WORKLOAD_CATEGORIES.map((cat) => {
+                  const count = cat.id === 'all' 
+                    ? categoryCounts.all 
+                    : (categoryCounts[cat.name] || 0);
+                  const isActive = selectedCategory === cat.id || selectedCategory === cat.name;
+
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id === 'all' ? 'all' : cat.name)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                          : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+                      }`}
+                    >
+                      <span>{cat.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <span className="text-slate-500 text-[11px] font-mono">
-              พบ {filteredOrders.length} รายการที่เข้าเงื่อนไข
-            </span>
-          </div>
-        </div>
+          )}
 
-        {/* Search & Status Tabs */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาเลขคำสั่ง, ชื่อกิจกรรม, สถานที่..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden"
-            />
-          </div>
+          {/* Expandable Date Range Panel */}
+          {isDatePanelOpen && (
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-150 space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <CalendarRange className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>กำหนดช่วงวันที่เริ่มต้น - สิ้นสุด</span>
+                </span>
+                {hasDateFilter && (
+                  <button
+                    onClick={() => applyPresetDate('reset')}
+                    className="text-[11px] text-rose-600 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>รีเซ็ตวันที่</span>
+                  </button>
+                )}
+              </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs">
-            <button
-              onClick={() => setFilterStatus('all')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                filterStatus === 'all'
-                  ? 'bg-white text-blue-700 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
-            >
-              ทั้งหมด ({assignedOrders.length})
-            </button>
-            <button
-              onClick={() => setFilterStatus('upcoming')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                filterStatus === 'upcoming'
-                  ? 'bg-white text-amber-700 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
-            >
-              รอดำเนินการ
-            </button>
-            <button
-              onClick={() => setFilterStatus('done')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                filterStatus === 'done'
-                  ? 'bg-white text-emerald-700 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
-            >
-              ปฏิบัติงานแล้ว
-            </button>
-            <button
-              onClick={() => setFilterStatus('missing_photo')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                filterStatus === 'missing_photo'
-                  ? 'bg-white text-rose-700 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
-            >
-              ขาดรูปหลักฐาน
-            </button>
-          </div>
+              <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                {/* Pickers */}
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 shadow-2xs">
+                    <span className="text-slate-400 text-[11px]">ตั้งแต่:</span>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="text-xs text-slate-800 font-medium outline-hidden bg-transparent cursor-pointer"
+                    />
+                  </div>
+                  <span className="text-slate-400 text-xs">ถึง</span>
+                  <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 shadow-2xs">
+                    <span className="text-slate-400 text-[11px]">ถึงวันที่:</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="text-xs text-slate-800 font-medium outline-hidden bg-transparent cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Presets */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    onClick={() => applyPresetDate('user_test_2567')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[11px] font-bold border border-amber-300 transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-700" />
+                    <span>1 ม.ค. 67 – 25 มิ.ย. 67</span>
+                  </button>
+                  <button
+                    onClick={() => applyPresetDate('year_2567')}
+                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    ปี 2567
+                  </button>
+                  <button
+                    onClick={() => applyPresetDate('year_2568')}
+                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    ปี 2568
+                  </button>
+                  <button
+                    onClick={() => applyPresetDate('year_2569')}
+                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    ปี 2569
+                  </button>
+                  <button
+                    onClick={() => applyPresetDate('round2_2569')}
+                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    รอบ 2/2569
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Active Filter Indicators Bar */}
+          {(hasDateFilter || selectedCategory !== 'all' || searchTerm) && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-[11px] text-slate-400 font-medium">ตัวกรองที่ใช้งานอยู่:</span>
+              
+              {hasDateFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-medium">
+                  <span>ช่วง: {formattedRangeText}</span>
+                  <button 
+                    onClick={() => applyPresetDate('reset')}
+                    className="hover:text-indigo-900 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedCategory !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-medium">
+                  <span>หมวด: {activeCategoryName}</span>
+                  <button 
+                    onClick={() => setSelectedCategory('all')}
+                    className="hover:text-blue-900 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium">
+                  <span>ค้นหา: "{searchTerm}"</span>
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="hover:text-slate-900 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              <button
+                onClick={() => {
+                  applyPresetDate('reset');
+                  setSelectedCategory('all');
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                }}
+                className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer ml-1"
+              >
+                ล้างทั้งหมด
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Orders Grid or Welcome Onboarding State */}
       {assignedOrders.length === 0 ? (
-        <div className="bg-gradient-to-br from-blue-50/70 via-white to-sky-50/50 rounded-3xl p-8 sm:p-12 text-center border border-blue-200 shadow-xs space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center mx-auto shadow-md shadow-sky-500/20">
-            <Sparkles className="w-8 h-8" />
+        <div className="bg-gradient-to-br from-blue-50/70 via-white to-sky-50/50 rounded-2xl p-8 sm:p-12 text-center border border-blue-200 shadow-xs space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center mx-auto shadow-md shadow-sky-500/20">
+            <Sparkles className="w-7 h-7" />
           </div>
           <div className="max-w-xl mx-auto space-y-2">
             <h3 className="text-base sm:text-lg font-bold text-slate-800">
@@ -480,7 +552,7 @@ export default function PersonalDrawerModule({
             </p>
           </div>
 
-          <div className="max-w-lg mx-auto bg-white/90 rounded-2xl p-4 border border-blue-100 text-left space-y-2.5 text-xs text-slate-700 shadow-2xs">
+          <div className="max-w-lg mx-auto bg-white/90 rounded-xl p-4 border border-blue-100 text-left space-y-2 text-xs text-slate-700 shadow-2xs">
             <div className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>ความพร้อมของบัญชีอาจารย์ท่านนี้:</span>
@@ -491,11 +563,7 @@ export default function PersonalDrawerModule({
             </div>
             <div className="flex items-start gap-2 text-[11px] text-slate-600">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
-              <span><strong>AI Entity Matcher:</strong> เมื่อฝ่ายธุรการสแกนคำสั่งแต่งตั้งที่มีชื่อท่าน คำสั่งจะวิ่งมาบรรจุที่ตู้นี้อัตโนมัติ</span>
-            </div>
-            <div className="flex items-start gap-2 text-[11px] text-slate-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
-              <span><strong>e-Portfolio Copilot:</strong> โนห์รัน AI พร้อมสรุปภาระงานและแปลงเป็นแบบประเมินทางการ มรภ.นครสวรรค์</span>
+              <span><strong>AI Entity Matcher:</strong> เมื่อธุรการสแกนคำสั่งที่มีชื่อท่าน คำสั่งจะจัดส่งมายังตู้นี้อัตโนมัติ</span>
             </div>
           </div>
 
@@ -520,8 +588,8 @@ export default function PersonalDrawerModule({
           </div>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-xs space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+        <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-xs space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
             <Filter className="w-6 h-6" />
           </div>
           <h3 className="text-sm font-bold text-slate-800">
@@ -544,7 +612,7 @@ export default function PersonalDrawerModule({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {filteredOrders.map((order) => {
             const myAssignment = order.facultyAssigned.find(f => f.id === activeFaculty.id);
             const isDone = order.status === 'done';
@@ -553,80 +621,80 @@ export default function PersonalDrawerModule({
             return (
               <div
                 key={order.id}
-                className={`bg-white rounded-3xl p-6 border transition-all duration-200 shadow-xs flex flex-col justify-between ${
+                className={`bg-white rounded-2xl p-5 border transition-all duration-200 shadow-xs flex flex-col justify-between ${
                   isDone 
-                    ? 'border-emerald-200/90 hover:border-emerald-300 bg-gradient-to-b from-white to-emerald-50/15' 
+                    ? 'border-emerald-200/90 hover:border-emerald-300 bg-gradient-to-b from-white to-emerald-50/10' 
                     : 'border-slate-200/90 hover:border-blue-300'
                 }`}
               >
                 <div>
                   {/* Top Badge & Action */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
                         {order.orderNumber}
                       </span>
-                      <span className="text-[11px] font-medium text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
+                      <span className="text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                         {order.category}
                       </span>
                     </div>
 
                     <button
                       onClick={() => onToggleStatus(order.id)}
-                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-xl font-medium transition-all cursor-pointer ${
+                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                         isDone
                           ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
                           : 'bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200'
                       }`}
                     >
                       <CheckCircle2 className={`w-3.5 h-3.5 ${isDone ? 'text-emerald-600 fill-emerald-100' : 'text-slate-400'}`} />
-                      <span>{isDone ? 'ปฏิบัติงานแล้ว' : 'ทำเครื่องหมายว่าเสร็จ'}</span>
+                      <span>{isDone ? 'เสร็จสิ้น' : 'ทำเครื่องหมายว่าเสร็จ'}</span>
                     </button>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug mb-2.5">
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug mb-2">
                     {order.title}
                   </h3>
 
                   {/* Role in this order */}
                   {myAssignment && (
-                    <div className="bg-sky-50/80 border border-sky-100 rounded-2xl p-3 mb-3 flex items-start gap-2.5">
-                      <UserCheck className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+                    <div className="bg-sky-50/70 border border-sky-100 rounded-xl p-2.5 mb-2.5 flex items-start gap-2">
+                      <UserCheck className="w-3.5 h-3.5 text-sky-600 shrink-0 mt-0.5" />
                       <div>
-                        <span className="text-[11px] text-sky-950 font-semibold block">บทบาทตามคำสั่ง:</span>
+                        <span className="text-[10px] text-sky-950 font-semibold block">บทบาทหน้าที่:</span>
                         <span className="text-xs text-slate-800 font-medium">{myAssignment.roleInOrder}</span>
                       </div>
                     </div>
                   )}
 
                   {/* Meta details */}
-                  <div className="space-y-1.5 text-xs text-slate-600 mb-4 bg-slate-50/60 p-3 rounded-2xl border border-slate-100">
+                  <div className="space-y-1 text-xs text-slate-600 mb-3 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span>วันที่จัด: <strong>{formatThaiDate(order.eventDate)}</strong> ({order.eventTime || 'ตามกำหนดการ'})</span>
                     </div>
                     {order.location && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 truncate">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">สถานที่: {order.location}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* --- Evidence Attachments Section --- */}
-                  <div className="border-t border-slate-100 pt-3.5 mb-3">
-                    <div className="flex items-center justify-between mb-2.5">
+                  {/* Evidence Attachments Section */}
+                  <div className="border-t border-slate-100 pt-3 mb-2">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
                         <FileText className="w-3.5 h-3.5 text-blue-600" />
                         <span className="text-xs font-bold text-slate-800">
-                          หลักฐานและภาพถ่าย ({order.evidenceFiles.length + (order.actualPhotos?.length || 0)} รายการ)
+                          หลักฐานและภาพถ่าย ({order.evidenceFiles.length + (order.actualPhotos?.length || 0)})
                         </span>
                       </div>
 
                       <button
                         onClick={() => setSelectedOrderForEvidence(order)}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
                       >
                         <Plus className="w-3 h-3" />
                         <span>แนบรูปเพิ่ม</span>
@@ -634,13 +702,13 @@ export default function PersonalDrawerModule({
                     </div>
 
                     {/* Official PDF Document */}
-                    <div className="space-y-2 mb-3">
+                    <div className="space-y-1.5 mb-2.5">
                       {order.evidenceFiles.map((f) => (
                         <div
                           key={f.id}
-                          className="flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200/80 transition-colors text-xs"
+                          className="flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200/80 transition-colors text-xs"
                         >
-                          <div className="flex items-center gap-2 truncate">
+                          <div className="flex items-center gap-1.5 truncate">
                             <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                             <span className="truncate font-medium">{f.name}</span>
                           </div>
@@ -651,27 +719,23 @@ export default function PersonalDrawerModule({
                       ))}
                     </div>
 
-                    {/* Photo Evidence Gallery (Thumbnails) */}
+                    {/* Photo Evidence Gallery */}
                     <div>
-                      <span className="text-[11px] font-semibold text-slate-500 block mb-1.5">
-                        ภาพถ่ายการปฏิบัติงานจริง (คลิกเพื่อดูภาพขยาย):
-                      </span>
-
                       {hasPhotos ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {order.actualPhotos.map((photo) => (
                             <div
                               key={photo.id}
                               onClick={() => setLightboxData({ photo, order })}
-                              className="group relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
+                              className="group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
                             >
                               <img
                                 src={photo.url}
                                 alt={photo.name}
                                 className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2 justify-between">
-                                <span className="text-[10px] text-white truncate max-w-[80%] font-medium">
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
+                                <span className="text-[9px] text-white truncate max-w-[80%] font-medium">
                                   {photo.name}
                                 </span>
                                 <Maximize2 className="w-3 h-3 text-white shrink-0" />
@@ -680,13 +744,13 @@ export default function PersonalDrawerModule({
                           ))}
                         </div>
                       ) : (
-                        <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 text-center">
+                        <div className="bg-amber-50/70 border border-amber-200/80 rounded-lg p-2.5 text-center">
                           <p className="text-xs text-amber-800 font-medium flex items-center justify-center gap-1.5">
                             <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                             <span>ยังไม่ได้แนบภาพถ่ายหน้างาน</span>
                           </p>
-                          <p className="text-[11px] text-amber-600 mt-0.5">
-                            กดปุ่ม "+ แนบรูปเพิ่ม" เพื่ออัปโหลดรูปภาพบันทึกการปฏิบัติหน้าที่
+                          <p className="text-[10px] text-amber-600 mt-0.5">
+                            กดปุ่ม "+ แนบรูปเพิ่ม" เพื่อบันทึกรูปภาพการปฏิบัติหน้าที่
                           </p>
                         </div>
                       )}
@@ -694,13 +758,13 @@ export default function PersonalDrawerModule({
                   </div>
                 </div>
 
-                {/* Card Footer: e-Portfolio shortcut */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs mt-3">
+                {/* Card Footer */}
+                <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs mt-2">
                   <div className="flex items-center gap-1.5">
                     {hasPhotos ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        หลักฐานครบ (มีรูปหน้างาน)
+                        หลักฐานครบ
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">

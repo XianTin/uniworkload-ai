@@ -6,6 +6,7 @@ import {
 } from './data/mockData';
 import Navbar from './components/Navbar';
 import StatsOverview from './components/StatsOverview';
+import DashboardOverview from './components/DashboardOverview';
 import IngestionModule from './components/IngestionModule';
 import PersonalDrawerModule from './components/PersonalDrawerModule';
 import DualCalendarModule from './components/DualCalendarModule';
@@ -226,55 +227,15 @@ export default function App() {
               onOpenIngest={() => setActiveTab('ingestion')}
               onNavigateTab={(tab) => setActiveTab(tab)}
             />
-            {/* Quick Preview of Calendar & Drawer */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                    คำสั่งล่าสุดในลิ้นชักส่วนบุคคล
-                  </h3>
-                  <button
-                    onClick={() => setActiveTab('drawer')}
-                    className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
-                  >
-                    ดูทั้งหมดในตู้ลิ้นชัก &rarr;
-                  </button>
-                </div>
-                <PersonalDrawerModule
-                  orders={orders.slice(0, 2)}
-                  activeFaculty={activeFaculty}
-                  onToggleStatus={handleToggleStatus}
-                  onSaveEvidence={handleSaveEvidence}
-                  onDeleteEvidence={handleDeleteEvidence}
-                  onJumpToEportfolio={handleJumpToEportfolio}
-                  onNotify={showToast}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    ตัวอย่างปฏิทินงาน 2 ทาง (Web + iCal)
-                  </h3>
-                  <button
-                    onClick={() => setActiveTab('calendar')}
-                    className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
-                  >
-                    เปิดปฏิทินเต็มรูปแบบ &rarr;
-                  </button>
-                </div>
-                <DualCalendarModule
-                  orders={orders}
-                  activeFaculty={activeFaculty}
-                  onToggleStatus={handleToggleStatus}
-                  onOpenIcal={() => setIsIcalOpen(true)}
-                  onJumpToEportfolio={handleJumpToEportfolio}
-                  onNotify={showToast}
-                />
-              </div>
-            </div>
+            <DashboardOverview
+              orders={orders}
+              activeFaculty={activeFaculty}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              onToggleStatus={handleToggleStatus}
+              onJumpToEportfolio={handleJumpToEportfolio}
+              onOpenIcal={() => setIsIcalOpen(true)}
+              onOpenIngest={() => setActiveTab('ingestion')}
+            />
           </div>
         )}
 
