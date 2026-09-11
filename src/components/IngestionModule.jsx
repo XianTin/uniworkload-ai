@@ -329,30 +329,68 @@ export default function IngestionModule({ onAddNewOrder, onNotify, facultyList =
         className="hidden"
       />
 
-      {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-50 text-sky-700 text-xs font-semibold mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-            <span>โมดูลที่ 1: Multi-Channel Ingestion & Real Thai OCR Parser</span>
+      {/* Module Header & Cross-Link Banner */}
+      <div className="space-y-3">
+        {/* Banner linking to Dedicated Real OCR Web */}
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-4 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3 border border-blue-700/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 text-blue-300">
+              <ScanLine className="w-5 h-5 text-sky-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-white">ต้องการทดสอบสแกนไฟล์เอกสารจริง (Live Thai OCR)?</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30">
+                  เว็บแยก (Port 5174)
+                </span>
+              </div>
+              <p className="text-xs text-blue-200/80 mt-0.5">
+                เปิดศูนย์ทดสอบ Live Thai OCR Studio สำหรับอัปโหลด PDF มรภ.นว., ภาพถ่ายจริง, และแคปแชตแบบเต็มสเปก
+              </p>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            ระบบนำเข้าและสกัดข้อมูลคำสั่งราชการจริง (Live OCR Engine)
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            ใส่เอกสารจริงได้ทันที ทั้งไฟล์ PDF ต้นฉบับ มรภ.นว., ภาพถ่ายคำสั่งจากกล้องมือถือ, หรือภาพแคปหน้าจอแชต LINE
-          </p>
+          <a
+            href="http://localhost:5174"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold transition-all shadow-sm shadow-blue-500/30 shrink-0"
+          >
+            <span>เปิด Live OCR Studio</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
 
-        {/* Preset Sample Quick Button */}
-        <button
-          onClick={() => handleStartDemoScan(DEMO_RAW_ORDERS[0])}
-          disabled={isScanning}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-        >
-          <ScanLine className="w-4 h-4 text-blue-600" />
-          <span>โหลดตัวอย่างคำสั่งจริง (มรภ.นว. 1299/2569)</span>
-        </button>
+        {/* Main Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-50 text-sky-700 text-xs font-semibold mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+              <span>โมดูลที่ 1: Multi-Channel Ingestion & AI Thai OCR Parser (แบบจำลอง)</span>
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              ระบบนำเข้าและสกัดข้อมูลคำสั่งราชการอัจฉริยะ
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              จำลองการสกัดโครงสร้างคำสั่งราชการ มรภ.นครสวรรค์ รองรับการสาธิตนำเสนอได้รวดเร็วทันใจ 100%
+            </p>
+          </div>
+
+          {/* Preset Sample Quick Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">ตัวอย่างจำลอง:</span>
+            {DEMO_RAW_ORDERS.map((demo, idx) => (
+              <button
+                key={demo.id}
+                onClick={() => handleStartDemoScan(demo)}
+                disabled={isScanning}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <ScanLine className="w-3.5 h-3.5 text-blue-600" />
+                <span>{demo.parsedData.orderNumber} ({demo.parsedData.category.slice(0, 8)}...)</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
