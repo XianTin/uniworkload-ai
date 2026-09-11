@@ -9,7 +9,8 @@ import {
   PlusCircle, 
   UserCheck, 
   Building2,
-  ChevronDown
+  ChevronDown,
+  UserPlus
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -22,7 +23,8 @@ export default function Navbar({
   setUserRole, 
   onOpenIngest, 
   onOpenIcal,
-  onOpenChatbot 
+  onOpenChatbot,
+  onOpenAddFaculty 
 }) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
@@ -189,6 +191,10 @@ export default function Navbar({
                   <select
                     value={activeFaculty.id}
                     onChange={(e) => {
+                      if (e.target.value === 'ADD_NEW') {
+                        onOpenAddFaculty();
+                        return;
+                      }
                       const found = facultyList.find(f => f.id === e.target.value);
                       if (found) setActiveFaculty(found);
                     }}
@@ -198,9 +204,20 @@ export default function Navbar({
                     {facultyList.map(f => (
                       <option key={f.id} value={f.id}>{f.name} ({f.department})</option>
                     ))}
+                    <option value="ADD_NEW">+ เพิ่มอาจารย์ใหม่...</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
+
+                {/* Add Faculty Button */}
+                <button
+                  onClick={onOpenAddFaculty}
+                  title="เพิ่มอาจารย์ / บุคลากรท่านใหม่"
+                  className="flex items-center gap-1 p-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-colors cursor-pointer text-[11px] font-medium"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">เพิ่มอาจารย์</span>
+                </button>
               </div>
             </div>
           </div>

@@ -12,6 +12,7 @@ import DualCalendarModule from './components/DualCalendarModule';
 import EportfolioCopilotModule from './components/EportfolioCopilotModule';
 import ICalModal from './components/ICalModal';
 import NohranChatbot from './components/NohranChatbot';
+import AddFacultyModal from './components/AddFacultyModal';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -25,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [facultyList] = useState(FACULTY_MEMBERS);
+  const [facultyList, setFacultyList] = useState(FACULTY_MEMBERS);
   const [activeFaculty, setActiveFaculty] = useState(FACULTY_MEMBERS[0]);
   const [userRole, setUserRole] = useState('faculty'); // 'faculty' | 'admin'
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'ingestion' | 'drawer' | 'calendar' | 'eportfolio'
@@ -33,6 +34,7 @@ export default function App() {
   const [selectedOrderIdForEportfolio, setSelectedOrderIdForEportfolio] = useState(null);
   const [isIcalOpen, setIsIcalOpen] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'info') => {
@@ -40,6 +42,52 @@ export default function App() {
     setTimeout(() => {
       setToast(null);
     }, 3500);
+  };
+
+  // Add new faculty member
+  const handleAddFaculty = (newFaculty, addSampleOrder = true) => {
+    setFacultyList((prev) => [...prev, newFaculty]);
+    setActiveFaculty(newFaculty);
+
+    if (addSampleOrder) {
+      const sampleOrder = {
+        id: `ord-${Date.now().toString().slice(-4)}`,
+        orderNumber: `คก. ๑๐๕๕/๒๕๖๙`,
+        title: `แต่งตั้งคณะกรรมการพัฒนาระบบเทคโนโลยีดิจิทัลและนวัตกรรม ประจำปีการศึกษา ๒๕๖๙`,
+        signDate: new Date().toISOString().split('T')[0],
+        eventDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
+        eventTime: "09:00 - 16:30 น.",
+        location: "ห้องประชุมวิชาการ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์",
+        category: "บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย",
+        categoryCode: "admin",
+        categoryColor: "purple",
+        facultyAssigned: [
+          { id: newFaculty.id, name: newFaculty.name, roleInOrder: "กรรมการและเลขานุการฝ่ายพัฒนาระบบดิจิทัล" }
+        ],
+        status: "upcoming",
+        evidenceFiles: [],
+        actualPhotos: [],
+        ePortfolio: {
+          topic: "กรรมการพัฒนาระบบเทคโนโลยีดิจิทัลและนวัตกรรม ประจำปีการศึกษา 2569",
+          role: "กรรมการและเลขานุการ",
+          hours: 6,
+          resultSummary: "วางแผนและพัฒนาระบบดิจิทัลเพื่อสนับสนุนการบริหารจัดการภายในคณะ",
+          status: "ready_to_export"
+        }
+      };
+      setOrders((prev) => [sampleOrder, ...prev]);
+    }
+
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {}
+
+    showToast(`ลงทะเบียนและเปิดใช้งานตู้ลิ้นชักของ "${newFaculty.name}" เรียบร้อยแล้ว!`, 'success');
+    setActiveTab('drawer');
   };
 
   // Add new order from AI Ingestion module
@@ -114,9 +162,41 @@ export default function App() {
     showToast('ลบภาพหลักฐานเรียบร้อยแล้ว', 'info');
   };
 
-  // Jump from Drawer or Calendar to e-Portfolio Copilot
+  // Simulate adding sample order for active faculty
+  const handleAddSampleOrderForActiveFaculty = () => {
+    const sampleOrder = {
+      id: `ord-${Date.now().toString().slice(-4)}`,
+      orderNumber: `คก. ๑๐๖๖/๒๕๖๙`,
+      title: `แต่งตั้งคณะกรรมการพัฒนานวัตกรรมการจัดการเรียนรู้ในศตวรรษที่ ๒๑ ประจำปีการศึกษา ๒๕๖๙`,
+      signDate: new Date().toISOString().split('T')[0],
+      eventDate: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0],
+      eventTime: "09:00 - 16:30 น.",
+      location: "ห้องปฏิบัติการคอมพิวเตอร์และสื่อสารดิจิทัล มหาวิทยาลัยราชภัฏนครสวรรค์",
+      category: "การจัดการเรียนการสอน",
+      categoryCode: "teaching",
+      categoryColor: "amber",
+      facultyAssigned: [
+        { id: activeFaculty.id, name: activeFaculty.name, roleInOrder: "กรรมการดำเนินงานและวิทยากรประจำกลุ่ม" }
+      ],
+      status: "upcoming",
+      evidenceFiles: [],
+      actualPhotos: [],
+      ePortfolio: {
+        topic: "พัฒนานวัตกรรมการจัดการเรียนรู้ในศตวรรษที่ 21 ประจำปีการศึกษา 2569",
+        role: "กรรมการดำเนินงานและวิทยากรประจำกลุ่ม",
+        hours: 6,
+        resultSummary: "จัดกิจกรรมอบรมเชิงปฏิบัติการเพื่อส่งเสริมสมรรถนะดิจิทัลแก่นักศึกษา",
+        status: "ready_to_export"
+      }
+    };
+    setOrders((prev) => [sampleOrder, ...prev]);
+    showToast(`จำลองส่งคำสั่งแต่งตั้ง [${sampleOrder.orderNumber}] เข้าตู้ลิ้นชักอาจารย์เรียบร้อยแล้ว!`, 'success');
+  };
+
+  // Jump directly to e-portfolio tab for a specific order
   const handleJumpToEportfolio = (order) => {
-    setSelectedOrderIdForEportfolio(order.id);
+    const targetId = typeof order === 'object' && order !== null ? order.id : order;
+    setSelectedOrderIdForEportfolio(targetId);
     setActiveTab('eportfolio');
   };
 
@@ -134,6 +214,7 @@ export default function App() {
         onOpenIngest={() => setActiveTab('ingestion')}
         onOpenIcal={() => setIsIcalOpen(true)}
         onOpenChatbot={() => setIsChatbotOpen(true)}
+        onOpenAddFaculty={() => setIsAddFacultyOpen(true)}
       />
 
       {/* Main Container */}
@@ -216,6 +297,8 @@ export default function App() {
               onDeleteEvidence={handleDeleteEvidence}
               onJumpToEportfolio={handleJumpToEportfolio}
               onNotify={showToast}
+              onAddSampleOrder={handleAddSampleOrderForActiveFaculty}
+              onOpenAddFaculty={() => setIsAddFacultyOpen(true)}
             />
           </div>
         )}
@@ -262,6 +345,14 @@ export default function App() {
         activeFaculty={activeFaculty}
         onNavigateTab={(tab) => setActiveTab(tab)}
         onJumpToEportfolio={handleJumpToEportfolio}
+        onNotify={showToast}
+      />
+
+      {/* Add New Faculty Modal */}
+      <AddFacultyModal
+        isOpen={isAddFacultyOpen}
+        onClose={() => setIsAddFacultyOpen(false)}
+        onAddFaculty={handleAddFaculty}
         onNotify={showToast}
       />
 

@@ -50,7 +50,9 @@ export default function PersonalDrawerModule({
   onSaveEvidence, 
   onDeleteEvidence,
   onJumpToEportfolio,
-  onNotify
+  onNotify,
+  onAddSampleOrder,
+  onOpenAddFaculty
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | upcoming | done | missing_photo
@@ -463,8 +465,61 @@ export default function PersonalDrawerModule({
         </div>
       </div>
 
-      {/* Orders Grid */}
-      {filteredOrders.length === 0 ? (
+      {/* Orders Grid or Welcome Onboarding State */}
+      {assignedOrders.length === 0 ? (
+        <div className="bg-gradient-to-br from-blue-50/70 via-white to-sky-50/50 rounded-3xl p-8 sm:p-12 text-center border border-blue-200 shadow-xs space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center mx-auto shadow-md shadow-sky-500/20">
+            <Sparkles className="w-8 h-8" />
+          </div>
+          <div className="max-w-xl mx-auto space-y-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-800">
+              ยินดีต้อนรับอาจารย์ {activeFaculty.name} สู่ UniWorkload AI! 🎓
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              ตู้ลิ้นชักแฟ้มงานส่วนบุคคลของท่านเปิดใช้งานเรียบร้อยแล้ว พร้อมระบบปฏิทิน iCal Feed และเชื่อมต่อระบบ AI OCR สกัดข้อมูลอัตโนมัติ
+            </p>
+          </div>
+
+          <div className="max-w-lg mx-auto bg-white/90 rounded-2xl p-4 border border-blue-100 text-left space-y-2.5 text-xs text-slate-700 shadow-2xs">
+            <div className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>ความพร้อมของบัญชีอาจารย์ท่านนี้:</span>
+            </div>
+            <div className="flex items-start gap-2 text-[11px] text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+              <span><strong>iCal Feed ปฏิทิน:</strong> เชื่อมต่อกับ Apple Calendar / Google Calendar ได้ทันที</span>
+            </div>
+            <div className="flex items-start gap-2 text-[11px] text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+              <span><strong>AI Entity Matcher:</strong> เมื่อฝ่ายธุรการสแกนคำสั่งแต่งตั้งที่มีชื่อท่าน คำสั่งจะวิ่งมาบรรจุที่ตู้นี้อัตโนมัติ</span>
+            </div>
+            <div className="flex items-start gap-2 text-[11px] text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+              <span><strong>e-Portfolio Copilot:</strong> โนห์รัน AI พร้อมสรุปภาระงานและแปลงเป็นแบบประเมินทางการ มรภ.นครสวรรค์</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {onAddSampleOrder && (
+              <button
+                onClick={onAddSampleOrder}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-xs font-semibold hover:from-sky-600 hover:to-blue-700 shadow-md shadow-sky-500/20 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>จำลองส่งคำสั่งราชการเข้าตู้ลิ้นชักนี้ทันที (1-Click)</span>
+              </button>
+            )}
+            {onOpenAddFaculty && (
+              <button
+                onClick={onOpenAddFaculty}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <span>+ เพิ่มอาจารย์ท่านอื่น</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : filteredOrders.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-xs space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
             <Filter className="w-6 h-6" />
