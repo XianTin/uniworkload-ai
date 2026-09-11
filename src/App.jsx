@@ -96,6 +96,22 @@ export default function App() {
     showToast('แนบภาพถ่ายหลักฐานเข้าลิ้นชักเรียบร้อยแล้ว!', 'success');
   };
 
+  // Delete evidence photo
+  const handleDeleteEvidence = (orderId, photoId) => {
+    setOrders((prev) =>
+      prev.map((ord) => {
+        if (ord.id === orderId) {
+          return {
+            ...ord,
+            actualPhotos: (ord.actualPhotos || []).filter(p => p.id !== photoId)
+          };
+        }
+        return ord;
+      })
+    );
+    showToast('ลบภาพหลักฐานเรียบร้อยแล้ว', 'info');
+  };
+
   // Jump from Drawer or Calendar to e-Portfolio Copilot
   const handleJumpToEportfolio = (order) => {
     setSelectedOrderIdForEportfolio(order.id);
@@ -146,6 +162,7 @@ export default function App() {
                   activeFaculty={activeFaculty}
                   onToggleStatus={handleToggleStatus}
                   onSaveEvidence={handleSaveEvidence}
+                  onDeleteEvidence={handleDeleteEvidence}
                   onJumpToEportfolio={handleJumpToEportfolio}
                   onNotify={showToast}
                 />
@@ -193,6 +210,7 @@ export default function App() {
               activeFaculty={activeFaculty}
               onToggleStatus={handleToggleStatus}
               onSaveEvidence={handleSaveEvidence}
+              onDeleteEvidence={handleDeleteEvidence}
               onJumpToEportfolio={handleJumpToEportfolio}
               onNotify={showToast}
             />
