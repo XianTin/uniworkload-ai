@@ -11,6 +11,7 @@ import PersonalDrawerModule from './components/PersonalDrawerModule';
 import DualCalendarModule from './components/DualCalendarModule';
 import EportfolioCopilotModule from './components/EportfolioCopilotModule';
 import ICalModal from './components/ICalModal';
+import NohranChatbot from './components/NohranChatbot';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -31,6 +32,7 @@ export default function App() {
   const [orders, setOrders] = useState(INITIAL_ORDERS);
   const [selectedOrderIdForEportfolio, setSelectedOrderIdForEportfolio] = useState(null);
   const [isIcalOpen, setIsIcalOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'info') => {
@@ -131,6 +133,7 @@ export default function App() {
         setUserRole={setUserRole}
         onOpenIngest={() => setActiveTab('ingestion')}
         onOpenIcal={() => setIsIcalOpen(true)}
+        onOpenChatbot={() => setIsChatbotOpen(true)}
       />
 
       {/* Main Container */}
@@ -251,9 +254,20 @@ export default function App() {
         onNotify={showToast}
       />
 
+      {/* Nohran AI Copilot Chatbot */}
+      <NohranChatbot
+        isOpen={isChatbotOpen}
+        setIsOpen={setIsChatbotOpen}
+        orders={orders}
+        activeFaculty={activeFaculty}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onJumpToEportfolio={handleJumpToEportfolio}
+        onNotify={showToast}
+      />
+
       {/* Toast Notification Container */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-22 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">
           <div className={`px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-3 ${
             toast.type === 'success'
               ? 'bg-emerald-950 text-emerald-100 border-emerald-800'

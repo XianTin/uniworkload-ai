@@ -21,7 +21,8 @@ export default function Navbar({
   userRole, 
   setUserRole, 
   onOpenIngest, 
-  onOpenIcal 
+  onOpenIcal,
+  onOpenChatbot 
 }) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
@@ -137,6 +138,16 @@ export default function Navbar({
 
           {/* Right Action Area */}
           <div className="flex items-center gap-3">
+            {/* Nohran AI Copilot button */}
+            <button
+              onClick={onOpenChatbot}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-700/10 via-indigo-600/10 to-blue-600/10 hover:from-purple-700/20 hover:to-blue-600/20 text-purple-700 border border-purple-200 hover:border-purple-300 transition-all cursor-pointer shadow-2xs"
+              title="เปิดผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <span className="hidden sm:inline">ถามโนห์รัน AI</span>
+            </button>
+
             {/* Quick iCal button */}
             <button
               onClick={onOpenIcal}
