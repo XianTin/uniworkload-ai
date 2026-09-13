@@ -349,7 +349,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-slate-400" />
             <span>
-              <strong>UniWorkload AI</strong> — โครงงานพัฒนาระบบปฏิทินงานและจัดเก็บข้อมูลอัจฉริยะ (Capstone Project)
+              <strong>UniWorkload AI</strong> — โครงงานพัฒนาระบบปฏิทินภาระงานและจัดเก็บหลักฐานอัจฉริยะ (Capstone Project)
             </span>
           </div>
           <div className="flex items-center gap-4 text-slate-400 text-[11px]">
