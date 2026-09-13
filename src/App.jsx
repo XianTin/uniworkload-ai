@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   FACULTY_MEMBERS, 
   INITIAL_ORDERS 
 } from './data/mockData';
+import { 
+  fetchFacultiesFromSupabase, 
+  fetchOrdersFromSupabase, 
+  saveOrderToSupabase, 
+  updateOrderStatusInSupabase, 
+  saveFacultyToSupabase 
+} from './utils/supabaseClient';
 import Navbar from './components/Navbar';
 import StatsOverview from './components/StatsOverview';
 import DashboardOverview from './components/DashboardOverview';
@@ -38,6 +45,28 @@ export default function App() {
   const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Sync with Supabase on mount
+  useEffect(() => {
+    async function syncFromSupabase() {
+      try {
+        const [facs, ords] = await Promise.all([
+          fetchFacultiesFromSupabase(FACULTY_MEMBERS),
+          fetchOrdersFromSupabase(INITIAL_ORDERS)
+        ]);
+        if (facs && facs.length > 0) {
+          setFacultyList(facs);
+          setActiveFaculty(facs[0]);
+        }
+        if (ords && ords.length > 0) {
+          setOrders(ords);
+        }
+      } catch (err) {
+        console.warn('[Supabase Sync] Operating with local state fallback:', err);
+      }
+    }
+    syncFromSupabase();
+  }, []);
+
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => {
@@ -49,6 +78,9 @@ export default function App() {
   const handleAddFaculty = (newFaculty, addSampleOrder = true) => {
     setFacultyList((prev) => [...prev, newFaculty]);
     setActiveFaculty(newFaculty);
+
+    // Persist faculty to Supabase
+    saveFacultyToSupabase(newFaculty);
 
     if (addSampleOrder) {
       const sampleOrder = {
@@ -77,6 +109,7 @@ export default function App() {
         }
       };
       setOrders((prev) => [sampleOrder, ...prev]);
+      saveOrderToSupabase(sampleOrder, newFaculty.id);
     }
 
     try {
@@ -94,6 +127,7 @@ export default function App() {
   // Add new order from AI Ingestion module
   const handleAddNewOrder = (newOrder) => {
     setOrders((prev) => [newOrder, ...prev]);
+    saveOrderToSupabase(newOrder, activeFaculty?.id || 'fac-1');
     
     // Confetti celebration
     try {
@@ -112,10 +146,11 @@ export default function App() {
 
   // Toggle order status done/upcoming
   const handleToggleStatus = (orderId) => {
+    let nextStatus = 'done';
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
-          const nextStatus = ord.status === 'done' ? 'upcoming' : 'done';
+          nextStatus = ord.status === 'done' ? 'upcoming' : 'done';
           return {
             ...ord,
             status: nextStatus,
@@ -128,6 +163,7 @@ export default function App() {
         return ord;
       })
     );
+    updateOrderStatusInSupabase(orderId, nextStatus);
     showToast('อัปเดตสถานะการปฏิบัติงานเรียบร้อยแล้ว', 'info');
   };
 
