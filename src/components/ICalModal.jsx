@@ -17,7 +17,9 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
   if (!isOpen) return null;
 
   const [copied, setCopied] = useState(false);
-  const icalUrl = activeFaculty.icalFeedUrl || `webcal://uniworkload.nsru.ac.th/api/v1/ical/${activeFaculty.id}.ics`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://uniworkload-ai.vercel.app';
+  const icalUrl = `${origin}/api/calendar/feed/${activeFaculty.id || 'fac-1'}.ics`;
+  const webcalUrl = `webcal://${origin.replace(/^https?:\/\//, '')}/api/calendar/feed/${activeFaculty.id || 'fac-1'}.ics`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(icalUrl);
@@ -78,6 +80,14 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               <span>{copied ? 'คัดลอกแล้ว' : 'คัดลอก URL'}</span>
             </button>
+            <a
+              href={webcalUrl}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all"
+              title="เปิดและเพิ่มลงในแอปปฏิทินบนอุปกรณ์นี้ทันที"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>เพิ่มปฏิทินทันที</span>
+            </a>
           </div>
           <p className="text-[11px] text-slate-500">
             * ระบบจะอัปเดตกิจกรรมอัตโนมัติลงในมือถือเมื่อมีคำสั่งใหม่ โดยไม่ต้องล็อกอินซ้ำ
