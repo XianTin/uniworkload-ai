@@ -1,4 +1,6 @@
-// Realistic Mock Data for UniWorkload AI (NSRU - Faculty of Management Science)
+import seedPimraOrders from './seedPimra.json';
+
+// Realistic Mock Data for UniWorkload AI (NSRU - Faculty of Management Science & Faculty of Science and Technology)
 
 export const WORKLOAD_CATEGORIES = [
   { id: "all", name: "ทุกหมวดหมู่งาน", code: "ALL", color: "slate" },
@@ -11,6 +13,23 @@ export const WORKLOAD_CATEGORIES = [
 ];
 
 export const FACULTY_MEMBERS = [
+  {
+    id: "fac-pimra",
+    name: "อ.พิมรา ทองแสง",
+    role: "อาจารย์ / รองผู้อำนวยการ",
+    department: "สาขาวิชาสาธารณสุขศาสตร์",
+    faculty: "คณะวิทยาศาสตร์และเทคโนโลยี",
+    email: "pimra.t@nsru.ac.th",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+    icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/calendar/feed/fac-pimra.ics",
+    stats: {
+      totalOrders: 42,
+      completedOrders: 36,
+      pendingOrders: 6,
+      totalHours: 112.6,
+      evidenceReadyPct: 88,
+    }
+  },
   {
     id: "fac-1",
     name: "อ.ธนภัทร สุขเกษม (tie)",
@@ -65,6 +84,7 @@ export const FACULTY_MEMBERS = [
 ];
 
 export const INITIAL_ORDERS = [
+  ...seedPimraOrders,
   // --- ปีการศึกษา 2569 (ปัจจุบัน) ---
   {
     id: "ord-1042",
