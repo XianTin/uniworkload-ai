@@ -13,7 +13,11 @@ import {
   Check,
   UserCheck,
   RefreshCw,
-  X
+  X,
+  LogOut,
+  Crown,
+  ShieldCheck,
+  User
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -24,6 +28,8 @@ export default function Navbar({
   facultyList, 
   userRole, 
   setUserRole, 
+  currentUser,
+  onLogout,
   onOpenIngest, 
   onOpenIcal,
   onOpenChatbot,
@@ -43,6 +49,8 @@ export default function Navbar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role === 'superadmin';
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
       {/* Top Banner with University Identity */}
@@ -58,11 +66,21 @@ export default function Navbar({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>ระบบออนไลน์</span>
-          </div>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Super Admin Badge or Status */}
+          {isSuperAdmin ? (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] sm:text-[11px] font-bold tracking-wide">
+              <Crown className="w-3 h-3 text-amber-400 shrink-0" />
+              <span>👑 Super Admin (tie)</span>
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>ระบบออนไลน์</span>
+            </div>
+          )}
+
+          {/* Switch View Mode button */}
           <button 
             onClick={() => setUserRole(userRole === 'faculty' ? 'admin' : 'faculty')}
             className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 text-sky-200 transition-colors cursor-pointer flex items-center gap-1"
@@ -185,28 +203,38 @@ export default function Navbar({
               <span className="hidden sm:inline">อัปโหลดคำสั่ง</span>
             </button>
 
-            {/* Unified Faculty Profile Menu */}
+            {/* Unified Faculty / User Profile Menu */}
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 className={`flex items-center gap-2 p-1.5 pl-2 rounded-xl border transition-all cursor-pointer ${
                   isProfileMenuOpen 
                     ? 'bg-slate-100 border-slate-300 ring-2 ring-blue-500/20' 
+                    : isSuperAdmin
+                    ? 'bg-amber-50/50 hover:bg-amber-100/50 border-amber-300/80 ring-1 ring-amber-400/30'
                     : 'bg-white hover:bg-slate-50 border-slate-200'
                 }`}
-                title="จัดการโปรไฟล์และอาจารย์"
+                title="จัดการโปรไฟล์และบัญชีผู้ใช้งาน"
               >
-                <img
-                  src={activeFaculty?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                  alt={activeFaculty?.name || 'อาจารย์'}
-                  className="w-7 h-7 rounded-lg ring-1 ring-slate-300 object-cover"
-                />
+                <div className="relative">
+                  <img
+                    src={activeFaculty?.avatar || currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                    alt={activeFaculty?.name || 'โปรไฟล์'}
+                    className="w-7 h-7 rounded-lg ring-1 ring-slate-300 object-cover"
+                  />
+                  {isSuperAdmin && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px] shadow-xs">
+                      👑
+                    </span>
+                  )}
+                </div>
+                
                 <div className="hidden lg:block text-left pr-1">
                   <span className="text-xs font-semibold text-slate-800 block leading-tight truncate max-w-[120px]">
-                    {activeFaculty?.name || 'อาจารย์'}
+                    {activeFaculty?.name || currentUser?.name || 'อาจารย์'}
                   </span>
                   <span className="text-[10px] text-slate-500 block leading-tight truncate max-w-[120px]">
-                    {activeFaculty?.department ? activeFaculty.department.replace('สาขาวิชา', '') : 'มรภ.นว.'}
+                    {isSuperAdmin ? '👑 Super Admin' : (activeFaculty?.department ? activeFaculty.department.replace('สาขาวิชา', '') : 'มรภ.นว.')}
                   </span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -214,35 +242,52 @@ export default function Navbar({
 
               {/* Profile Dropdown Popover */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  {/* Current Faculty Info */}
-                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/70">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
-                      กำลังใช้งานในนาม
-                    </span>
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  
+                  {/* Logged in Account Info */}
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                        บัญชีที่เข้าสู่ระบบ
+                      </span>
+                      {isSuperAdmin && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                          <Crown className="w-3 h-3 text-amber-600" />
+                          <span>Super Admin</span>
+                        </span>
+                      )}
+                    </div>
+                    
                     <div className="flex items-center gap-2.5">
                       <img
-                        src={activeFaculty?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                        alt={activeFaculty?.name || 'อาจารย์'}
+                        src={currentUser?.avatar || activeFaculty?.avatar}
+                        alt="User"
                         className="w-9 h-9 rounded-xl ring-2 ring-blue-500/30 object-cover"
                       />
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-slate-900 truncate">
-                          {activeFaculty?.name || 'อาจารย์'}
+                          {currentUser?.name || activeFaculty?.name}
                         </h4>
-                        <p className="text-[11px] text-slate-500 truncate">
-                          {activeFaculty?.role || 'อาจารย์ประจำสาขา'}
+                        <p className="text-[11px] text-slate-500 truncate font-mono">
+                          {currentUser?.email || activeFaculty?.email}
                         </p>
                       </div>
                     </div>
+
+                    {isSuperAdmin && (
+                      <div className="mt-2.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 flex items-start gap-1.5">
+                        <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                        <span>คุณมีสิทธิ์เข้าถึงและควบคุมตู้ลิ้นชักของอาจารย์ทุกคนในระบบ</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Switch Faculty Section */}
+                  {/* Switch Active Faculty View (For Super Admin or Admin) */}
                   <div className="px-2 py-2 border-b border-slate-100">
                     <span className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                      สลับอาจารย์ผู้ใช้งาน ({facultyList.length} ท่าน)
+                      {isSuperAdmin ? 'สลับดูตู้ลิ้นชักอาจารย์ (ทุกท่าน)' : `สลับอาจารย์ผู้ใช้งาน (${facultyList.length} ท่าน)`}
                     </span>
-                    <div className="max-h-40 overflow-y-auto space-y-0.5">
+                    <div className="max-h-44 overflow-y-auto space-y-0.5">
                       {facultyList.map((faculty) => {
                         const isSelected = faculty.id === activeFaculty?.id;
                         return (
@@ -295,6 +340,18 @@ export default function Navbar({
                     >
                       <Smartphone className="w-4 h-4 text-slate-500" />
                       <span>ซิงค์ปฏิทินมือถือ (iCal Feed)</span>
+                    </button>
+
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        if (onLogout) onLogout();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border-t border-slate-100 mt-1"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-500" />
+                      <span>ออกจากระบบ (Sign Out)</span>
                     </button>
                   </div>
                 </div>

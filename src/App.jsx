@@ -22,6 +22,8 @@ import ICalModal from './components/ICalModal';
 import NohranChatbot from './components/NohranChatbot';
 import AddFacultyModal from './components/AddFacultyModal';
 import ErrorBoundary from './components/ErrorBoundary';
+import LoginPage from './components/LoginPage';
+import { getStoredSession, storeSession, clearSession } from './utils/auth';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -35,6 +37,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => getStoredSession());
   const [facultyList, setFacultyList] = useState(FACULTY_MEMBERS);
   const [activeFaculty, setActiveFaculty] = useState(FACULTY_MEMBERS[0]);
   const [userRole, setUserRole] = useState('faculty'); // 'faculty' | 'admin'
@@ -57,7 +60,14 @@ export default function App() {
         ]);
         if (facs && facs.length > 0) {
           setFacultyList(facs);
-          setActiveFaculty(facs[0]);
+          // If logged in as specific faculty, retain that faculty
+          if (currentUser?.facultyId) {
+            const matched = facs.find(f => f.id === currentUser.facultyId);
+            if (matched) setActiveFaculty(matched);
+            else setActiveFaculty(facs[0]);
+          } else {
+            setActiveFaculty(facs[0]);
+          }
         }
         if (ords && ords.length > 0) {
           setOrders(ords);
@@ -72,6 +82,7 @@ export default function App() {
   // URL Deep-link listener (e.g. from Google Calendar, email, notifications)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!currentUser) return; // Only process deep link when authenticated
 
     const handleDeepLink = () => {
       const params = new URLSearchParams(window.location.search);
@@ -108,13 +119,51 @@ export default function App() {
     handleDeepLink();
     window.addEventListener('popstate', handleDeepLink);
     return () => window.removeEventListener('popstate', handleDeepLink);
-  }, [facultyList, orders]);
+  }, [facultyList, orders, currentUser]);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => {
       setToast(null);
     }, 3500);
+  };
+
+  // Auth Handlers
+  const handleLoginSuccess = (user, rememberMe = true) => {
+    if (rememberMe) {
+      storeSession(user);
+    } else {
+      clearSession();
+    }
+    setCurrentUser(user);
+
+    // If user has specific faculty assigned, activate it
+    if (user.facultyId && facultyList?.length > 0) {
+      const matched = facultyList.find(f => f.id === user.facultyId);
+      if (matched) setActiveFaculty(matched);
+    }
+
+    if (user.isSuperAdmin || user.role === 'admin') {
+      setUserRole('admin');
+    } else {
+      setUserRole('faculty');
+    }
+
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {}
+
+    showToast(`ยินดีต้อนรับคุณ ${user.name} เข้าสู่ระบบ UniWorkload AI! 🎯`, 'success');
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    setCurrentUser(null);
+    showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
   };
 
   // Add new faculty member
@@ -286,6 +335,43 @@ export default function App() {
     setActiveTab('eportfolio');
   };
 
+  // Unauthenticated: Render Login Page
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 font-sans selection:bg-sky-500 selection:text-white">
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          facultyList={facultyList}
+        />
+        {/* Toast Notification Container */}
+        {toast && (
+          <div className="fixed bottom-22 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">
+            <div className={`px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-3 ${
+              toast.type === 'success'
+                ? 'bg-emerald-950 text-emerald-100 border-emerald-800'
+                : toast.type === 'error'
+                ? 'bg-rose-950 text-rose-100 border-rose-800'
+                : 'bg-slate-900 text-slate-100 border-slate-800'
+            }`}>
+              {toast.type === 'success' ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              ) : (
+                <Info className="w-5 h-5 text-sky-400 shrink-0" />
+              )}
+              <span className="text-xs font-medium">{toast.message}</span>
+              <button
+                onClick={() => setToast(null)}
+                className="p-1 hover:bg-white/10 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
       {/* Navigation Bar */}
@@ -297,6 +383,8 @@ export default function App() {
         facultyList={facultyList}
         userRole={userRole}
         setUserRole={setUserRole}
+        currentUser={currentUser}
+        onLogout={handleLogout}
         onOpenIngest={() => setActiveTab('ingestion')}
         onOpenIcal={() => setIsIcalOpen(true)}
         onOpenChatbot={() => setIsChatbotOpen(true)}
@@ -310,6 +398,7 @@ export default function App() {
             <div className="space-y-8 animate-in fade-in duration-300">
               <StatsOverview
                 activeFaculty={activeFaculty}
+                currentUser={currentUser}
                 onOpenIngest={() => setActiveTab('ingestion')}
                 onNavigateTab={(tab) => setActiveTab(tab)}
               />

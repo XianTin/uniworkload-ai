@@ -12,7 +12,8 @@ import {
   Award
 } from 'lucide-react';
 
-export default function StatsOverview({ activeFaculty, onOpenIngest, onNavigateTab }) {
+export default function StatsOverview({ activeFaculty, currentUser, onOpenIngest, onNavigateTab }) {
+  const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role === 'superadmin';
   const stats = activeFaculty?.stats || {
     totalOrders: 14,
     completedOrders: 11,
@@ -30,13 +31,28 @@ export default function StatsOverview({ activeFaculty, onOpenIngest, onNavigateT
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-sky-300 text-xs font-medium backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span>รอบการประเมินปัจจุบัน: รอบที่ 2 / 2569 (1 เม.ย. – 30 ก.ย. 2569)</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-sky-300 text-xs font-medium backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                <span>รอบการประเมินปัจจุบัน: รอบที่ 2 / 2569 (1 เม.ย. – 30 ก.ย. 2569)</span>
+              </div>
+              {isSuperAdmin && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold">
+                  <span>👑 ผู้ดูแลระบบสูงสุด (tie)</span>
+                </span>
+              )}
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-              ยินดีต้อนรับ, {activeFaculty?.name || 'อาจารย์'}
+            
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap">
+              <span>ยินดีต้อนรับ, {isSuperAdmin ? (currentUser?.name || 'นายธนภัทร สุขเกษม (tie)') : (activeFaculty?.name || 'อาจารย์')}</span>
             </h1>
+            
+            {isSuperAdmin && activeFaculty && (
+              <p className="text-xs text-amber-200/90 font-medium bg-amber-950/40 border border-amber-500/20 px-3 py-1.5 rounded-xl inline-block">
+                ⚡ สิทธิ์ Super Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้ตลอดเวลา
+              </p>
+            )}
+
             <p className="text-slate-300 text-sm leading-relaxed">
               ระบบ UniWorkload AI ช่วยรวบรวมคำสั่งราชการ สกัดวันเวลานัดหมายลงปฏิทินมือถือ 
               และเตรียมหลักฐานพร้อมส่งต่อระบบ e-Portfolio ของมหาวิทยาลัยราชภัฏนครสวรรค์ครบจบในที่เดียว
