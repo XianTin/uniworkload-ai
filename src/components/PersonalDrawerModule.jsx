@@ -50,6 +50,7 @@ function formatThaiDate(dateStr) {
 export default function PersonalDrawerModule({ 
   orders, 
   activeFaculty, 
+  highlightOrderId,
   onToggleStatus, 
   onSaveEvidence, 
   onDeleteEvidence,
@@ -184,6 +185,31 @@ export default function PersonalDrawerModule({
   const activeCategoryName = selectedCategory === 'all' 
     ? 'ทุกหมวดหมู่งาน' 
     : WORKLOAD_CATEGORIES.find(c => c.name === selectedCategory || c.id === selectedCategory)?.name || selectedCategory;
+
+  // Handle highlightOrderId from URL deep-link or calendar jump
+  React.useEffect(() => {
+    if (highlightOrderId) {
+      const targetInFaculty = assignedOrders.some(o => o.id === highlightOrderId);
+      if (targetInFaculty) {
+        const isVisible = filteredOrders.some(o => o.id === highlightOrderId);
+        if (!isVisible) {
+          setFilterStatus('all');
+          setSelectedCategory('all');
+          setStartDate('');
+          setEndDate('');
+          setSearchTerm('');
+        }
+      }
+
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`order-card-${highlightOrderId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightOrderId, assignedOrders, filteredOrders]);
 
   return (
     <div className="space-y-5">
@@ -620,17 +646,33 @@ export default function PersonalDrawerModule({
             const myAssignment = (order.facultyAssigned || []).find(f => f.id === activeFaculty?.id);
             const isDone = order.status === 'done';
             const hasPhotos = order.actualPhotos && order.actualPhotos.length > 0;
+            const isHighlighted = highlightOrderId === order.id;
 
             return (
               <div
                 key={order.id}
-                className={`bg-white rounded-2xl p-5 border transition-all duration-200 shadow-xs flex flex-col justify-between ${
-                  isDone 
+                id={`order-card-${order.id}`}
+                className={`bg-white rounded-2xl p-5 border transition-all duration-300 shadow-xs flex flex-col justify-between ${
+                  isHighlighted
+                    ? 'ring-2 ring-blue-500 border-blue-500 bg-gradient-to-b from-blue-50/50 via-white to-white shadow-lg shadow-blue-500/15'
+                    : isDone 
                     ? 'border-emerald-200/90 hover:border-emerald-300 bg-gradient-to-b from-white to-emerald-50/10' 
                     : 'border-slate-200/90 hover:border-blue-300'
                 }`}
               >
                 <div>
+                  {isHighlighted && (
+                    <div className="mb-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>เปิดจาก Google Calendar (ไฮไลต์คำสั่งนี้)</span>
+                      </span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-md text-white font-mono">
+                        Direct Deep-Link
+                      </span>
+                    </div>
+                  )}
+
                   {/* Top Badge & Action */}
                   <div className="flex items-start justify-between gap-2 mb-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">

@@ -50,7 +50,8 @@ export default async function handler(req, res) {
       }
 
       const summary = `[${ord.category || 'ภาระงาน'}] ${ord.title || ord.order_number}`;
-      const description = `เลขที่คำสั่ง: ${ord.order_number}\\nบทบาท: ${ord.role || 'กรรมการ'}\\nภาระงานสะสม: ${ord.workload_hours || 0} ชั่วโมง\\nสถานะ: ${ord.status === 'done' ? 'เสร็จสิ้นแล้ว' : 'รอดำเนินการ'}\\nมหาวิทยาลัยราชภัฏนครสวรรค์`;
+      const directDrawerUrl = `https://uniworkload-ai.vercel.app/?tab=drawer&orderId=${ord.id}&faculty=${facultyId}`;
+      const description = `เลขที่คำสั่ง: ${ord.order_number}\\nบทบาท: ${ord.role || 'กรรมการ'}\\nภาระงานสะสม: ${ord.workload_hours || 0} ชั่วโมง\\nสถานะ: ${ord.status === 'done' ? 'เสร็จสิ้นแล้ว' : 'รอดำเนินการ'}\\n\\n🔗 เปิดดูคำสั่งและแนบหลักฐานในลิ้นชักงาน:\\n${directDrawerUrl}\\n\\nมหาวิทยาลัยราชภัฏนครสวรรค์`;
       const location = ord.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์';
 
       return [
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
         `SUMMARY:${summary}`,
         `LOCATION:${location}`,
         `DESCRIPTION:${description}`,
+        `URL:${directDrawerUrl}`,
         'STATUS:CONFIRMED',
         'END:VEVENT'
       ].join('\r\n');

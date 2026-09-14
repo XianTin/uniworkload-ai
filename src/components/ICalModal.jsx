@@ -34,7 +34,7 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
     const facultyOrders = (orders || []).filter(o => 
       (o.facultyAssigned || []).some(f => f.id === facultyId)
     );
-    downloadICSFile(facultyOrders, `uniworkload-${facultyId}.ics`);
+    downloadICSFile(facultyOrders, `uniworkload-${facultyId}.ics`, facultyId, origin);
     onNotify?.('ดาวน์โหลดไฟล์ .ics สำเร็จ! สามารถเปิดในคอมพิวเตอร์หรือโทรศัพท์ได้ทันที', 'success');
   };
 
@@ -96,6 +96,12 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
           <p className="text-[11px] text-slate-500">
             * ระบบจะอัปเดตกิจกรรมอัตโนมัติลงในมือถือเมื่อมีคำสั่งใหม่ โดยไม่ต้องล็อกอินซ้ำ
           </p>
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs">
+            <ExternalLink className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>
+              <strong>ระบบ Google/Apple Calendar Deep-Link:</strong> ในทุกกิจกรรมจะมีลิงก์ตรง เมื่ออาจารย์กดดูในมือถือ สามารถแตะลิงก์เพื่อเปิดมาที่ตู้ลิ้นชักงานและแนบภาพถ่ายได้ทันที!
+            </span>
+          </div>
         </div>
 
         {/* Download File Option & QR Code Area */}

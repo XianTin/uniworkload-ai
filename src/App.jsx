@@ -41,6 +41,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'ingestion' | 'drawer' | 'calendar' | 'eportfolio'
   const [orders, setOrders] = useState(INITIAL_ORDERS);
   const [selectedOrderIdForEportfolio, setSelectedOrderIdForEportfolio] = useState(null);
+  const [highlightOrderId, setHighlightOrderId] = useState(null);
   const [isIcalOpen, setIsIcalOpen] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
@@ -67,6 +68,47 @@ export default function App() {
     }
     syncFromSupabase();
   }, []);
+
+  // URL Deep-link listener (e.g. from Google Calendar, email, notifications)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleDeepLink = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      const orderIdParam = params.get('orderId') || params.get('order') || params.get('drawer');
+      const facultyParam = params.get('faculty');
+
+      if (facultyParam && facultyList?.length > 0) {
+        const foundFaculty = facultyList.find(f => f.id === facultyParam);
+        if (foundFaculty) setActiveFaculty(foundFaculty);
+      } else if (orderIdParam && orders?.length > 0) {
+        // Switch to assigned faculty if needed
+        const targetOrder = orders.find(o => o.id === orderIdParam);
+        if (targetOrder?.facultyAssigned?.length > 0) {
+          const targetFacId = targetOrder.facultyAssigned[0].id;
+          const foundFaculty = facultyList.find(f => f.id === targetFacId);
+          if (foundFaculty && foundFaculty.id !== activeFaculty?.id) {
+            setActiveFaculty(foundFaculty);
+          }
+        }
+      }
+
+      if (orderIdParam) {
+        setActiveTab('drawer');
+        setHighlightOrderId(orderIdParam);
+        const targetOrder = (orders || []).find(o => o.id === orderIdParam);
+        const label = targetOrder ? targetOrder.orderNumber : orderIdParam;
+        showToast(`เปิดตู้ลิ้นชักงานคำสั่ง [${label}] จากลิงก์ Google Calendar สำเร็จ! 🎯`, 'success');
+      } else if (tabParam && ['dashboard', 'ingestion', 'drawer', 'calendar', 'eportfolio'].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    };
+
+    handleDeepLink();
+    window.addEventListener('popstate', handleDeepLink);
+    return () => window.removeEventListener('popstate', handleDeepLink);
+  }, [facultyList, orders]);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -299,6 +341,7 @@ export default function App() {
               <PersonalDrawerModule
                 orders={orders}
                 activeFaculty={activeFaculty}
+                highlightOrderId={highlightOrderId}
                 onToggleStatus={handleToggleStatus}
                 onSaveEvidence={handleSaveEvidence}
                 onDeleteEvidence={handleDeleteEvidence}
@@ -316,8 +359,14 @@ export default function App() {
                 orders={orders}
                 activeFaculty={activeFaculty}
                 onToggleStatus={handleToggleStatus}
+                onSaveEvidence={handleSaveEvidence}
+                onDeleteEvidence={handleDeleteEvidence}
                 onOpenIcal={() => setIsIcalOpen(true)}
                 onJumpToEportfolio={handleJumpToEportfolio}
+                onJumpToDrawer={(orderId) => {
+                  setHighlightOrderId(orderId);
+                  setActiveTab('drawer');
+                }}
                 onNotify={showToast}
               />
             </div>
