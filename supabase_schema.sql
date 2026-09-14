@@ -1,3 +1,7 @@
+DROP TABLE IF EXISTS order_evidences CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS faculties CASCADE;
+
 -- ==========================================
 -- UniWorkload AI - Supabase PostgreSQL Schema
 -- ==========================================
