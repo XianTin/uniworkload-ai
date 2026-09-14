@@ -229,8 +229,8 @@ export default function Navbar({
               >
                 <div className="relative">
                   <img
-                    src={activeFaculty?.avatar || currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                    alt={activeFaculty?.name || 'โปรไฟล์'}
+                    src={currentUser?.avatar || activeFaculty?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                    alt={currentUser?.name || activeFaculty?.name || 'โปรไฟล์'}
                     className="w-7 h-7 rounded-lg ring-1 ring-slate-300 object-cover"
                   />
                   {isSuperAdmin ? (
@@ -246,7 +246,7 @@ export default function Navbar({
                 
                 <div className="hidden lg:block text-left pr-1">
                   <span className="text-xs font-semibold text-slate-800 block leading-tight truncate max-w-[120px]">
-                    {activeFaculty?.name || currentUser?.name || 'อาจารย์'}
+                    {currentUser?.name || activeFaculty?.name || 'อาจารย์'}
                   </span>
                   <span className="text-[10px] text-slate-500 block leading-tight truncate max-w-[120px]">
                     {isSuperAdmin ? '👑 Super Admin' : isCoAdmin ? '🛡️ Co-Admin' : (activeFaculty?.department ? activeFaculty.department.replace('สาขาวิชา', '') : 'มรภ.นว.')}

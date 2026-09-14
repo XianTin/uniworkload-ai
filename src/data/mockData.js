@@ -32,13 +32,13 @@ export const FACULTY_MEMBERS = [
   },
   {
     id: "fac-1",
-    name: "อ.ธนภัทร สุขเกษม (tie)",
+    name: "อ.ธนภัทร สุขเกษม",
     role: "อาจารย์ประจำหลักสูตรเทคโนโลยีสารสนเทศ",
     department: "สาขาวิชาเทคโนโลยีสารสนเทศ",
     faculty: "คณะวิทยาการจัดการ",
     email: "thanaphat.s@nsru.ac.th",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/v1/ical/tie-84920.ics",
+    icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/v1/ical/thanaphat-84920.ics",
     stats: {
       totalOrders: 18,
       completedOrders: 15,
@@ -98,7 +98,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "service",
     categoryColor: "emerald",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "ประธานกรรมการฝ่ายพัฒนาระบบและโสตทัศนูปกรณ์" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "ประธานกรรมการฝ่ายพัฒนาระบบและโสตทัศนูปกรณ์" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "ที่ปรึกษาโครงการและวิทยากรบรรยายพิเศษ" },
       { id: "fac-3", name: "อ.วรัญญา ประเสริฐสุข", roleInOrder: "กรรมการฝ่ายประชาสัมพันธ์และสื่อสารองค์กร" }
     ],
@@ -127,7 +127,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "qa",
     categoryColor: "blue",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "กรรมการและเลขานุการ" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "กรรมการและเลขานุการ" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "ประธานกรรมการตรวจประเมิน" }
     ],
     status: "done",
@@ -172,7 +172,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "teaching",
     categoryColor: "amber",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "อาจารย์นิเทศก์ประจำเขตพื้นที่นครสวรรค์" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "อาจารย์นิเทศก์ประจำเขตพื้นที่นครสวรรค์" },
       { id: "fac-3", name: "อ.วรัญญา ประเสริฐสุข", roleInOrder: "อาจารย์นิเทศก์ประจำเขตพื้นที่พิษณุโลก" }
     ],
     status: "upcoming",
@@ -200,7 +200,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "admin",
     categoryColor: "purple",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "กรรมการฝ่ายต้อนรับและลงทะเบียนดิจิทัล" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "กรรมการฝ่ายต้อนรับและลงทะเบียนดิจิทัล" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "กรรมการร่วมพิธีเปิด" },
       { id: "fac-3", name: "อ.วรัญญา ประเสริฐสุข", roleInOrder: "พิธีกรดำเนินรายการ" }
     ],
@@ -240,7 +240,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "service",
     categoryColor: "emerald",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "ประธานฝ่ายเทคโนโลยีสารสนเทศและถ่ายทอดสด" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "ประธานฝ่ายเทคโนโลยีสารสนเทศและถ่ายทอดสด" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "ประธานฝ่ายประสานงานวิชาการ" }
     ],
     status: "done",
@@ -285,7 +285,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "research",
     categoryColor: "indigo",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "นักวิจัยร่วมและหัวหน้าฝ่ายพัฒนาระบบคลังข้อมูลดิจิทัล" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "นักวิจัยร่วมและหัวหน้าฝ่ายพัฒนาระบบคลังข้อมูลดิจิทัล" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "หัวหน้าโครงการวิจัย" },
       { id: "fac-3", name: "อ.วรัญญา ประเสริฐสุข", roleInOrder: "นักวิจัยฝ่ายสื่อสร้างสรรค์" }
     ],
@@ -323,7 +323,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "teaching",
     categoryColor: "amber",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "กรรมการและเลขานุการคณะกรรมการพัฒนาหลักสูตร" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "กรรมการและเลขานุการคณะกรรมการพัฒนาหลักสูตร" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "ประธานคณะกรรมการพัฒนาหลักสูตร" }
     ],
     status: "done",
@@ -360,7 +360,7 @@ export const INITIAL_ORDERS = [
     categoryCode: "arts",
     categoryColor: "rose",
     facultyAssigned: [
-      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "กรรมการฝ่ายพิธีการสงฆ์และจัดสถานที่" },
+      { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "กรรมการฝ่ายพิธีการสงฆ์และจัดสถานที่" },
       { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "กรรมการร่วมพิธี" }
     ],
     status: "done",
@@ -418,7 +418,7 @@ export const DEMO_RAW_ORDERS = [
       categoryColor: "indigo",
       facultyAssigned: [
         { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "หัวหน้าคณะทำงาน" },
-        { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "คณะทำงานฝ่ายระบบสารสนเทศชุมชน" },
+        { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "คณะทำงานฝ่ายระบบสารสนเทศชุมชน" },
         { id: "fac-3", name: "อ.วรัญญา ประเสริฐสุข", roleInOrder: "คณะทำงานฝ่ายสื่อประชาสัมพันธ์ชุมชน" }
       ]
     }
@@ -452,7 +452,7 @@ export const DEMO_RAW_ORDERS = [
       categoryCode: "service",
       categoryColor: "emerald",
       facultyAssigned: [
-        { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "วิทยากรหลักและผู้ดูแลระบบปฏิบัติการ" },
+        { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "วิทยากรหลักและผู้ดูแลระบบปฏิบัติการ" },
         { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "ที่ปรึกษาโครงการ" },
         { id: "fac-3", name: "อ.วรัญญา ประเสริฐสุข", roleInOrder: "ผู้ช่วยวิทยากรและประสานงาน" }
       ]
@@ -486,7 +486,7 @@ export const DEMO_RAW_ORDERS = [
       categoryColor: "purple",
       facultyAssigned: [
         { id: "fac-2", name: "ผศ.ดร.สมชาย ใจดี", roleInOrder: "ประธานกรรมการตรวจประเมิน" },
-        { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "กรรมการและเลขานุการ" }
+        { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "กรรมการและเลขานุการ" }
       ]
     }
   }

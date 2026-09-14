@@ -5,30 +5,30 @@ export const SUPER_ADMIN_ACCOUNT = {
   id: "user-superadmin-tie",
   username: "admin",
   email: "admin@nsru.ac.th",
-  name: "นายธนภัทร สุขเกษม (tie)",
+  name: "นายศุภกร คงไข่ (tie)",
   role: "superadmin", // 'superadmin' | 'coadmin' | 'admin' | 'faculty' | 'head'
   roleLabel: "👑 ผู้ดูแลระบบสูงสุด (Super Admin)",
-  department: "สาขาวิชาเทคโนโลยีสารสนเทศ",
+  department: "ผู้พัฒนาระบบ UniWorkload AI",
   faculty: "คณะวิทยาการจัดการ",
   avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  facultyId: "fac-1",
+  facultyId: null, // tie is the system creator/admin, not in the faculty workload list
   isSuperAdmin: true,
   isCoAdmin: false,
   canSwitchFaculty: true,
-  permissions: ["all", "manage_all_faculties", "upload_orders", "delete_orders", "export_all_eportfolio", "system_settings"]
+  permissions: ["all", "manage_all_faculties", "upload_orders", "delete_orders", "export_all_eportfolio", "system_settings", "view_all_drawers"]
 };
 
 export const CO_ADMIN_PIMMY_ACCOUNT = {
   id: "user-coadmin-pimmy",
   username: "pimmy",
   email: "pimmy@nsru.ac.th",
-  name: "อ.พิมรา ทองแสง (Pimmy)",
-  role: "coadmin", // รองผู้ดูแลระบบสูงสุด (รองจาก tie)
+  name: "พิมมี่ (Pimmy)",
+  role: "coadmin", // รองผู้ดูแลระบบสูงสุด (คู่พัฒนาของ tie)
   roleLabel: "🛡️ รองผู้ดูแลระบบสูงสุด (Co-Admin)",
-  department: "สาขาวิชาสาธารณสุขศาสตร์",
-  faculty: "คณะวิทยาศาสตร์และเทคโนโลยี",
+  department: "ผู้พัฒนาระบบร่วม UniWorkload AI",
+  faculty: "คณะวิทยาการจัดการ",
   avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-  facultyId: "fac-pimra",
+  facultyId: null, // pimmy is tie's project partner, not an instructor
   isSuperAdmin: false,
   isCoAdmin: true,
   canSwitchFaculty: true,
@@ -54,7 +54,7 @@ export const DEMO_PRESET_ACCOUNTS = [
   },
   {
     label: "🛡️ รองผู้ดูแลระบบสูงสุด (Pimmy)",
-    sublabel: "สิทธิ์ระดับบริหาร รองจาก tie (สลับดูอาจารย์ทุกคนได้)",
+    sublabel: "สิทธิ์ระดับบริหาร คู่ของ tie (สลับดูอาจารย์ทุกคนได้)",
     username: "pimmy",
     passwordHint: "1234",
     color: "from-purple-500 to-indigo-600",
@@ -68,7 +68,21 @@ export const DEMO_PRESET_ACCOUNTS = [
     passwordHint: "1234",
     color: "from-sky-500 to-blue-600",
     badgeColor: "bg-sky-100 text-sky-800 border-sky-300",
-    account: CO_ADMIN_PIMMY_ACCOUNT
+    account: {
+      id: "user-pimra",
+      username: "pimra.t@nsru.ac.th",
+      email: "pimra.t@nsru.ac.th",
+      name: "อ.พิมรา ทองแสง",
+      role: "faculty",
+      roleLabel: "อาจารย์ / รองผู้อำนวยการ",
+      department: "สาขาวิชาสาธารณสุขศาสตร์",
+      faculty: "คณะวิทยาศาสตร์และเทคโนโลยี",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+      facultyId: "fac-pimra",
+      isSuperAdmin: false,
+      isCoAdmin: false,
+      permissions: ["view_own_drawer", "upload_own_evidence", "export_own_eportfolio"]
+    }
   },
   {
     label: "👨‍🏫 ผศ.ดร.สมชาย ใจดี",
@@ -128,11 +142,12 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
   const cleanId = (identifier || '').trim().toLowerCase();
   const cleanPass = (password || '').trim();
 
-  // 1. Check Super Admin (tie) - accepts 'admin', 'admin@nsru.ac.th', or 'thanaphat.s@nsru.ac.th' with password '2547'
+  // 1. Check Super Admin (tie: นายศุภกร คงไข่) - accepts 'admin', 'admin@nsru.ac.th', 'suphakon', 'suphakon.k@nsru.ac.th', 'tie', 'xiantin' with password '2547'
   if (
     (cleanId === 'admin' || 
      cleanId === 'admin@nsru.ac.th' || 
-     cleanId === 'thanaphat.s@nsru.ac.th' || 
+     cleanId === 'suphakon' || 
+     cleanId === 'suphakon.k@nsru.ac.th' || 
      cleanId === 'tie' || 
      cleanId === 'xiantin') && 
     cleanPass === '2547'
@@ -146,12 +161,10 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
     };
   }
 
-  // 2. Check Co-Admin (pimmy) - second highest level to tie, accepts 'pimmy', 'pimmy@nsru.ac.th', 'pimra.t@nsru.ac.th' with password '1234'
+  // 2. Check Co-Admin (pimmy: พิมมี่ คู่ของ tie) - accepts 'pimmy', 'pimmy@nsru.ac.th' with password '1234'
   if (
     (cleanId === 'pimmy' || 
-     cleanId === 'pimmy@nsru.ac.th' || 
-     cleanId === 'pimra.t@nsru.ac.th' ||
-     cleanId === 'pimra') && 
+     cleanId === 'pimmy@nsru.ac.th') && 
     cleanPass === '1234'
   ) {
     return {
@@ -163,7 +176,7 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
     };
   }
 
-  // 2. Check predefined demo accounts
+  // 3. Check predefined demo accounts
   for (const preset of DEMO_PRESET_ACCOUNTS) {
     if (
       (cleanId === preset.username.toLowerCase() || cleanId === preset.account.email?.toLowerCase()) &&
@@ -179,17 +192,16 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
     }
   }
 
-  // 3. Dynamic faculty matching (matches any faculty registered in the system)
+  // 4. Dynamic faculty matching (matches any faculty registered in the system)
   if (dynamicFaculties && dynamicFaculties.length > 0) {
     const matchedFac = dynamicFaculties.find(
       (f) => f.email?.toLowerCase() === cleanId || f.id.toLowerCase() === cleanId
     );
 
     if (matchedFac) {
-      // Default fallback password for faculty is 1234, or 2547 if it's tie's profile
-      const isValid = cleanPass === '1234' || (matchedFac.id === 'fac-1' && cleanPass === '2547');
+      // Default fallback password for faculty is 1234
+      const isValid = cleanPass === '1234';
       if (isValid) {
-        const isTie = matchedFac.id === 'fac-1' || matchedFac.email?.includes('thanaphat');
         return {
           success: true,
           user: {
@@ -197,14 +209,16 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
             username: matchedFac.email,
             email: matchedFac.email,
             name: matchedFac.name,
-            role: isTie ? 'superadmin' : 'faculty',
-            roleLabel: isTie ? '👑 ผู้ดูแลระบบสูงสุด (tie)' : (matchedFac.role || 'อาจารย์ผู้สอน'),
+            role: 'faculty',
+            roleLabel: matchedFac.role || 'อาจารย์ผู้สอน',
             department: matchedFac.department,
             faculty: matchedFac.faculty,
             avatar: matchedFac.avatar,
             facultyId: matchedFac.id,
-            isSuperAdmin: isTie,
-            permissions: isTie ? ["all"] : ["view_own_drawer", "upload_own_evidence", "export_own_eportfolio"],
+            isSuperAdmin: false,
+            isCoAdmin: false,
+            canSwitchFaculty: false,
+            permissions: ["view_own_drawer", "upload_own_evidence", "export_own_eportfolio"],
             loginTime: new Date().toISOString()
           }
         };

@@ -49,7 +49,7 @@ export default function StatsOverview({ activeFaculty, currentUser, onOpenIngest
             </div>
             
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap">
-              <span>ยินดีต้อนรับ, {isSuperAdmin ? (currentUser?.name || 'นายธนภัทร สุขเกษม (tie)') : isCoAdmin ? (currentUser?.name || 'อ.พิมรา ทองแสง (Pimmy)') : (activeFaculty?.name || 'อาจารย์')}</span>
+              <span>ยินดีต้อนรับ, {isSuperAdmin ? (currentUser?.name || 'นายศุภกร คงไข่ (tie)') : isCoAdmin ? (currentUser?.name || 'พิมมี่ (Pimmy)') : (activeFaculty?.name || 'อาจารย์')}</span>
             </h1>
             
             {isSuperAdmin && activeFaculty ? (

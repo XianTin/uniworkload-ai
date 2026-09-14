@@ -27,7 +27,7 @@ const defaultFaculties = [
   },
   {
     id: "fac-1",
-    name: "อ.ธนภัทร สุขเกษม (tie)",
+    name: "อ.ธนภัทร สุขเกษม",
     role: "อาจารย์ประจำหลักสูตรเทคโนโลยีสารสนเทศ",
     department: "สาขาวิชาเทคโนโลยีสารสนเทศ",
     faculty: "คณะวิทยาการจัดการ",
@@ -116,7 +116,7 @@ class Database {
         categoryCode: "service",
         score: 1.0,
         facultyAssigned: [
-          { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "ประธานกรรมการฝ่ายพัฒนาระบบ" },
+          { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "ประธานกรรมการฝ่ายพัฒนาระบบ" },
           { id: "fac-pimra", name: "อ.พิมรา ทองแสง", roleInOrder: "วิทยากรร่วม" }
         ],
         status: "done",
@@ -152,7 +152,7 @@ class Database {
         categoryCode: "qa",
         score: 1.0,
         facultyAssigned: [
-          { id: "fac-1", name: "อ.ธนภัทร สุขเกษม (tie)", roleInOrder: "กรรมการและเลขานุการ" },
+          { id: "fac-1", name: "อ.ธนภัทร สุขเกษม", roleInOrder: "กรรมการและเลขานุการ" },
           { id: "fac-pimra", name: "อ.พิมรา ทองแสง", roleInOrder: "กรรมการตรวจประเมิน" }
         ],
         status: "upcoming",
