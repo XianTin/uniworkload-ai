@@ -21,6 +21,7 @@ import EportfolioCopilotModule from './components/EportfolioCopilotModule';
 import ICalModal from './components/ICalModal';
 import NohranChatbot from './components/NohranChatbot';
 import AddFacultyModal from './components/AddFacultyModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -101,9 +102,12 @@ export default function App() {
         evidenceFiles: [],
         actualPhotos: [],
         ePortfolio: {
+          year: "2569",
+          round: "รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)",
           topic: "กรรมการพัฒนาระบบเทคโนโลยีดิจิทัลและนวัตกรรม ประจำปีการศึกษา 2569",
           role: "กรรมการและเลขานุการ",
           hours: 6,
+          workloadRef: "ภาระงานด้านบริหาร/กรรมการ/ภารกิจมหาวิทยาลัย มหาวิทยาลัยราชภัฏนครสวรรค์",
           resultSummary: "วางแผนและพัฒนาระบบดิจิทัลเพื่อสนับสนุนการบริหารจัดการภายในคณะ",
           status: "ready_to_export"
         }
@@ -174,7 +178,7 @@ export default function App() {
         if (ord.id === orderId) {
           return {
             ...ord,
-            actualPhotos: [...ord.actualPhotos, newEvidence]
+            actualPhotos: [...(ord.actualPhotos || []), newEvidence]
           };
         }
         return ord;
@@ -213,15 +217,18 @@ export default function App() {
       categoryCode: "teaching",
       categoryColor: "amber",
       facultyAssigned: [
-        { id: activeFaculty.id, name: activeFaculty.name, roleInOrder: "กรรมการดำเนินงานและวิทยากรประจำกลุ่ม" }
+        { id: activeFaculty?.id || 'fac-1', name: activeFaculty?.name || 'อาจารย์', roleInOrder: "กรรมการดำเนินงานและวิทยากรประจำกลุ่ม" }
       ],
       status: "upcoming",
       evidenceFiles: [],
       actualPhotos: [],
       ePortfolio: {
+        year: "2569",
+        round: "รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)",
         topic: "พัฒนานวัตกรรมการจัดการเรียนรู้ในศตวรรษที่ 21 ประจำปีการศึกษา 2569",
         role: "กรรมการดำเนินงานและวิทยากรประจำกลุ่ม",
         hours: 6,
+        workloadRef: "ภาระงานด้านการจัดการเรียนการสอน มหาวิทยาลัยราชภัฏนครสวรรค์",
         resultSummary: "จัดกิจกรรมอบรมเชิงปฏิบัติการเพื่อส่งเสริมสมรรถนะดิจิทัลแก่นักศึกษา",
         status: "ready_to_export"
       }
@@ -256,75 +263,77 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'dashboard' && (
-          <div className="space-y-8 animate-in fade-in duration-300">
-            <StatsOverview
-              activeFaculty={activeFaculty}
-              onOpenIngest={() => setActiveTab('ingestion')}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-            />
-            <DashboardOverview
-              orders={orders}
-              activeFaculty={activeFaculty}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-              onToggleStatus={handleToggleStatus}
-              onJumpToEportfolio={handleJumpToEportfolio}
-              onOpenIcal={() => setIsIcalOpen(true)}
-              onOpenIngest={() => setActiveTab('ingestion')}
-            />
-          </div>
-        )}
+        <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+          {activeTab === 'dashboard' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              <StatsOverview
+                activeFaculty={activeFaculty}
+                onOpenIngest={() => setActiveTab('ingestion')}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+              />
+              <DashboardOverview
+                orders={orders}
+                activeFaculty={activeFaculty}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+                onToggleStatus={handleToggleStatus}
+                onJumpToEportfolio={handleJumpToEportfolio}
+                onOpenIcal={() => setIsIcalOpen(true)}
+                onOpenIngest={() => setActiveTab('ingestion')}
+              />
+            </div>
+          )}
 
-        {activeTab === 'ingestion' && (
-          <div className="animate-in fade-in duration-300">
-            <IngestionModule
-              onAddNewOrder={handleAddNewOrder}
-              onNotify={showToast}
-              facultyList={facultyList}
-              activeFaculty={activeFaculty}
-            />
-          </div>
-        )}
+          {activeTab === 'ingestion' && (
+            <div className="animate-in fade-in duration-300">
+              <IngestionModule
+                onAddNewOrder={handleAddNewOrder}
+                onNotify={showToast}
+                facultyList={facultyList}
+                activeFaculty={activeFaculty}
+              />
+            </div>
+          )}
 
-        {activeTab === 'drawer' && (
-          <div className="animate-in fade-in duration-300">
-            <PersonalDrawerModule
-              orders={orders}
-              activeFaculty={activeFaculty}
-              onToggleStatus={handleToggleStatus}
-              onSaveEvidence={handleSaveEvidence}
-              onDeleteEvidence={handleDeleteEvidence}
-              onJumpToEportfolio={handleJumpToEportfolio}
-              onNotify={showToast}
-              onAddSampleOrder={handleAddSampleOrderForActiveFaculty}
-              onOpenAddFaculty={() => setIsAddFacultyOpen(true)}
-            />
-          </div>
-        )}
+          {activeTab === 'drawer' && (
+            <div className="animate-in fade-in duration-300">
+              <PersonalDrawerModule
+                orders={orders}
+                activeFaculty={activeFaculty}
+                onToggleStatus={handleToggleStatus}
+                onSaveEvidence={handleSaveEvidence}
+                onDeleteEvidence={handleDeleteEvidence}
+                onJumpToEportfolio={handleJumpToEportfolio}
+                onNotify={showToast}
+                onAddSampleOrder={handleAddSampleOrderForActiveFaculty}
+                onOpenAddFaculty={() => setIsAddFacultyOpen(true)}
+              />
+            </div>
+          )}
 
-        {activeTab === 'calendar' && (
-          <div className="animate-in fade-in duration-300">
-            <DualCalendarModule
-              orders={orders}
-              activeFaculty={activeFaculty}
-              onToggleStatus={handleToggleStatus}
-              onOpenIcal={() => setIsIcalOpen(true)}
-              onJumpToEportfolio={handleJumpToEportfolio}
-              onNotify={showToast}
-            />
-          </div>
-        )}
+          {activeTab === 'calendar' && (
+            <div className="animate-in fade-in duration-300">
+              <DualCalendarModule
+                orders={orders}
+                activeFaculty={activeFaculty}
+                onToggleStatus={handleToggleStatus}
+                onOpenIcal={() => setIsIcalOpen(true)}
+                onJumpToEportfolio={handleJumpToEportfolio}
+                onNotify={showToast}
+              />
+            </div>
+          )}
 
-        {activeTab === 'eportfolio' && (
-          <div className="animate-in fade-in duration-300">
-            <EportfolioCopilotModule
-              orders={orders}
-              activeFaculty={activeFaculty}
-              selectedOrderId={selectedOrderIdForEportfolio}
-              onNotify={showToast}
-            />
-          </div>
-        )}
+          {activeTab === 'eportfolio' && (
+            <div className="animate-in fade-in duration-300">
+              <EportfolioCopilotModule
+                orders={orders}
+                activeFaculty={activeFaculty}
+                selectedOrderId={selectedOrderIdForEportfolio}
+                onNotify={showToast}
+              />
+            </div>
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* iCalendar Modal */}

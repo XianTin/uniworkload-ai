@@ -197,16 +197,16 @@ export default function Navbar({
                 title="จัดการโปรไฟล์และอาจารย์"
               >
                 <img
-                  src={activeFaculty.avatar}
-                  alt={activeFaculty.name}
+                  src={activeFaculty?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                  alt={activeFaculty?.name || 'อาจารย์'}
                   className="w-7 h-7 rounded-lg ring-1 ring-slate-300 object-cover"
                 />
                 <div className="hidden lg:block text-left pr-1">
                   <span className="text-xs font-semibold text-slate-800 block leading-tight truncate max-w-[120px]">
-                    {activeFaculty.name}
+                    {activeFaculty?.name || 'อาจารย์'}
                   </span>
                   <span className="text-[10px] text-slate-500 block leading-tight truncate max-w-[120px]">
-                    {activeFaculty.department.replace('สาขาวิชา', '')}
+                    {activeFaculty?.department ? activeFaculty.department.replace('สาขาวิชา', '') : 'มรภ.นว.'}
                   </span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -222,16 +222,16 @@ export default function Navbar({
                     </span>
                     <div className="flex items-center gap-2.5">
                       <img
-                        src={activeFaculty.avatar}
-                        alt={activeFaculty.name}
+                        src={activeFaculty?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                        alt={activeFaculty?.name || 'อาจารย์'}
                         className="w-9 h-9 rounded-xl ring-2 ring-blue-500/30 object-cover"
                       />
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-slate-900 truncate">
-                          {activeFaculty.name}
+                          {activeFaculty?.name || 'อาจารย์'}
                         </h4>
                         <p className="text-[11px] text-slate-500 truncate">
-                          {activeFaculty.role}
+                          {activeFaculty?.role || 'อาจารย์ประจำสาขา'}
                         </p>
                       </div>
                     </div>
@@ -244,7 +244,7 @@ export default function Navbar({
                     </span>
                     <div className="max-h-40 overflow-y-auto space-y-0.5">
                       {facultyList.map((faculty) => {
-                        const isSelected = faculty.id === activeFaculty.id;
+                        const isSelected = faculty.id === activeFaculty?.id;
                         return (
                           <button
                             key={faculty.id}

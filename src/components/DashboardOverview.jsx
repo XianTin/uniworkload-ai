@@ -36,8 +36,8 @@ export default function DashboardOverview({
   onOpenIngest
 }) {
   // Orders assigned to this faculty
-  const facultyOrders = orders.filter(o => 
-    o.facultyAssigned && o.facultyAssigned.some(f => f.id === activeFaculty.id)
+  const facultyOrders = (orders || []).filter(o => 
+    (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
   );
 
   // Recent 3 orders
@@ -66,7 +66,7 @@ export default function DashboardOverview({
                     คำสั่งล่าสุดในตู้ลิ้นชัก
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    คำสั่งราชการที่กระจายมายัง {activeFaculty.name}
+                    คำสั่งราชการที่กระจายมายัง {activeFaculty?.name || 'อาจารย์'}
                   </p>
                 </div>
               </div>
@@ -205,10 +205,11 @@ export default function DashboardOverview({
             ) : (
               <div className="space-y-3">
                 {upcomingEvents.map((evt) => {
-                  const eventDate = new Date(evt.eventDate);
-                  const day = eventDate.getDate();
+                  const eventDate = evt.eventDate ? new Date(evt.eventDate) : null;
+                  const isValidDate = eventDate && !isNaN(eventDate.getTime());
+                  const day = isValidDate ? eventDate.getDate() : '—';
                   const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                  const month = thaiMonths[eventDate.getMonth()];
+                  const month = isValidDate ? thaiMonths[eventDate.getMonth()] : 'ก.ย.';
 
                   return (
                     <div

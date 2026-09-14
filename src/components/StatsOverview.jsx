@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export default function StatsOverview({ activeFaculty, onOpenIngest, onNavigateTab }) {
-  const stats = activeFaculty.stats || {
+  const stats = activeFaculty?.stats || {
     totalOrders: 14,
     completedOrders: 11,
     pendingOrders: 3,
@@ -35,7 +35,7 @@ export default function StatsOverview({ activeFaculty, onOpenIngest, onNavigateT
               <span>รอบการประเมินปัจจุบัน: รอบที่ 2 / 2569 (1 เม.ย. – 30 ก.ย. 2569)</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-              ยินดีต้อนรับ, {activeFaculty.name}
+              ยินดีต้อนรับ, {activeFaculty?.name || 'อาจารย์'}
             </h1>
             <p className="text-slate-300 text-sm leading-relaxed">
               ระบบ UniWorkload AI ช่วยรวบรวมคำสั่งราชการ สกัดวันเวลานัดหมายลงปฏิทินมือถือ 

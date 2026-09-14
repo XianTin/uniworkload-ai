@@ -18,20 +18,24 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
 
   const [copied, setCopied] = useState(false);
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://uniworkload-ai.vercel.app';
-  const icalUrl = `${origin}/api/calendar/feed/${activeFaculty.id || 'fac-1'}.ics`;
-  const webcalUrl = `webcal://${origin.replace(/^https?:\/\//, '')}/api/calendar/feed/${activeFaculty.id || 'fac-1'}.ics`;
+  const facultyId = activeFaculty?.id || 'fac-1';
+  const facultyName = activeFaculty?.name || 'อาจารย์';
+  const icalUrl = `${origin}/api/calendar/feed/${facultyId}.ics`;
+  const webcalUrl = `webcal://${origin.replace(/^https?:\/\//, '')}/api/calendar/feed/${facultyId}.ics`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(icalUrl);
     setCopied(true);
-    onNotify('คัดลอก iCalendar URL แล้ว! สามารถนำไป Subscribe ใน Google/Apple Calendar ได้ทันที', 'success');
+    onNotify?.('คัดลอก iCalendar URL แล้ว! สามารถนำไป Subscribe ใน Google/Apple Calendar ได้ทันที', 'success');
     setTimeout(() => setCopied(false), 2500);
   };
 
   const handleDownload = () => {
-    const facultyOrders = orders.filter(o => o.facultyAssigned.some(f => f.id === activeFaculty.id));
-    downloadICSFile(facultyOrders, `uniworkload-${activeFaculty.id}.ics`);
-    onNotify('ดาวน์โหลดไฟล์ .ics สำเร็จ! สามารถเปิดในคอมพิวเตอร์หรือโทรศัพท์ได้ทันที', 'success');
+    const facultyOrders = (orders || []).filter(o => 
+      (o.facultyAssigned || []).some(f => f.id === facultyId)
+    );
+    downloadICSFile(facultyOrders, `uniworkload-${facultyId}.ics`);
+    onNotify?.('ดาวน์โหลดไฟล์ .ics สำเร็จ! สามารถเปิดในคอมพิวเตอร์หรือโทรศัพท์ได้ทันที', 'success');
   };
 
   return (
@@ -63,7 +67,7 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
         {/* URL Card with 1-Click Copy */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-slate-700">
-            URL ปฏิทินเฉพาะบุคคลสำหรับ {activeFaculty.name}
+            URL ปฏิทินเฉพาะบุคคลสำหรับ {facultyName}
           </label>
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 select-all truncate">

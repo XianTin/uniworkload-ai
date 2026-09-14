@@ -65,11 +65,11 @@ export default function DossierSummaryModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/80 text-[11px]">
               <div>
                 <span className="text-slate-500">ผู้รับการประเมิน: </span>
-                <strong className="text-slate-900">{activeFaculty.name}</strong>
+                <strong className="text-slate-900">{activeFaculty?.name || 'อาจารย์'}</strong>
               </div>
               <div>
                 <span className="text-slate-500">สังกัด: </span>
-                <span className="text-slate-800">{activeFaculty.department} {activeFaculty.faculty}</span>
+                <span className="text-slate-800">{activeFaculty?.department || 'สาขาวิชาเทคโนโลยีสารสนเทศ'} {activeFaculty?.faculty || 'คณะวิทยาการจัดการ'}</span>
               </div>
               <div>
                 <span className="text-slate-500">หมวดหมู่ภาระงาน: </span>
@@ -106,7 +106,7 @@ export default function DossierSummaryModal({
                   </tr>
                 ) : (
                   orders.map((order, idx) => {
-                    const assignment = order.facultyAssigned.find(f => f.id === activeFaculty.id);
+                    const assignment = (order.facultyAssigned || []).find(f => f.id === activeFaculty?.id);
                     return (
                       <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px]">
@@ -134,18 +134,22 @@ export default function DossierSummaryModal({
                         <td className="py-3 px-3 text-center">
                           {order.actualPhotos?.length > 0 ? (
                             <div className="flex items-center justify-center gap-1">
-                              {order.actualPhotos.slice(0, 2).map((photo) => (
-                                <img
-                                  key={photo.id}
-                                  src={photo.url}
-                                  alt="Thumb"
-                                  className="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-2xs"
-                                  title={photo.name}
-                                />
-                              ))}
-                              {order.actualPhotos.length > 2 && (
+                              {(order.actualPhotos || []).slice(0, 2).map((photo, pIdx) => {
+                                const photoUrl = typeof photo === 'string' ? photo : (photo?.url || '');
+                                const photoName = typeof photo === 'string' ? 'ภาพถ่ายหลักฐาน' : (photo?.name || 'ภาพถ่ายหลักฐาน');
+                                return (
+                                  <img
+                                    key={photo?.id || `photo-${pIdx}`}
+                                    src={photoUrl}
+                                    alt={photoName}
+                                    className="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-2xs"
+                                    title={photoName}
+                                  />
+                                );
+                              })}
+                              {(order.actualPhotos || []).length > 2 && (
                                 <span className="text-[10px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded-md font-mono">
-                                  +{order.actualPhotos.length - 2}
+                                  +{(order.actualPhotos || []).length - 2}
                                 </span>
                               )}
                             </div>

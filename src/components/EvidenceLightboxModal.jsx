@@ -10,20 +10,24 @@ export default function EvidenceLightboxModal({
 }) {
   if (!photo) return null;
 
+  const currentPhoto = typeof photo === 'string' 
+    ? { id: 'photo-raw', url: photo, name: 'ภาพถ่ายหลักฐาน.jpg', size: '1.5 MB', uploadedAt: '-' } 
+    : photo;
+
   const handleDownload = () => {
     // If it's a real base64 or URL, trigger download
     const link = document.createElement('a');
-    link.href = photo.url;
-    link.download = photo.name || 'evidence-photo.jpg';
+    link.href = currentPhoto.url;
+    link.download = currentPhoto.name || 'evidence-photo.jpg';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onNotify?.(`เริ่มดาวน์โหลดภาพ: ${photo.name}`, 'success');
+    onNotify?.(`เริ่มดาวน์โหลดภาพ: ${currentPhoto.name}`, 'success');
   };
 
   const handleDelete = () => {
-    if (confirm(`คุณต้องการลบภาพหลักฐาน "${photo.name}" หรือไม่?`)) {
-      onDeletePhoto?.(order?.id, photo.id);
+    if (confirm(`คุณต้องการลบภาพหลักฐาน "${currentPhoto.name}" หรือไม่?`)) {
+      onDeletePhoto?.(order?.id, currentPhoto.id);
       onClose();
       onNotify?.(`ลบภาพหลักฐานเรียบร้อยแล้ว`, 'info');
     }
@@ -35,8 +39,8 @@ export default function EvidenceLightboxModal({
         {/* Left / Main: Photo Viewer */}
         <div className="flex-1 bg-black/90 flex items-center justify-center p-4 relative min-h-[300px] md:min-h-[500px]">
           <img
-            src={photo.url}
-            alt={photo.name}
+            src={currentPhoto.url}
+            alt={currentPhoto.name}
             className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg shadow-2xl"
           />
         </div>
@@ -60,20 +64,20 @@ export default function EvidenceLightboxModal({
             {/* Photo Title */}
             <div>
               <h4 className="text-sm font-bold text-slate-100 leading-snug">
-                {photo.name}
+                {currentPhoto.name}
               </h4>
               <p className="text-[11px] text-slate-400 mt-1 font-mono">
-                ขนาด: {photo.size || '3.2 MB'} • บันทึกเมื่อ: {photo.uploadedAt || '-'}
+                ขนาด: {currentPhoto.size || '3.2 MB'} • บันทึกเมื่อ: {currentPhoto.uploadedAt || '-'}
               </p>
             </div>
 
             {/* Note / Caption */}
-            {photo.note && (
+            {currentPhoto.note && (
               <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 text-xs text-slate-300 space-y-1">
                 <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
                   คำอธิบายภาพหลักฐาน (e-Portfolio Note):
                 </span>
-                <p className="italic leading-relaxed">"{photo.note}"</p>
+                <p className="italic leading-relaxed">"{currentPhoto.note}"</p>
               </div>
             )}
 

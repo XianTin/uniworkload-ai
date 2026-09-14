@@ -53,41 +53,90 @@ export async function fetchOrdersFromSupabase(fallback = []) {
       return fallback;
     }
 
-    return data.map((ord) => ({
-      id: ord.id,
-      facultyId: ord.faculty_id || 'fac-1',
-      orderNumber: ord.order_number || '',
-      title: ord.title || '',
-      signDate: ord.sign_date || '',
-      eventDate: ord.event_date || '',
-      eventTime: ord.event_time || '',
-      location: ord.location || '',
-      category: ord.category || 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
-      categoryCode: getCategoryCode(ord.category),
-      categoryColor: getCategoryColor(ord.category),
-      status: ord.status || 'pending',
-      role: ord.role || '',
-      workloadHours: Number(ord.workload_hours) || 0,
-      evidenceStatus: (ord.order_evidences && ord.order_evidences.length > 0) ? 'ready' : (ord.evidence_status || 'none'),
-      documentFileName: ord.doc_file_name || null,
-      rawOcrText: ord.raw_ocr_text || null,
-      evidences: (ord.order_evidences || []).map((ev) => ({
+    const facultyMap = {
+      'fac-pimra': { name: 'อ.พิมรา ทองแสง', role: 'รองผู้อำนวยการ' },
+      'fac-kritsana': { name: 'ผศ.ดร.กฤษณะ มีสุข', role: 'ผู้ช่วยศาสตราจารย์' },
+      'fac-theerapat': { name: 'อ.ธีรภัทร วัฒนศิลป์', role: 'อาจารย์ประจำสาขาวิชา' },
+      'fac-1': { name: 'อ.ธนภัทร สุขเกษม (tie)', role: 'อาจารย์ผู้รับผิดชอบ' },
+      'fac-2': { name: 'ผศ.ดร.สมชาย ใจดี', role: 'ผู้ช่วยศาสตราจารย์' },
+      'fac-3': { name: 'อ.วรัญญา ประเสริฐสุข', role: 'อาจารย์ประจำสาขา' }
+    };
+
+    const parsedDbOrders = data.map((ord) => {
+      const assignedFacId = ord.faculty_id || 'fac-pimra';
+      const facInfo = facultyMap[assignedFacId] || { name: 'อาจารย์ผู้รับผิดชอบ', role: ord.role || 'กรรมการ' };
+
+      const photos = (ord.order_evidences || []).map((ev) => ({
         id: ev.id,
-        title: ev.title || 'ภาพถ่ายหลักฐานหน้างาน',
+        name: ev.title || 'ภาพถ่ายหลักฐานหน้างาน.jpg',
         url: ev.image_url,
-        fileSize: ev.file_size || '1.2 MB',
-        uploadedAt: ev.uploaded_at || new Date().toISOString(),
-        description: ev.description || ''
-      })),
-      actualPhotos: (ord.order_evidences || []).map((ev) => ev.image_url),
-      ePortfolio: {
-        topic: ord.title || '',
-        role: ord.role || 'กรรมการ',
-        hours: Number(ord.workload_hours) || 3,
-        resultSummary: `ดำเนินงานตามคำสั่ง ${ord.order_number} เรียบร้อยสมบูรณ์`,
-        status: 'ready_to_export'
+        size: ev.file_size || '1.2 MB',
+        uploadedAt: ev.uploaded_at ? ev.uploaded_at.split('T')[0] : (ord.event_date || new Date().toISOString().split('T')[0]),
+        type: 'photo'
+      }));
+
+      const docFile = ord.doc_file_name || `${ord.order_number ? ord.order_number.replace(/[^a-zA-Z0-9ก-๙]/g, '_') : 'order'}.pdf`;
+
+      return {
+        id: ord.id,
+        facultyId: assignedFacId,
+        orderNumber: ord.order_number || '',
+        title: ord.title || '',
+        signDate: ord.sign_date || '',
+        eventDate: ord.event_date || '',
+        eventTime: ord.event_time || '08:30 - 16:30 น.',
+        location: ord.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+        category: ord.category || 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
+        categoryCode: getCategoryCode(ord.category),
+        categoryColor: getCategoryColor(ord.category),
+        status: ord.status || 'upcoming',
+        role: ord.role || 'กรรมการดำเนินงาน',
+        workloadHours: Number(ord.workload_hours) || 3,
+        evidenceStatus: photos.length > 0 ? 'ready' : (ord.evidence_status || 'none'),
+        documentFileName: docFile,
+        rawOcrText: ord.raw_ocr_text || null,
+        facultyAssigned: [
+          {
+            id: assignedFacId,
+            name: facInfo.name,
+            roleInOrder: ord.role || 'กรรมการดำเนินงาน'
+          }
+        ],
+        evidenceFiles: [
+          {
+            id: `ev-doc-${ord.id}`,
+            name: docFile,
+            size: '1.8 MB',
+            type: docFile.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image',
+            uploadedAt: ord.sign_date || new Date().toISOString().split('T')[0]
+          }
+        ],
+        actualPhotos: photos,
+        ePortfolio: {
+          year: ord.sign_date ? String(new Date(ord.sign_date).getFullYear() + 543) : '2569',
+          round: 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)',
+          topic: ord.title || '',
+          role: ord.role || 'กรรมการดำเนินงาน',
+          hours: Number(ord.workload_hours) || 3,
+          workloadRef: `ภาระงานด้าน${ord.category || 'มหาวิทยาลัย'} มหาวิทยาลัยราชภัฏนครสวรรค์`,
+          resultSummary: ord.status === 'done' 
+            ? `ปฏิบัติหน้าที่ตามคำสั่ง ${ord.order_number} เรียบร้อยแล้ว`
+            : `อยู่ระหว่างรอดำเนินการตามกำหนดการคำสั่งราชการ`,
+          status: ord.status === 'done' ? 'completed' : 'pending_task'
+        }
+      };
+    });
+
+    // Merge DB orders with fallback orders to ensure all faculties have demo data
+    const dbOrderIds = new Set(parsedDbOrders.map(o => o.id));
+    const mergedOrders = [...parsedDbOrders];
+    for (const fb of fallback) {
+      if (!dbOrderIds.has(fb.id)) {
+        mergedOrders.push(fb);
       }
-    }));
+    }
+
+    return mergedOrders;
   } catch (err) {
     console.warn('[Supabase] Exception fetching orders:', err);
     return fallback;

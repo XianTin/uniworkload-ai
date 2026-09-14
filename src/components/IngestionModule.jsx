@@ -115,6 +115,7 @@ export default function IngestionModule({
     categoryCode: 'service',
     categoryColor: 'emerald',
     workloadHours: 3,
+    status: 'upcoming',
     facultyAssigned: []
   });
 
@@ -213,6 +214,7 @@ export default function IngestionModule({
         categoryCode: parsedData.categoryCode,
         categoryColor: parsedData.categoryColor,
         workloadHours: parsedData.estimatedHours || 3,
+        status: 'upcoming',
         facultyAssigned: parsedData.facultyAssigned
       });
       setActiveResultTab('form');
@@ -428,7 +430,7 @@ export default function IngestionModule({
       workloadHours: Number(formData.workloadHours) || 3,
       role: formData.facultyAssigned[0]?.roleInOrder || 'กรรมการ',
       facultyAssigned: formData.facultyAssigned,
-      status: 'upcoming',
+      status: formData.status || 'upcoming',
       rawOcrText: scanResult.detectedText || '',
       documentFileName: activeFile?.name || scanResult.filename || 'เอกสารคำสั่ง.pdf',
       evidenceFiles: [
@@ -441,16 +443,18 @@ export default function IngestionModule({
           uploadedAt: new Date().toISOString().split('T')[0]
         }
       ],
-      actualPhotos: previewUrl ? [previewUrl] : [],
+      actualPhotos: [],
       ePortfolio: {
-        year: '2569',
+        year: formData.signDate ? String(new Date(formData.signDate).getFullYear() + 543) : '2569',
         round: 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)',
         topic: formData.title,
         role: formData.facultyAssigned[0]?.roleInOrder || 'กรรมการดำเนินงาน',
         hours: Number(formData.workloadHours) || 3,
         workloadRef: `ภาระงานด้าน${formData.category} มหาวิทยาลัยราชภัฏนครสวรรค์`,
-        resultSummary: `ดำเนินงานตามคำสั่ง ${formData.orderNumber} ${formData.title} เรียบร้อยสมบูรณ์`,
-        status: 'ready_to_export'
+        resultSummary: (formData.status === 'done')
+          ? `ปฏิบัติหน้าที่ตามคำสั่ง ${formData.orderNumber} เรียบร้อยแล้ว`
+          : `อยู่ระหว่างรอดำเนินการตามกำหนดการคำสั่งราชการ`,
+        status: (formData.status === 'done') ? 'completed' : 'pending_task'
       }
     };
 
@@ -850,6 +854,42 @@ export default function IngestionModule({
                           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                           className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden"
                         />
+                      </div>
+
+                      {/* Explicit Status Selector */}
+                      <div className="sm:col-span-2 pt-1">
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span>สถานะการปฏิบัติงานเริ่มต้น:</span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            (กำหนดเป็น "รอดำเนินการ" เพื่อรอแนบภาพถ่ายหลังเสร็จงาน)
+                          </span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData(p => ({ ...p, status: 'upcoming' }))}
+                            className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                              (formData.status || 'upcoming') === 'upcoming'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300 ring-2 ring-amber-400/20 shadow-xs'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>⏳ รอดำเนินการ (Upcoming)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(p => ({ ...p, status: 'done' }))}
+                            className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                              formData.status === 'done'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-400/20 shadow-xs'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>✓ ปฏิบัติงานแล้วเสร็จ (Done)</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 

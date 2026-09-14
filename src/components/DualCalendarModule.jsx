@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -24,10 +24,16 @@ export default function DualCalendarModule({
   onNotify
 }) {
   const [viewMode, setViewMode] = useState('month'); // 'month' | 'agenda'
-  const [selectedOrder, setSelectedOrder] = useState(orders[0] || null);
-
   // Filter orders relevant to active faculty
-  const facultyOrders = orders.filter(o => o.facultyAssigned.some(f => f.id === activeFaculty.id));
+  const facultyOrders = (orders || []).filter(o => 
+    (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
+  );
+  const [selectedOrder, setSelectedOrder] = useState(() => facultyOrders[0] || (orders && orders[0]) || null);
+
+  // Sync selected order when faculty or orders change
+  useEffect(() => {
+    setSelectedOrder(facultyOrders[0] || (orders && orders[0]) || null);
+  }, [activeFaculty?.id, orders]);
 
   // September 2026 calendar days simulation (Sep 1, 2026 was Tuesday)
   // Calendar days: 1 to 30.
@@ -209,7 +215,9 @@ export default function DualCalendarModule({
                   <div className="flex items-center gap-3">
                     <div className="text-center font-mono bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
                       <span className="text-[10px] text-slate-500 block uppercase">ก.ย.</span>
-                      <span className="text-base font-bold text-slate-800">{ev.eventDate.split('-')[2]}</span>
+                      <span className="text-base font-bold text-slate-800">
+                        {ev.eventDate ? (ev.eventDate.split('-')[2] || '—') : '—'}
+                      </span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -300,13 +308,13 @@ export default function DualCalendarModule({
                   ผู้รับผิดชอบตามคำสั่งราชการ:
                 </span>
                 <div className="space-y-1.5">
-                  {selectedOrder.facultyAssigned.map((f, i) => (
+                  {(selectedOrder.facultyAssigned || []).map((f, i) => (
                     <div key={i} className="text-xs flex items-center justify-between text-slate-700">
-                      <span className={f.id === activeFaculty.id ? 'font-bold text-blue-700' : ''}>
-                        {f.name}
+                      <span className={f.id === activeFaculty?.id ? 'font-bold text-blue-700' : ''}>
+                        {f.name || 'อาจารย์ผู้รับผิดชอบ'}
                       </span>
                       <span className="text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded-md border border-slate-200">
-                        {f.roleInOrder.slice(0, 20)}
+                        {(f.roleInOrder || 'กรรมการดำเนินงาน').slice(0, 25)}
                       </span>
                     </div>
                   ))}

@@ -115,16 +115,18 @@ export default function PersonalDrawerModule({
 
   // Base list of orders assigned to active faculty
   const assignedOrders = useMemo(() => {
+    if (!orders || !Array.isArray(orders)) return [];
     return orders.filter((order) => 
-      order.facultyAssigned.some(f => f.id === activeFaculty.id)
+      (order.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
     );
-  }, [orders, activeFaculty.id]);
+  }, [orders, activeFaculty?.id]);
 
   // Compute category counts
   const categoryCounts = useMemo(() => {
     const counts = { all: assignedOrders.length };
     assignedOrders.forEach((o) => {
-      counts[o.category] = (counts[o.category] || 0) + 1;
+      const cat = o.category || 'อื่นๆ';
+      counts[cat] = (counts[cat] || 0) + 1;
     });
     return counts;
   }, [assignedOrders]);
@@ -134,25 +136,26 @@ export default function PersonalDrawerModule({
     return assignedOrders.filter((order) => {
       if (filterStatus === 'upcoming' && order.status !== 'upcoming') return false;
       if (filterStatus === 'done' && order.status !== 'done') return false;
-      if (filterStatus === 'missing_photo' && (order.actualPhotos?.length > 0)) return false;
+      if (filterStatus === 'missing_photo' && ((order.actualPhotos || []).length > 0)) return false;
 
       if (selectedCategory !== 'all') {
-        const matchesCategory = order.category === selectedCategory || 
+        const cat = order.category || '';
+        const matchesCategory = cat === selectedCategory || 
           order.categoryCode === selectedCategory ||
-          order.category.includes(selectedCategory);
+          cat.includes(selectedCategory);
         if (!matchesCategory) return false;
       }
 
       const orderDate = order.eventDate || order.signDate;
-      if (startDate && orderDate < startDate) return false;
-      if (endDate && orderDate > endDate) return false;
+      if (startDate && orderDate && orderDate < startDate) return false;
+      if (endDate && orderDate && orderDate > endDate) return false;
 
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
-        const matchNumber = order.orderNumber.toLowerCase().includes(q);
-        const matchTitle = order.title.toLowerCase().includes(q);
-        const matchCategory = order.category.toLowerCase().includes(q);
-        const matchLocation = order.location?.toLowerCase().includes(q);
+        const matchNumber = (order.orderNumber || '').toLowerCase().includes(q);
+        const matchTitle = (order.title || '').toLowerCase().includes(q);
+        const matchCategory = (order.category || '').toLowerCase().includes(q);
+        const matchLocation = (order.location || '').toLowerCase().includes(q);
         return matchNumber || matchTitle || matchCategory || matchLocation;
       }
 
@@ -220,7 +223,7 @@ export default function PersonalDrawerModule({
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>ตู้ลิ้นชักแฟ้มหลักฐานส่วนบุคคล:</span>
-              <span className="text-blue-700">{activeFaculty.name}</span>
+              <span className="text-blue-700">{activeFaculty?.name || 'อาจารย์'}</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               จัดเก็บคำสั่งราชการ แนบภาพถ่ายหน้างานจริง กรองช่วงวันที่อิสระ และส่งต่อ e-Portfolio มรภ.นครสวรรค์
@@ -545,7 +548,7 @@ export default function PersonalDrawerModule({
           </div>
           <div className="max-w-xl mx-auto space-y-2">
             <h3 className="text-base sm:text-lg font-bold text-slate-800">
-              ยินดีต้อนรับอาจารย์ {activeFaculty.name} สู่ UniWorkload AI! 🎓
+              ยินดีต้อนรับอาจารย์ {activeFaculty?.name || 'อาจารย์'} สู่ UniWorkload AI! 🎓
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               ตู้ลิ้นชักแฟ้มงานส่วนบุคคลของท่านเปิดใช้งานเรียบร้อยแล้ว พร้อมระบบปฏิทิน iCal Feed และเชื่อมต่อระบบ AI OCR สกัดข้อมูลอัตโนมัติ
@@ -614,7 +617,7 @@ export default function PersonalDrawerModule({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {filteredOrders.map((order) => {
-            const myAssignment = order.facultyAssigned.find(f => f.id === activeFaculty.id);
+            const myAssignment = (order.facultyAssigned || []).find(f => f.id === activeFaculty?.id);
             const isDone = order.status === 'done';
             const hasPhotos = order.actualPhotos && order.actualPhotos.length > 0;
 
@@ -688,7 +691,7 @@ export default function PersonalDrawerModule({
                       <div className="flex items-center gap-1.5">
                         <FileText className="w-3.5 h-3.5 text-blue-600" />
                         <span className="text-xs font-bold text-slate-800">
-                          หลักฐานและภาพถ่าย ({order.evidenceFiles.length + (order.actualPhotos?.length || 0)})
+                          หลักฐานและภาพถ่าย ({((order.evidenceFiles || []).length) + ((order.actualPhotos || []).length)})
                         </span>
                       </div>
 
@@ -703,17 +706,17 @@ export default function PersonalDrawerModule({
 
                     {/* Official PDF Document */}
                     <div className="space-y-1.5 mb-2.5">
-                      {order.evidenceFiles.map((f) => (
+                      {(order.evidenceFiles || []).map((f, fIdx) => (
                         <div
-                          key={f.id}
+                          key={f.id || `f-${fIdx}`}
                           className="flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200/80 transition-colors text-xs"
                         >
                           <div className="flex items-center gap-1.5 truncate">
                             <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                            <span className="truncate font-medium">{f.name}</span>
+                            <span className="truncate font-medium">{f.name || 'เอกสารคำสั่ง.pdf'}</span>
                           </div>
                           <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
-                            {f.size}
+                            {f.size || '1.5 MB'}
                           </span>
                         </div>
                       ))}
@@ -723,25 +726,31 @@ export default function PersonalDrawerModule({
                     <div>
                       {hasPhotos ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {order.actualPhotos.map((photo) => (
-                            <div
-                              key={photo.id}
-                              onClick={() => setLightboxData({ photo, order })}
-                              className="group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
-                            >
-                              <img
-                                src={photo.url}
-                                alt={photo.name}
-                                className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
-                                <span className="text-[9px] text-white truncate max-w-[80%] font-medium">
-                                  {photo.name}
-                                </span>
-                                <Maximize2 className="w-3 h-3 text-white shrink-0" />
+                          {(order.actualPhotos || []).map((photo, pIdx) => {
+                            const photoObj = typeof photo === 'string' 
+                              ? { id: `photo-${pIdx}`, url: photo, name: `ภาพถ่ายปฏิบัติงาน_${pIdx + 1}.jpg` }
+                              : photo;
+
+                            return (
+                              <div
+                                key={photoObj.id || `p-${pIdx}`}
+                                onClick={() => setLightboxData({ photo: photoObj, order })}
+                                className="group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
+                              >
+                                <img
+                                  src={photoObj.url}
+                                  alt={photoObj.name || 'ภาพหลักฐาน'}
+                                  className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
+                                  <span className="text-[9px] text-white truncate max-w-[80%] font-medium">
+                                    {photoObj.name || 'ภาพหลักฐาน'}
+                                  </span>
+                                  <Maximize2 className="w-3 h-3 text-white shrink-0" />
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="bg-amber-50/70 border border-amber-200/80 rounded-lg p-2.5 text-center">

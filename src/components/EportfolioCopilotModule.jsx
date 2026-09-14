@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   Copy, 
@@ -20,38 +20,56 @@ export default function EportfolioCopilotModule({
   onNotify 
 }) {
   // Filter orders for this faculty
-  const facultyOrders = orders.filter(o => o.facultyAssigned.some(f => f.id === activeFaculty.id));
+  const facultyOrders = (orders || []).filter(o => 
+    (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
+  );
   const [activeOrderId, setActiveOrderId] = useState(
-    selectedOrderId || facultyOrders[0]?.id || orders[0]?.id
+    selectedOrderId || facultyOrders[0]?.id || (orders && orders[0]?.id) || null
   );
   const [copiedField, setCopiedField] = useState(null);
 
-  const currentOrder = orders.find(o => o.id === activeOrderId) || facultyOrders[0];
+  // Sync activeOrderId when selectedOrderId or faculty changes
+  useEffect(() => {
+    if (selectedOrderId) {
+      setActiveOrderId(selectedOrderId);
+    } else {
+      setActiveOrderId(facultyOrders[0]?.id || (orders && orders[0]?.id) || null);
+    }
+  }, [selectedOrderId, activeFaculty?.id, orders]);
+
+  const currentOrder = (orders || []).find(o => o.id === activeOrderId) || facultyOrders[0] || (orders && orders[0]) || null;
 
   const handleCopy = (fieldName, text) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedField(fieldName);
-    onNotify(`คัดลอก [${fieldName}] เรียบร้อยแล้ว`, 'success');
+    onNotify?.(`คัดลอก [${fieldName}] เรียบร้อยแล้ว`, 'success');
     setTimeout(() => setCopiedField(null), 2000);
   };
 
   const handleCopyAll = () => {
     if (!currentOrder) return;
-    const allText = `ปีการประเมิน: ${currentOrder.ePortfolio.year}
-รอบการประเมินที่: ${currentOrder.ePortfolio.round}
-หัวข้อ: ${currentOrder.ePortfolio.topic}
-อ้างอิงภาระงาน: ${currentOrder.ePortfolio.workloadRef}
-เอกสารแนบ: ${currentOrder.evidenceFiles.map(f => f.name).join(', ')}${currentOrder.actualPhotos.length ? ' และภาพถ่ายหน้างาน ' + currentOrder.actualPhotos.map(p => p.name).join(', ') : ''}
-(จัดเตรียมข้อมูลโดยระบบ UniWorkload AI มรภ.นครสวรรค์)`;
+    const ep = currentOrder.ePortfolio || {};
+    const evFiles = (currentOrder.evidenceFiles || []).map(f => f.name || 'เอกสารคำสั่ง.pdf');
+    const photos = (currentOrder.actualPhotos || []).map((p, i) => 
+      typeof p === 'string' ? `ภาพถ่ายปฏิบัติงาน_${i + 1}.jpg` : (p.name || `ภาพถ่ายปฏิบัติงาน_${i + 1}.jpg`)
+    );
+
+    const allText = `ปีการประเมิน: ${ep.year || '2569'}
+รอบการประเมินที่: ${ep.round || 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)'}
+หัวข้อ: ${ep.topic || currentOrder.title || ''}
+อ้างอิงภาระงาน: ${ep.workloadRef || `ภาระงานด้าน${currentOrder.category || 'มหาวิทยาลัย'} มรภ.นครสวรรค์`}
+เอกสารแนบ: ${evFiles.join(', ')}${photos.length ? ' และภาพถ่ายหน้างาน ' + photos.join(', ') : ''}
+(จัดเตรียมข้อมูลโดยระบบ UniWorkload AI มหาวิทยาลัยราชภัฏนครสวรรค์)`;
 
     navigator.clipboard.writeText(allText);
     setCopiedField('all');
-    onNotify('คัดลอกชุดข้อมูลฟอร์ม e-Portfolio ครบทั้ง 5 ช่องแล้ว!', 'success');
+    onNotify?.('คัดลอกชุดข้อมูลฟอร์ม e-Portfolio ครบทั้ง 5 ช่องแล้ว!', 'success');
     setTimeout(() => setCopiedField(null), 2500);
   };
 
   const handleDownloadEvidencePackage = () => {
-    onNotify(`ดาวน์โหลดชุดแฟ้มหลักฐาน (คำสั่ง PDF + รูปภาพปฏิบัติงาน) ของ ${currentOrder.orderNumber} สำเร็จ`, 'success');
+    onNotify?.(`ดาวน์โหลดชุดแฟ้มหลักฐาน (คำสั่ง PDF + รูปภาพปฏิบัติงาน) ของ ${currentOrder?.orderNumber || ''} สำเร็จ`, 'success');
   };
 
   return (
@@ -115,7 +133,7 @@ export default function EportfolioCopilotModule({
                         {ord.orderNumber}
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        {ord.ePortfolio.round.split(' ')[0]} {ord.ePortfolio.year}
+                        {(ord.ePortfolio?.round ? ord.ePortfolio.round.split(' ')[0] : 'รอบ 2')} {ord.ePortfolio?.year || '2569'}
                       </span>
                     </div>
                     <h4 className="text-xs font-bold text-slate-800 leading-snug line-clamp-2">
@@ -177,14 +195,14 @@ export default function EportfolioCopilotModule({
                       ช่องที่ 1: ปีการประเมิน
                     </span>
                     <span className="text-sm font-semibold text-slate-900 font-mono">
-                      {currentOrder.ePortfolio.year}
+                      {currentOrder.ePortfolio?.year || '2569'}
                     </span>
                     <span className="text-[11px] text-slate-500 block">
                       (ระบบวิเคราะห์จาก พ.ศ. ของคำสั่งราชการให้อัตโนมัติ)
                     </span>
                   </div>
                   <button
-                    onClick={() => handleCopy('ปีการประเมิน', currentOrder.ePortfolio.year)}
+                    onClick={() => handleCopy('ปีการประเมิน', currentOrder.ePortfolio?.year || '2569')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {copiedField === 'ปีการประเมิน' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -199,14 +217,14 @@ export default function EportfolioCopilotModule({
                       ช่องที่ 2: รอบการประเมินที่
                     </span>
                     <span className="text-sm font-semibold text-slate-900">
-                      {currentOrder.ePortfolio.round}
+                      {currentOrder.ePortfolio?.round || 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)'}
                     </span>
                     <span className="text-[11px] text-slate-500 block">
                       (คำนวณตามช่วงวันที่จัดกิจกรรม รอบ 1 หรือ รอบ 2)
                     </span>
                   </div>
                   <button
-                    onClick={() => handleCopy('รอบการประเมินที่', currentOrder.ePortfolio.round)}
+                    onClick={() => handleCopy('รอบการประเมินที่', currentOrder.ePortfolio?.round || 'รอบ 2')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {copiedField === 'รอบการประเมินที่' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -221,14 +239,14 @@ export default function EportfolioCopilotModule({
                       ช่องที่ 3: หัวข้อภาระงาน
                     </span>
                     <p className="text-xs font-semibold text-slate-900 leading-relaxed">
-                      {currentOrder.ePortfolio.topic}
+                      {currentOrder.ePortfolio?.topic || currentOrder.title || 'คำสั่งราชการ'}
                     </p>
                     <span className="text-[11px] text-slate-500 block">
                       (สกัดบทบาทและชื่องานตามคำสั่งราชการอย่างกระชับและเป็นทางการ)
                     </span>
                   </div>
                   <button
-                    onClick={() => handleCopy('หัวข้อภาระงาน', currentOrder.ePortfolio.topic)}
+                    onClick={() => handleCopy('หัวข้อภาระงาน', currentOrder.ePortfolio?.topic || currentOrder.title || '')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {copiedField === 'หัวข้อภาระงาน' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -243,14 +261,14 @@ export default function EportfolioCopilotModule({
                       ช่องที่ 4: อ้างอิงภาระงาน
                     </span>
                     <span className="text-xs font-semibold text-slate-900 block">
-                      {currentOrder.ePortfolio.workloadRef}
+                      {currentOrder.ePortfolio?.workloadRef || `ภาระงานด้าน${currentOrder.category || 'มหาวิทยาลัย'} มรภ.นครสวรรค์`}
                     </span>
                     <span className="text-[11px] text-slate-500 block">
                       (จับคู่กับหมวดหมู่ตามข้อบังคับมหาวิทยาลัย)
                     </span>
                   </div>
                   <button
-                    onClick={() => handleCopy('อ้างอิงภาระงาน', currentOrder.ePortfolio.workloadRef)}
+                    onClick={() => handleCopy('อ้างอิงภาระงาน', currentOrder.ePortfolio?.workloadRef || `ภาระงานด้าน${currentOrder.category || 'มหาวิทยาลัย'}`)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {copiedField === 'อ้างอิงภาระงาน' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -265,16 +283,19 @@ export default function EportfolioCopilotModule({
                       ช่องที่ 5: แนบเอกสารหลักฐาน (Attachment)
                     </span>
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {currentOrder.evidenceFiles.map(f => (
-                        <span key={f.id} className="text-xs bg-white border border-slate-300 px-2.5 py-1 rounded-md text-slate-800 font-medium">
-                          {f.name}
+                      {(currentOrder.evidenceFiles || []).map((f, i) => (
+                        <span key={f.id || i} className="text-xs bg-white border border-slate-300 px-2.5 py-1 rounded-md text-slate-800 font-medium">
+                          {f.name || 'เอกสารคำสั่ง.pdf'}
                         </span>
                       ))}
-                      {currentOrder.actualPhotos.map(p => (
-                        <span key={p.id} className="text-xs bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md text-emerald-800 font-medium">
-                          {p.name}
-                        </span>
-                      ))}
+                      {(currentOrder.actualPhotos || []).map((p, i) => {
+                        const name = typeof p === 'string' ? `ภาพถ่ายหลักฐาน_${i + 1}.jpg` : (p.name || `ภาพถ่ายหลักฐาน_${i + 1}.jpg`);
+                        return (
+                          <span key={p.id || i} className="text-xs bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md text-emerald-800 font-medium">
+                            {name}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                   <button

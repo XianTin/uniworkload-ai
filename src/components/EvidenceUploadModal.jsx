@@ -106,9 +106,10 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const safeOrderNum = (order?.orderNumber || 'order').replace(/[^a-zA-Z0-9ก-๙]/g, '_');
     const finalTitle = title || (evidenceType === 'photo' 
-      ? `ภาพถ่ายปฏิบัติงานจริง_${order.orderNumber.replace(/[^a-zA-Z0-9ก-๙]/g, '_')}.jpg` 
-      : `หลักฐานลงทะเบียน_${order.orderNumber.replace(/[^a-zA-Z0-9ก-๙]/g, '_')}.pdf`);
+      ? `ภาพถ่ายปฏิบัติงานจริง_${safeOrderNum}.jpg` 
+      : `หลักฐานลงทะเบียน_${safeOrderNum}.pdf`);
 
     const newEvidence = {
       id: `ev-photo-${Date.now()}`,
