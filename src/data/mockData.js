@@ -492,3 +492,223 @@ export const DEMO_RAW_ORDERS = [
   }
 ];
 
+export const REAL_OFFICIAL_DOCUMENTS = [
+  {
+    id: "real-1",
+    fileName: "nrru_order_coop.pdf",
+    orderNo: "๓๕๖๒/๒๕๖๘",
+    org: "มรภ.นครราชสีมา",
+    title: "คำสั่งมหาวิทยาลัยราชภัฏนครราชสีมา ที่ ๓๕๖๒/๒๕๖๘",
+    subtitle: "แต่งตั้งคณะกรรมการดำเนินงานโครงการสหกิจศึกษา",
+    category: "บริการวิชาการแก่สังคม",
+    badge: "Digital Text (เร็ว)",
+    type: "digital",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
+  },
+  {
+    id: "real-2",
+    fileName: "pnu_order_advisor_2567.pdf",
+    orderNo: "1068/๒๕6๗",
+    org: "ม.นราธิวาสราชนครินทร์",
+    title: "คำสั่งมหาวิทยาลัยนราธิวาสราชนครินทร์ ที่ 1068/๒๕6๗",
+    subtitle: "แต่งตั้งคณะกรรมการดำเนินงานอาจารย์ที่ปรึกษา ประจำปีการศึกษา 2567",
+    category: "การจัดการเรียนการสอน",
+    badge: "Digital Text (เร็ว)",
+    type: "digital",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
+  },
+  {
+    id: "real-3",
+    fileName: "nsru_order_105_2567_research.pdf",
+    orderNo: "๑๐๕/๒๕๖๗",
+    org: "มรภ.นครสวรรค์",
+    title: "คำสั่ง/คู่มือ มรภ.นครสวรรค์ (สถาบันวิจัยและพัฒนา)",
+    subtitle: "แต่งตั้งคณะกรรมการติดตามประเมินผลโครงการวิทยาศาสตร์วิจัยและนวัตกรรม",
+    category: "งานวิจัยและนวัตกรรม",
+    badge: "Digital Text (เร็ว)",
+    type: "digital",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
+  },
+  {
+    id: "real-4",
+    fileName: "nsru_order_257_2569_construction.pdf",
+    orderNo: "๒๕๗/๒๕๖๙",
+    org: "มรภ.นครสวรรค์",
+    title: "คำสั่ง มรภ.นครสวรรค์ ที่ ๒๕๗/๒๕๖๙ (ตราครุฑ)",
+    subtitle: "แต่งตั้งคณะกรรมการจัดทำแบบรูปรายการงานก่อสร้าง และกำหนดราคากลาง",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-5",
+    fileName: "nsru_order_162_2569_building.pdf",
+    orderNo: "๑๖๒/๒๕๖๙",
+    org: "มรภ.นครสวรรค์",
+    title: "คำสั่ง มรภ.นครสวรรค์ ที่ ๑๖๒/๒๕๖๙ (ตราครุฑ)",
+    subtitle: "แต่งตั้งคณะกรรมการจัดทำแบบรูปรายการงานก่อสร้าง",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-6",
+    fileName: "nsru_order_156_2569_election.pdf",
+    orderNo: "๑๕๖/๒๕๖๙",
+    org: "มรภ.นครสวรรค์",
+    title: "ประกาศ/คำสั่ง มรภ.นครสวรรค์ ที่ ๑๕๖/๒๕๖๙",
+    subtitle: "แต่งตั้งคณะกรรมการกลางการเลือกตั้งนายกองค์การบริหารนักศึกษา ภาคปกติ",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-7",
+    fileName: "nsru_order_230_2563_delegation.pdf",
+    orderNo: "๒๓๐/๒๕๖๓",
+    org: "มรภ.นครสวรรค์",
+    title: "คำสั่ง มรภ.นครสวรรค์ ที่ ๒๓๐/๒๕๖๓ (ตราครุฑ)",
+    subtitle: "มอบอำนาจให้คณบดี ผู้อำนวยการสำนัก ปฏิบัติราชการแทนอธิการบดี",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-8",
+    fileName: "nsru_order_mt_2079.pdf",
+    orderNo: "ทส. ๒๐๗๙",
+    org: "มรภ.นครสวรรค์ (วิทยาการจัดการ)",
+    title: "คำสั่งคณะวิทยาการจัดการ มรภ.นครสวรรค์",
+    subtitle: "คำสั่งมอบหมายภาระงานและบริหารงานคณะ ประจำปีการศึกษา",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-9",
+    fileName: "uru_order_teaching.pdf",
+    orderNo: "มรภ.อต.",
+    org: "มรภ.อุตรดิตถ์",
+    title: "คำสั่ง มรภ.อุตรดิตถ์ เรื่องการแต่งตั้งอาจารย์ผู้สอน",
+    subtitle: "เปลี่ยนแปลงการแต่งตั้งอาจารย์ผู้สอนประจำภาคเรียน (ตารางภาระงานสอน)",
+    category: "การจัดการเรียนการสอน",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-10",
+    fileName: "crru_order_teaching_grad.pdf",
+    orderNo: "มรภ.ชร.",
+    org: "มรภ.เชียงราย",
+    title: "คำสั่ง มรภ.เชียงราย เรื่องอาจารย์ผู้สอนระดับบัณฑิตศึกษา",
+    subtitle: "แต่งตั้งอาจารย์ผู้สอนนักศึกษาระดับบัณฑิตศึกษา (เพิ่มเติม)",
+    category: "การจัดการเรียนการสอน",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-11",
+    fileName: "cpru_order_governance_2569.pdf",
+    orderNo: "มรภ.ชย. ๒๕๖๙",
+    org: "มรภ.ชัยภูมิ",
+    title: "คำสั่ง มรภ.ชัยภูมิ ที่ ๒๕๖๙ (ตราครุฑ)",
+    subtitle: "แต่งตั้งคณะกรรมการดำเนินงานด้านธรรมาภิบาลและจริยธรรม ๒๕๖๙",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-12",
+    fileName: "cmu_order_building_renovation.pdf",
+    orderNo: "มช. ๑๖๑/๒๕๖๔",
+    org: "มหาวิทยาลัยเชียงใหม่",
+    title: "คำสั่งมหาวิทยาลัยเชียงใหม่ ที่ ๑๖๑/๒๕๖๔ (ตราครุฑ)",
+    subtitle: "แต่งตั้งคณะกรรมการดำเนินงานโครงการปรับปรุงซ่อมแซมเรือนโบราณล้านนา",
+    category: "ทำนุบำรุงศิลปวัฒนธรรม",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-rose-100 text-rose-800 border-rose-200"
+  },
+  {
+    id: "real-13",
+    fileName: "nu_order_songkran_culture.pdf",
+    orderNo: "มน. ๒๕๖๑",
+    org: "มหาวิทยาลัยนเรศวร",
+    title: "คำสั่งมหาวิทยาลัยนเรศวร สืบสานสงกรานต์",
+    subtitle: "แต่งตั้งคณะกรรมการดำเนินโครงการสืบสานประเพณีสงกรานต์รดน้ำขอพร",
+    category: "ทำนุบำรุงศิลปวัฒนธรรม",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-rose-100 text-rose-800 border-rose-200"
+  },
+  {
+    id: "real-14",
+    fileName: "mcu_order_exam_committee_2567.pdf",
+    orderNo: "05/๒๕๖๗",
+    org: "มจร. วิทยาเขตพะเยา",
+    title: "คำสั่ง มจร. วิทยาเขตพะเยา ที่ 05/๒๕๖๗",
+    subtitle: "แต่งตั้งคณะกรรมการดำเนินการสอบข้อสอบกลาง ภาคบรรพชิตและคฤหัสถ์",
+    category: "การจัดการเรียนการสอน",
+    badge: "Digital Text (เร็ว)",
+    type: "digital",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200"
+  },
+  {
+    id: "real-15",
+    fileName: "pcru_order_research_board.pdf",
+    orderNo: "มรภ.พช. ๖๖๑๑",
+    org: "มรภ.เพชรบูรณ์",
+    title: "คำสั่ง มรภ.เพชรบูรณ์ เรื่องบริหารการวิจัย",
+    subtitle: "แต่งตั้งคณะกรรมการบริหารการวิจัยและนวัตกรรม",
+    category: "งานวิจัยและนวัตกรรม",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200"
+  },
+  {
+    id: "real-16",
+    fileName: "psru_order_module_board.pdf",
+    orderNo: "มรภ.พส. ๐๓๓",
+    org: "มรภ.พิบูลสงคราม",
+    title: "คำสั่ง มรภ.พิบูลสงคราม พัฒนาโมดูล",
+    subtitle: "แต่งตั้งคณะกรรมการพัฒนาชุดการเรียนรู้และโมดูลวิชาการ",
+    category: "การจัดการเรียนการสอน",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200"
+  },
+  {
+    id: "real-17",
+    fileName: "mcu_order_qa_development.pdf",
+    orderNo: "มจร. รอ. ๓๗๒",
+    org: "มจร. ร้อยเอ็ด",
+    title: "คำสั่ง มจร. วิทยาลัยสงฆ์ร้อยเอ็ด ประกันคุณภาพ",
+    subtitle: "แต่งตั้งคณะกรรมการจัดทำแผนพัฒนาคุณภาพการศึกษา",
+    category: "ประกันคุณภาพการศึกษา",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-blue-100 text-blue-800 border-blue-200"
+  },
+  {
+    id: "real-18",
+    fileName: "pbru_order_academic_board.pdf",
+    orderNo: "มรภ.พบ. ๐๘๗",
+    org: "มรภ.เพชรบุรี",
+    title: "คำสั่ง มรภ.เพชรบุรี สภาวิชาการ",
+    subtitle: "แต่งตั้งคณะกรรมการสภาวิชาการ มหาวิทยาลัยราชภัฏเพชรบุรี",
+    category: "งานบริหารและภารกิจพิเศษ",
+    badge: "Scanned OCR",
+    type: "scanned",
+    badgeColor: "bg-purple-100 text-purple-800 border-purple-200"
+  }
+];
+
+
