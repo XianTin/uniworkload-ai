@@ -6,14 +6,40 @@ export const SUPER_ADMIN_ACCOUNT = {
   username: "admin",
   email: "admin@nsru.ac.th",
   name: "นายธนภัทร สุขเกษม (tie)",
-  role: "superadmin", // 'superadmin' | 'admin' | 'faculty' | 'head'
+  role: "superadmin", // 'superadmin' | 'coadmin' | 'admin' | 'faculty' | 'head'
   roleLabel: "👑 ผู้ดูแลระบบสูงสุด (Super Admin)",
   department: "สาขาวิชาเทคโนโลยีสารสนเทศ",
   faculty: "คณะวิทยาการจัดการ",
   avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
   facultyId: "fac-1",
   isSuperAdmin: true,
+  isCoAdmin: false,
+  canSwitchFaculty: true,
   permissions: ["all", "manage_all_faculties", "upload_orders", "delete_orders", "export_all_eportfolio", "system_settings"]
+};
+
+export const CO_ADMIN_PIMMY_ACCOUNT = {
+  id: "user-coadmin-pimmy",
+  username: "pimmy",
+  email: "pimmy@nsru.ac.th",
+  name: "อ.พิมรา ทองแสง (Pimmy)",
+  role: "coadmin", // รองผู้ดูแลระบบสูงสุด (รองจาก tie)
+  roleLabel: "🛡️ รองผู้ดูแลระบบสูงสุด (Co-Admin)",
+  department: "สาขาวิชาสาธารณสุขศาสตร์",
+  faculty: "คณะวิทยาศาสตร์และเทคโนโลยี",
+  avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+  facultyId: "fac-pimra",
+  isSuperAdmin: false,
+  isCoAdmin: true,
+  canSwitchFaculty: true,
+  permissions: [
+    "all_management",
+    "manage_all_faculties",
+    "upload_orders",
+    "distribute_orders",
+    "export_all_eportfolio",
+    "view_all_drawers"
+  ]
 };
 
 export const DEMO_PRESET_ACCOUNTS = [
@@ -27,26 +53,22 @@ export const DEMO_PRESET_ACCOUNTS = [
     account: SUPER_ADMIN_ACCOUNT
   },
   {
+    label: "🛡️ รองผู้ดูแลระบบสูงสุด (Pimmy)",
+    sublabel: "สิทธิ์ระดับบริหาร รองจาก tie (สลับดูอาจารย์ทุกคนได้)",
+    username: "pimmy",
+    passwordHint: "1234",
+    color: "from-purple-500 to-indigo-600",
+    badgeColor: "bg-purple-100 text-purple-800 border-purple-300",
+    account: CO_ADMIN_PIMMY_ACCOUNT
+  },
+  {
     label: "👩‍🏫 อ.พิมรา ทองแสง",
     sublabel: "อาจารย์ / รองผู้อำนวยการ (สาธารณสุข)",
     username: "pimra.t@nsru.ac.th",
     passwordHint: "1234",
     color: "from-sky-500 to-blue-600",
     badgeColor: "bg-sky-100 text-sky-800 border-sky-300",
-    account: {
-      id: "user-pimra",
-      username: "pimra.t@nsru.ac.th",
-      email: "pimra.t@nsru.ac.th",
-      name: "อ.พิมรา ทองแสง",
-      role: "faculty",
-      roleLabel: "อาจารย์ / รองผู้อำนวยการ",
-      department: "สาขาวิชาสาธารณสุขศาสตร์",
-      faculty: "คณะวิทยาศาสตร์และเทคโนโลยี",
-      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-      facultyId: "fac-pimra",
-      isSuperAdmin: false,
-      permissions: ["view_own_drawer", "upload_own_evidence", "export_own_eportfolio"]
-    }
+    account: CO_ADMIN_PIMMY_ACCOUNT
   },
   {
     label: "👨‍🏫 ผศ.ดร.สมชาย ใจดี",
@@ -119,6 +141,23 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
       success: true,
       user: {
         ...SUPER_ADMIN_ACCOUNT,
+        loginTime: new Date().toISOString()
+      }
+    };
+  }
+
+  // 2. Check Co-Admin (pimmy) - second highest level to tie, accepts 'pimmy', 'pimmy@nsru.ac.th', 'pimra.t@nsru.ac.th' with password '1234'
+  if (
+    (cleanId === 'pimmy' || 
+     cleanId === 'pimmy@nsru.ac.th' || 
+     cleanId === 'pimra.t@nsru.ac.th' ||
+     cleanId === 'pimra') && 
+    cleanPass === '1234'
+  ) {
+    return {
+      success: true,
+      user: {
+        ...CO_ADMIN_PIMMY_ACCOUNT,
         loginTime: new Date().toISOString()
       }
     };

@@ -14,6 +14,7 @@ import {
 
 export default function StatsOverview({ activeFaculty, currentUser, onOpenIngest, onNavigateTab }) {
   const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role === 'superadmin';
+  const isCoAdmin = currentUser?.isCoAdmin || currentUser?.role === 'coadmin';
   const stats = activeFaculty?.stats || {
     totalOrders: 14,
     completedOrders: 11,
@@ -36,22 +37,30 @@ export default function StatsOverview({ activeFaculty, currentUser, onOpenIngest
                 <Sparkles className="w-3.5 h-3.5 text-sky-400" />
                 <span>รอบการประเมินปัจจุบัน: รอบที่ 2 / 2569 (1 เม.ย. – 30 ก.ย. 2569)</span>
               </div>
-              {isSuperAdmin && (
+              {isSuperAdmin ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold">
                   <span>👑 ผู้ดูแลระบบสูงสุด (tie)</span>
                 </span>
-              )}
+              ) : isCoAdmin ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold">
+                  <span>🛡️ รองผู้ดูแลระบบสูงสุด (Pimmy)</span>
+                </span>
+              ) : null}
             </div>
             
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap">
-              <span>ยินดีต้อนรับ, {isSuperAdmin ? (currentUser?.name || 'นายธนภัทร สุขเกษม (tie)') : (activeFaculty?.name || 'อาจารย์')}</span>
+              <span>ยินดีต้อนรับ, {isSuperAdmin ? (currentUser?.name || 'นายธนภัทร สุขเกษม (tie)') : isCoAdmin ? (currentUser?.name || 'อ.พิมรา ทองแสง (Pimmy)') : (activeFaculty?.name || 'อาจารย์')}</span>
             </h1>
             
-            {isSuperAdmin && activeFaculty && (
+            {isSuperAdmin && activeFaculty ? (
               <p className="text-xs text-amber-200/90 font-medium bg-amber-950/40 border border-amber-500/20 px-3 py-1.5 rounded-xl inline-block">
                 ⚡ สิทธิ์ Super Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้ตลอดเวลา
               </p>
-            )}
+            ) : isCoAdmin && activeFaculty ? (
+              <p className="text-xs text-purple-200/90 font-medium bg-purple-950/40 border border-purple-500/20 px-3 py-1.5 rounded-xl inline-block">
+                ⚡ สิทธิ์ Co-Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้
+              </p>
+            ) : null}
 
             <p className="text-slate-300 text-sm leading-relaxed">
               ระบบ UniWorkload AI ช่วยรวบรวมคำสั่งราชการ สกัดวันเวลานัดหมายลงปฏิทินมือถือ 

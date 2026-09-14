@@ -143,7 +143,7 @@ export default function App() {
       if (matched) setActiveFaculty(matched);
     }
 
-    if (user.isSuperAdmin || user.role === 'admin') {
+    if (user.isSuperAdmin || user.isCoAdmin || user.role === 'admin' || user.role === 'coadmin') {
       setUserRole('admin');
     } else {
       setUserRole('faculty');
