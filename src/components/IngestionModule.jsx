@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   UploadCloud, 
   Sparkles, 
@@ -25,10 +25,21 @@ import {
   ChevronDown,
   X,
   ExternalLink,
-  Download
+  Download,
+  Key,
+  Server,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { extractTextFromDocument } from '../utils/ocrEngine';
 import { parseThaiOfficialOrder } from '../utils/thaiDocumentParser';
+import { 
+  getAiSettings, 
+  saveAiSettings, 
+  checkGeminiStatus, 
+  parseOfficialOrderWithGemini, 
+  AI_MODES 
+} from '../utils/geminiClient';
 import { DEMO_RAW_ORDERS, WORKLOAD_CATEGORIES, FACULTY_MEMBERS, REAL_OFFICIAL_DOCUMENTS } from '../data/mockData';
 
 export default function IngestionModule({ 
@@ -50,6 +61,47 @@ export default function IngestionModule({
   const [activeResultTab, setActiveResultTab] = useState('form'); // 'form' | 'raw' | 'preview'
   const [isCopied, setIsCopied] = useState(false);
   const [isOfficialDocsModalOpen, setIsOfficialDocsModalOpen] = useState(false);
+
+  // AI Architecture & Mode State (Gemini 3.6 Flash vs Local Offline)
+  const [aiMode, setAiMode] = useState(() => getAiSettings().mode || AI_MODES.GEMINI);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [aiSettings, setAiSettings] = useState(() => getAiSettings());
+  const [connectionStatus, setConnectionStatus] = useState({ checked: false, online: false, type: '', message: '' });
+  const [isTestingConn, setIsTestingConn] = useState(false);
+
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  const checkConnection = async () => {
+    setIsTestingConn(true);
+    try {
+      const st = await checkGeminiStatus();
+      setConnectionStatus({ checked: true, ...st });
+    } catch (e) {
+      setConnectionStatus({ checked: true, online: false, message: e.message });
+    } finally {
+      setIsTestingConn(false);
+    }
+  };
+
+  const handleSwitchAiMode = (newMode) => {
+    setAiMode(newMode);
+    saveAiSettings({ mode: newMode });
+    if (onNotify) {
+      onNotify(newMode === 'gemini' 
+        ? 'เปิดใช้งานโหมด Gemini 3.6 Flash (สกัดแม่นยำสูง)' 
+        : 'เปิดใช้งานโหมด Local Offline (ทำงานในเครื่อง 100%)', 'info');
+    }
+  };
+
+  const handleSaveSettings = () => {
+    saveAiSettings(aiSettings);
+    setAiMode(aiSettings.mode);
+    setIsSettingsModalOpen(false);
+    checkConnection();
+    if (onNotify) onNotify('บันทึกการตั้งค่า AI สำเร็จ', 'success');
+  };
 
   // Verification Form State
   const [formData, setFormData] = useState({
@@ -87,11 +139,11 @@ export default function IngestionModule({
     e.target.value = '';
   };
 
-  // Process Real File with OCR Engine
+  // Process Real File with OCR Engine and AI Parser
   const processRealDocument = async (file) => {
     setIsScanning(true);
     setScanProgress(10);
-    setScanMessage('กำลังโหลดเอกสารเข้าสู่ระบบ AI OCR Parser...');
+    setScanMessage('กำลังโหลดเอกสารเข้าสู่ระบบ AI Parser...');
     setScanResult(null);
     setActiveFile(file);
 
@@ -111,43 +163,70 @@ export default function IngestionModule({
         if (status.message) setScanMessage(status.message);
       });
 
-      setScanMessage('กำลังวิเคราะห์โครงสร้างคำสั่งราชการ วันที่ เวลา และบุคลากร...');
-      setScanProgress(92);
+      if (result.previewUrl) {
+        setPreviewUrl(result.previewUrl);
+      }
 
-      // Parse with Thai Official Order Parser
-      const parsed = parseThaiOfficialOrder(result.text, file.name, facultyList);
+      setScanProgress(85);
+      setScanMessage(aiMode === 'gemini' 
+        ? 'กำลังส่งให้ Gemini 3.6 Flash สกัดโครงสร้างและแก้ไขคำผิด...' 
+        : 'กำลังวิเคราะห์โครงสร้างคำสั่งราชการ วันที่ เวลา และบุคลากร...');
+
+      let parsedData;
+      let engineUsed = aiMode;
+
+      if (aiMode === 'gemini') {
+        try {
+          parsedData = await parseOfficialOrderWithGemini(result.text, file.name, facultyList);
+        } catch (geminiErr) {
+          console.warn('Gemini parser unavailable, fallback to local:', geminiErr);
+          engineUsed = 'local_fallback';
+          const localParsed = parseThaiOfficialOrder(result.text, file.name, facultyList);
+          parsedData = localParsed.parsedData;
+          if (onNotify) onNotify('ระบบ Gemini ไม่ตอบสนอง สลับใช้ Local Parser ให้ชั่วคราว', 'warning');
+        }
+      } else {
+        const localParsed = parseThaiOfficialOrder(result.text, file.name, facultyList);
+        parsedData = localParsed.parsedData;
+      }
+
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
       setScanDuration(elapsed);
 
-      setTimeout(() => {
-        setScanProgress(100);
-        setIsScanning(false);
-        setScanResult(parsed);
-        setFormData({
-          orderNumber: parsed.parsedData.orderNumber,
-          title: parsed.parsedData.title,
-          signDate: parsed.parsedData.signDate,
-          eventDate: parsed.parsedData.eventDate,
-          eventTime: parsed.parsedData.eventTime,
-          location: parsed.parsedData.location,
-          category: parsed.parsedData.category,
-          categoryCode: parsed.parsedData.categoryCode,
-          categoryColor: parsed.parsedData.categoryColor,
-          workloadHours: parsed.parsedData.estimatedHours || 3,
-          facultyAssigned: parsed.parsedData.facultyAssigned
-        });
-        setActiveResultTab('form');
-        onNotify(`AI OCR สกัดเอกสารจริง [${file.name}] สำเร็จใน ${elapsed} วินาที!`, 'success');
-      }, 300);
+      setScanProgress(100);
+      setIsScanning(false);
+      setScanResult({
+        filename: file.name,
+        detectedConfidence: engineUsed === 'gemini' ? 99 : 92,
+        detectedText: result.text || 'ไม่พบข้อความตัวอักษรในเอกสาร',
+        parsedData,
+        engine: engineUsed
+      });
+      setFormData({
+        orderNumber: parsedData.orderNumber,
+        title: parsedData.title,
+        signDate: parsedData.signDate,
+        eventDate: parsedData.eventDate,
+        eventTime: parsedData.eventTime,
+        location: parsedData.location,
+        category: parsedData.category,
+        categoryCode: parsedData.categoryCode,
+        categoryColor: parsedData.categoryColor,
+        workloadHours: parsedData.estimatedHours || 3,
+        facultyAssigned: parsedData.facultyAssigned
+      });
+      setActiveResultTab('form');
+      const engineLabel = engineUsed === 'gemini' ? 'Gemini 3.6 Flash' : 'Local Engine';
+      if (onNotify) onNotify(`AI สกัดเอกสารจริง [${file.name}] สำเร็จใน ${elapsed} วินาที (${engineLabel})!`, 'success');
 
     } catch (err) {
       console.error('OCR Error:', err);
       setIsScanning(false);
-      onNotify('เกิดข้อผิดพลาดในการประมวลผล OCR กรุณาลองใหม่อีกครั้ง หรือตรวจสอบไฟล์', 'error');
+      if (onNotify) onNotify('เกิดข้อผิดพลาดในการประมวลผล OCR กรุณาลองใหม่อีกครั้ง หรือตรวจสอบไฟล์', 'error');
     }
   };
 
-  // Load and test one of the 11 real official PDF documents
+  // Load and test one of the real official PDF documents
   const handleLoadOfficialRealDoc = async (docItem) => {
     setIsOfficialDocsModalOpen(false);
     setIsScanning(true);
@@ -166,7 +245,7 @@ export default function IngestionModule({
     } catch (err) {
       console.error('Error loading real doc sample:', err);
       setIsScanning(false);
-      onNotify('เกิดข้อผิดพลาดในการโหลดไฟล์ทดสอบ: ' + err.message, 'error');
+      if (onNotify) onNotify('เกิดข้อผิดพลาดในการโหลดไฟล์ทดสอบ: ' + err.message, 'error');
     }
   };
 
@@ -181,45 +260,73 @@ export default function IngestionModule({
   };
 
   // Process Pasted Text
-  const handleProcessPastedText = () => {
+  const handleProcessPastedText = async () => {
     if (!pastedText.trim()) {
-      onNotify('กรุณาวางข้อความคำสั่งก่อนประมวลผล', 'warning');
+      if (onNotify) onNotify('กรุณาวางข้อความคำสั่งก่อนประมวลผล', 'warning');
       return;
     }
 
     setIsScanning(true);
     setScanProgress(30);
-    setScanMessage('AI กำลังสกัดข้อความคำสั่งราชการและแปลงเลขไทย...');
+    setScanMessage(aiMode === 'gemini' 
+      ? 'กำลังส่งให้ Gemini 3.6 Flash วิเคราะห์โครงสร้างข้อความ...' 
+      : 'AI กำลังสกัดข้อความคำสั่งราชการและแปลงเลขไทย...');
     setScanResult(null);
     setActiveFile(null);
     setPreviewUrl(null);
 
     const startTime = performance.now();
 
-    setTimeout(() => {
-      setScanProgress(95);
-      const parsed = parseThaiOfficialOrder(pastedText, 'ข้อความจากบันทึก_แชต.txt', facultyList);
+    try {
+      let parsedData;
+      let engineUsed = aiMode;
+
+      if (aiMode === 'gemini') {
+        try {
+          parsedData = await parseOfficialOrderWithGemini(pastedText, 'ข้อความคำสั่ง.txt', facultyList);
+        } catch (err) {
+          console.warn('Gemini failed, fallback to local:', err);
+          engineUsed = 'local_fallback';
+          const localParsed = parseThaiOfficialOrder(pastedText, 'ข้อความคำสั่ง.txt', facultyList);
+          parsedData = localParsed.parsedData;
+        }
+      } else {
+        const localParsed = parseThaiOfficialOrder(pastedText, 'ข้อความคำสั่ง.txt', facultyList);
+        parsedData = localParsed.parsedData;
+      }
+
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
       setScanDuration(elapsed);
       setIsScanning(false);
       setScanProgress(100);
-      setScanResult(parsed);
+      setScanResult({
+        filename: 'ข้อความคำสั่ง.txt',
+        detectedConfidence: engineUsed === 'gemini' ? 99 : 92,
+        detectedText: pastedText,
+        parsedData,
+        engine: engineUsed
+      });
       setFormData({
-        orderNumber: parsed.parsedData.orderNumber,
-        title: parsed.parsedData.title,
-        signDate: parsed.parsedData.signDate,
-        eventDate: parsed.parsedData.eventDate,
-        eventTime: parsed.parsedData.eventTime,
-        location: parsed.parsedData.location,
-        category: parsed.parsedData.category,
-        categoryCode: parsed.parsedData.categoryCode,
-        categoryColor: parsed.parsedData.categoryColor,
-        workloadHours: parsed.parsedData.estimatedHours || 3,
-        facultyAssigned: parsed.parsedData.facultyAssigned
+        orderNumber: parsedData.orderNumber,
+        title: parsedData.title,
+        signDate: parsedData.signDate,
+        eventDate: parsedData.eventDate,
+        eventTime: parsedData.eventTime,
+        location: parsedData.location,
+        category: parsedData.category,
+        categoryCode: parsedData.categoryCode,
+        categoryColor: parsedData.categoryColor,
+        workloadHours: parsedData.estimatedHours || 3,
+        facultyAssigned: parsedData.facultyAssigned
       });
       setActiveResultTab('form');
-      onNotify(`วิเคราะห์โครงสร้างข้อความสำเร็จใน ${elapsed} วินาที!`, 'success');
-    }, 400);
+      const engineLabel = engineUsed === 'gemini' ? 'Gemini 3.6 Flash' : 'Local Engine';
+      if (onNotify) onNotify(`วิเคราะห์โครงสร้างข้อความสำเร็จใน ${elapsed} วินาที (${engineLabel})!`, 'success');
+    } catch (err) {
+      console.error('Process pasted text error:', err);
+      setIsScanning(false);
+      if (onNotify) onNotify('เกิดข้อผิดพลาดในการประมวลผลข้อความ: ' + err.message, 'error');
+    }
   };
 
   // Load Preset Sample

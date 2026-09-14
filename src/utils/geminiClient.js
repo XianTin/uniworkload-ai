@@ -1,0 +1,378 @@
+/**
+ * Gemini AI Client for UniWorkload AI
+ * รองรับทั้ง:
+ * 1. Local Antigravity OpenAI Bridge (Port 8080: gemini-3.6-flash-high / gemini-3.8-flash-high)
+ * 2. Direct Google Gemini API (gemini-1.5-flash / gemini-2.5-flash ผ่าน API Key)
+ * 3. Fallback ออฟไลน์ไร้รอยต่อ (Zero Single Point of Failure)
+ */
+
+export const AI_MODES = {
+  GEMINI: 'gemini',
+  LOCAL: 'local'
+};
+
+const STORAGE_KEYS = {
+  MODE: 'uniworkload_ai_engine_mode',
+  API_KEY: 'uniworkload_gemini_api_key',
+  BASE_URL: 'uniworkload_gemini_base_url',
+  MODEL: 'uniworkload_gemini_model'
+};
+
+// ค่าเริ่มต้น
+const DEFAULT_CONFIG = {
+  mode: AI_MODES.GEMINI,
+  baseUrl: typeof window !== 'undefined' ? '/ai-proxy/v1' : 'http://127.0.0.1:8080/v1',
+  fallbackBaseUrl: 'http://127.0.0.1:8080/v1',
+  model: 'gemini-3.6-flash-high',
+  apiKey: 'sk-antigravity'
+};
+
+/**
+ * ดึงการตั้งค่า AI ปัจจุบัน
+ */
+export function getAiSettings() {
+  if (typeof window === 'undefined') return DEFAULT_CONFIG;
+  return {
+    mode: localStorage.getItem(STORAGE_KEYS.MODE) || DEFAULT_CONFIG.mode,
+    apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : '') || DEFAULT_CONFIG.apiKey,
+    baseUrl: localStorage.getItem(STORAGE_KEYS.BASE_URL) || DEFAULT_CONFIG.baseUrl,
+    model: localStorage.getItem(STORAGE_KEYS.MODEL) || DEFAULT_CONFIG.model
+  };
+}
+
+/**
+ * บันทึกการตั้งค่า AI
+ */
+export function saveAiSettings({ mode, apiKey, baseUrl, model }) {
+  if (typeof window === 'undefined') return;
+  if (mode !== undefined) localStorage.setItem(STORAGE_KEYS.MODE, mode);
+  if (apiKey !== undefined) localStorage.setItem(STORAGE_KEYS.API_KEY, apiKey);
+  if (baseUrl !== undefined) localStorage.setItem(STORAGE_KEYS.BASE_URL, baseUrl);
+  if (model !== undefined) localStorage.setItem(STORAGE_KEYS.MODEL, model);
+}
+
+/**
+ * ทดสอบการเชื่อมต่อกับ Gemini Engine (Local Bridge หรือ Direct API)
+ */
+export async function checkGeminiStatus() {
+  const config = getAiSettings();
+
+  // 1. ตรวจสอบผ่าน Proxy ก่อน
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+    const res = await fetch(`${config.baseUrl}/models`, {
+      headers: {
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        online: true,
+        type: 'local_bridge',
+        endpoint: config.baseUrl,
+        model: config.model,
+        modelsAvailable: data.data ? data.data.map(m => m.id) : []
+      };
+    }
+  } catch (err) {
+    // ลองเช็ค Direct Port 8080
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch('http://127.0.0.1:8080/v1/models', {
+        headers: { 'Authorization': `Bearer ${config.apiKey}` },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        return {
+          online: true,
+          type: 'local_bridge_direct',
+          endpoint: 'http://127.0.0.1:8080/v1',
+          model: config.model
+        };
+      }
+    } catch {
+      // Offline / Unreachable
+    }
+  }
+
+  // 2. หากเป็น Google Direct API Key (AIza...)
+  if (config.apiKey && config.apiKey.startsWith('AIza')) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`);
+      if (res.ok) {
+        return {
+          online: true,
+          type: 'google_direct',
+          endpoint: 'generativelanguage.googleapis.com',
+          model: 'gemini-1.5-flash'
+        };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    online: false,
+    type: 'offline',
+    message: 'ไม่พบ Local Bridge (Port 8080) หรือยังไม่ได้ระบุ Google Gemini API Key'
+  };
+}
+
+/**
+ * ส่งคำขอ Chat Completion เข้าสู่ Gemini ผ่าน OpenAI-compatible bridge หรือ Direct API
+ */
+async function callGeminiApi({ messages, temperature = 0.2, maxTokens = 2000, timeoutMs = 35000 }) {
+  const config = getAiSettings();
+
+  // กรณีเป็น Google AI API Key ตรง (AIza...)
+  if (config.apiKey && config.apiKey.startsWith('AIza')) {
+    return callGoogleDirectApi({ messages, apiKey: config.apiKey, temperature });
+  }
+
+  // ส่งผ่าน Local Antigravity Bridge
+  const endpointsToTry = Array.from(new Set([
+    config.baseUrl,
+    'http://127.0.0.1:8080/v1'
+  ])).filter(Boolean);
+  let lastError = null;
+
+  for (const endpoint of endpointsToTry) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(`${endpoint}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey || 'sk-antigravity'}`
+        },
+        body: JSON.stringify({
+          model: config.model || 'gemini-3.6-flash-high',
+          messages,
+          temperature,
+          max_tokens: maxTokens
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      return content;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('ไม่สามารถเชื่อมต่อ Gemini API ได้');
+}
+
+/**
+ * เรียก Google Generative AI REST API แบบตรง
+ */
+async function callGoogleDirectApi({ messages, apiKey, temperature = 0.2 }) {
+  const systemMsg = messages.find(m => m.role === 'system')?.content || '';
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: systemMsg ? { parts: [{ text: systemMsg }] } : undefined,
+      contents,
+      generationConfig: {
+        temperature
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Google Gemini Direct API Error: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return candidate;
+}
+
+/**
+ * ให้ Gemini สกัดและแปลงข้อมูลคำสั่งราชการเป็น JSON ที่ถูกต้อง 100%
+ */
+export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', facultyList = []) {
+  const facultyNames = facultyList.map(f => f.name).join(', ');
+
+  const systemPrompt = `คุณคือ AI ผู้เชี่ยวชาญการวิเคราะห์และตรวจสอบเอกสารคำสั่งราชการภาษาไทย (มหาวิทยาลัยราชภัฏนครสวรรค์) สำหรับระบบบริหารภาระงานอาจารย์ UniWorkload AI
+หน้าที่ของคุณคือรับข้อความ OCR ดิบจากเอกสารคำสั่ง แล้วสกัดเป็น Structured JSON เท่านั้น
+
+กฎสำคัญในการสกัดข้อมูล:
+1. แก้อักขระที่ผิดเพี้ยนจากการสแกน OCR ให้เป็นภาษาไทยทางการที่ถูกต้อง 100% (เช่น "คําสัง" -> "คำสั่ง", "แต่งตัง" -> "แต่งตั้ง", "ปการศึกษา" -> "ปีการศึกษา", "เรือง" หรือ "เรื อง" -> "เรื่อง")
+2. สกัด "title" (เรื่อง) ให้สมบูรณ์ หากชื่อเรื่องยาวหรือเคาะหลายบรรทัดให้รวมเป็นประโยคเดียวที่อ่านรู้เรื่องและสละสลวย
+3. สกัด "orderNumber" เช่น "222/2569", "๐๐๒/๒๕๖๙", "087/2567" หรือตามที่ปรากฏ
+4. แปลงวันที่ พ.ศ. เป็น ค.ศ. ในฟอร์แมต ISO YYYY-MM-DD:
+   - "signDate" คือ วันที่สั่งการ (เช่น สั่ง ณ วันที่ 22 ธันวาคม 2569 -> 2026-12-22)
+   - "eventDate" คือ วันที่จัดกิจกรรมหรือเริ่มปฏิบัติหน้าที่ (ถ้าไม่มีให้ใช้วันเดียวกับ signDate)
+5. ระบุเวลา "eventTime" (เช่น "08:30 - 16:30 น." หรือ "ไม่ระบุ")
+6. ระบุสถานที่ "location" (ค่าเริ่มต้น: "มหาวิทยาลัยราชภัฏนครสวรรค์")
+7. จำแนกหมวดหมู่ กพอ. ให้ตรง 1 ใน 6 หมวด:
+   - "การจัดการเรียนการสอน" (categoryCode: "teaching", categoryColor: "amber")
+   - "งานวิจัยและงานสร้างสรรค์" (categoryCode: "research", categoryColor: "indigo")
+   - "บริการวิชาการแก่สังคม" (categoryCode: "service", categoryColor: "emerald")
+   - "ทำนุบำรุงศิลปวัฒนธรรม" (categoryCode: "arts", categoryColor: "rose")
+   - "ประกันคุณภาพการศึกษา" (categoryCode: "qa", categoryColor: "blue")
+   - "บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย" (categoryCode: "admin", categoryColor: "purple")
+8. จับคู่รายชื่ออาจารย์ใน "facultyAssigned" พร้อมระบุบทบาท (roleInOrder) เช่น ประธานกรรมการ, กรรมการ, กรรมการและเลขานุการ, วิทยากร
+   (รายชื่ออาจารย์ในระบบที่ควรพิจารณาเป็นพิเศษ: ${facultyNames})
+9. คำนวณชั่วโมงภาระงานประมาณการ "estimatedHours" (ประธาน/วิทยากร = 6 ชม., เลขานุการ = 4 ชม., กรรมการ = 3 ชม.)
+10. สรุปสาระสำคัญสั้นๆ 1-2 ประโยคใน "summary"
+
+รูปแบบ JSON ที่ต้องส่งกลับ (ห้ามมีข้อความอื่นนอกเหนือจาก JSON):
+{
+  "orderNumber": "...",
+  "title": "...",
+  "signDate": "YYYY-MM-DD",
+  "eventDate": "YYYY-MM-DD",
+  "eventTime": "08:30 - 16:30 น.",
+  "location": "...",
+  "category": "...",
+  "categoryCode": "...",
+  "categoryColor": "...",
+  "estimatedHours": 3,
+  "facultyAssigned": [
+    { "name": "...", "roleInOrder": "..." }
+  ],
+  "summary": "..."
+}`;
+
+  // จำกัดความยาวของ OCR text ไม่ให้เกิน 3,500 ตัวอักษรเพื่อความเร็วสูงสุด
+  const truncatedText = (rawOcrText || '').slice(0, 3500);
+  const userPrompt = `ชื่อไฟล์: ${filename}\n\nข้อความสกัดดิบจากเอกสาร:\n${truncatedText}`;
+
+  const responseText = await callGeminiApi({
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    temperature: 0.1
+  });
+
+  // ทำความสะอาด JSON block
+  let cleanedJson = responseText.trim();
+  const jsonMatch = cleanedJson.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    cleanedJson = jsonMatch[0];
+  } else if (cleanedJson.includes('```json')) {
+    cleanedJson = cleanedJson.split('```json')[1].split('```')[0].trim();
+  } else if (cleanedJson.includes('```')) {
+    cleanedJson = cleanedJson.split('```')[1].split('```')[0].trim();
+  }
+
+  const parsed = JSON.parse(cleanedJson);
+
+  // เชื่อมโยง Faculty ID กับระบบ (รองรับทั้ง object และ string)
+  const enrichedFacultyAssigned = (parsed.facultyAssigned || []).map((assigned, idx) => {
+    const assignedName = typeof assigned === 'string' ? assigned : (assigned.name || '');
+    const assignedRole = typeof assigned === 'string' ? 'กรรมการดำเนินงาน' : (assigned.roleInOrder || 'กรรมการดำเนินงาน');
+
+    const matched = facultyList.find(f => {
+      const cleanName = f.name.replace(/\([^)]*\)/g, '').trim();
+      const lastName = cleanName.split(/\s+/).slice(1).join(' ');
+      const firstName = cleanName.split(/\s+/)[0].replace(/^(ผศ\.ดร\.|รศ\.ดร\.|ศ\.ดร\.|ผศ\.|รศ\.|ศ\.|ดร\.|อ\.|อาจารย์)/, '').trim();
+      return (firstName && assignedName.includes(firstName)) || (lastName && assignedName.includes(lastName));
+    });
+
+    return {
+      id: matched ? matched.id : `gemini-fac-${idx + 1}`,
+      name: matched ? matched.name : assignedName,
+      roleInOrder: assignedRole
+    };
+  });
+
+  return {
+    orderNumber: parsed.orderNumber || 'มรภ.นว. คำสั่งราชการ',
+    title: parsed.title || filename.replace(/\.[^/.]+$/, ''),
+    signDate: parsed.signDate || new Date().toISOString().split('T')[0],
+    eventDate: parsed.eventDate || parsed.signDate || new Date().toISOString().split('T')[0],
+    eventTime: parsed.eventTime || '08:30 - 16:30 น.',
+    location: parsed.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+    category: parsed.category || 'บริการวิชาการแก่สังคม',
+    categoryCode: parsed.categoryCode || 'service',
+    categoryColor: parsed.categoryColor || 'emerald',
+    estimatedHours: parsed.estimatedHours || 3,
+    facultyAssigned: enrichedFacultyAssigned.length > 0 ? enrichedFacultyAssigned : [{
+      id: facultyList[0]?.id || 'fac-1',
+      name: facultyList[0]?.name || 'อาจารย์ผู้รับผิดชอบ',
+      roleInOrder: 'ผู้รับผิดชอบโครงการ'
+    }],
+    summary: parsed.summary || ''
+  };
+}
+
+/**
+ * ระบบ Nohran AI Copilot ขับเคลื่อนด้วย Gemini Flash
+ */
+export async function askGeminiCopilot({ prompt, activeFaculty, orders = [], chatHistory = [] }) {
+  const facultyOrders = orders.filter(o =>
+    !activeFaculty || (o.facultyAssigned || []).some(f => f.id === activeFaculty.id)
+  );
+
+  const missingEvidence = facultyOrders.filter(o => !o.actualPhotos || o.actualPhotos.length === 0);
+  const totalHours = facultyOrders.reduce((sum, o) => sum + (o.workloadHours || 3), 0);
+
+  const ordersContext = facultyOrders.map((o, i) => 
+    `${i + 1}. [${o.orderNumber}] "${o.title}" | วันที่: ${o.signDate || o.eventDate} | หมวด: ${o.category} (${o.workloadHours || 3} ชม.) | หลักฐานรูปถ่าย: ${o.actualPhotos?.length > 0 ? `แนบแล้ว (${o.actualPhotos.length} รูป)` : 'ยังไม่มีรูป'}`
+  ).join('\n');
+
+  const systemInstruction = `คุณคือ "ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)" ประจำระบบ UniWorkload AI มหาวิทยาลัยราชภัฏนครสวรรค์
+คุณกำลังสนทนาและให้คำปรึกษากับ:
+- อาจารย์: ${activeFaculty?.name || 'อาจารย์'} (${activeFaculty?.role || 'อาจารย์ประจำหลักสูตร'})
+- สังกัด: คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏนครสวรรค์
+- สถิติภาระงานปัจจุบัน: รวม ${facultyOrders.length} คำสั่ง (${totalHours} ชั่วโมง กพอ.)
+- คำสั่งที่ยังขาดรูปภาพหลักฐาน: ${missingEvidence.length} รายการ
+
+รายการคำสั่งและภาระงานจริงของอาจารย์ในระบบ:
+${ordersContext || 'ยังไม่มีข้อมูลคำสั่งในระบบ'}
+
+หน้าที่ของคุณ:
+1. ตอบคำถามอย่างสุภาพ มืออาชีพ และกระชับ (ใช้น้ำเสียงเป็นกันเอง แบบผู้ช่วย AI อัจฉริยะ มีอีโมจิ 🔮 นำหน้าตามเอกลักษณ์ Nohran)
+2. เมื่ออาจารย์ถามเรื่อง "หลักฐานที่ขาด" ให้สรุปเฉพาะคำสั่งที่ยังไม่มีรูปถ่าย และแนะนำให้ไปแนบในตู้ลิ้นชัก
+3. เมื่ออาจารย์ถามเรื่อง "สรุปภาระงาน" ให้แจกแจงตามหมวด กพอ. 1-6 และคำนวณชั่วโมงให้ครบถ้วน
+4. เมื่ออาจารย์ขอให้ "ร่างบันทึกข้อความ" หรือ "ร่างเอกสาร" ให้ร่างข้อความแบบฟอร์มหนังสือราชการไทย (บันทึกข้อความ) ที่สมบูรณ์แบบ มีส่วนหัว ข้อความเรียน ความเป็นมา และข้อความสั่งการ
+5. จัดรูปแบบคำตอบด้วย Markdown อย่างสวยงาม (ตัวหนา รายการข้อย่อย ตาราง หรือกล่องข้อความ)`;
+
+  const messages = [
+    { role: 'system', content: systemInstruction },
+    ...chatHistory.slice(-6).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text
+    })),
+    { role: 'user', content: prompt }
+  ];
+
+  return await callGeminiApi({
+    messages,
+    temperature: 0.3,
+    maxTokens: 1500
+  });
+}

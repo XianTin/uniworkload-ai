@@ -18,9 +18,12 @@ import {
   ChevronRight,
   HelpCircle,
   Copy,
-  Check
+  Check,
+  Cpu,
+  Zap
 } from 'lucide-react';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
+import { askGeminiCopilot, getAiSettings, saveAiSettings, AI_MODES } from '../utils/geminiClient';
 
 export default function NohranChatbot({ 
   orders = [], 
@@ -35,6 +38,7 @@ export default function NohranChatbot({
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalSetIsOpen !== undefined ? externalSetIsOpen : setInternalIsOpen;
   const [isExpanded, setIsExpanded] = useState(false);
+  const [aiMode, setAiMode] = useState(() => getAiSettings().mode || AI_MODES.GEMINI);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -260,7 +264,7 @@ export default function NohranChatbot({
     };
   };
 
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend) => {
     const text = textToSend || inputMessage;
     if (!text.trim()) return;
 
@@ -275,7 +279,34 @@ export default function NohranChatbot({
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI thinking and streaming
+    const currentSettings = getAiSettings();
+    const activeEngine = currentSettings.mode || aiMode;
+
+    if (activeEngine === AI_MODES.GEMINI) {
+      try {
+        const geminiReply = await askGeminiCopilot({
+          prompt: text,
+          activeFaculty,
+          orders,
+          chatHistory: messages
+        });
+
+        const botMsg = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'bot',
+          text: geminiReply,
+          engine: 'gemini',
+          timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, botMsg]);
+        setIsTyping(false);
+        return;
+      } catch (err) {
+        console.warn('Gemini copilot unavailable, falling back to local engine:', err);
+      }
+    }
+
+    // Local heuristic fallback
     setTimeout(() => {
       const botResponse = generateBotResponse(text);
       const botMsg = {
@@ -285,11 +316,12 @@ export default function NohranChatbot({
         actions: botResponse.actions,
         suggestions: botResponse.suggestions,
         copyable: botResponse.copyable,
+        engine: 'local',
         timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
       setIsTyping(false);
-    }, 600);
+    }, 450);
   };
 
   const handleResetChat = () => {
@@ -387,10 +419,27 @@ export default function NohranChatbot({
             <div className="flex items-center gap-2 truncate">
               <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <span className="truncate">
-                ข้อมูลปัจจุบัน: <strong>{activeFaculty?.name}</strong> ({facultyOrders.length} คำสั่งในฐานข้อมูล)
+                ข้อมูล: <strong>{activeFaculty?.name}</strong> ({facultyOrders.length} คำสั่ง)
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono shrink-0">v2.1 Copilot</span>
+            
+            <button
+              onClick={() => {
+                const nextMode = aiMode === AI_MODES.GEMINI ? AI_MODES.LOCAL : AI_MODES.GEMINI;
+                setAiMode(nextMode);
+                saveAiSettings({ mode: nextMode });
+                if (onNotify) onNotify(`สลับโหมด AI เป็น: ${nextMode === AI_MODES.GEMINI ? '⚡ Gemini 3.6 Flash' : '🛡️ Local Rule'}`, 'info');
+              }}
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono cursor-pointer transition-all border shrink-0 ${
+                aiMode === AI_MODES.GEMINI 
+                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' 
+                  : 'bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300'
+              }`}
+              title="คลิกเพื่อสลับระหว่างโหมด Gemini Flash และ Local Heuristic"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${aiMode === AI_MODES.GEMINI ? 'bg-indigo-600 animate-pulse' : 'bg-slate-500'}`} />
+              <span>{aiMode === AI_MODES.GEMINI ? '⚡ Gemini Flash' : '🛡️ Local Rule'}</span>
+            </button>
           </div>
 
           {/* Message History Area */}
