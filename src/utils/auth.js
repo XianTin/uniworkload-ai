@@ -175,7 +175,7 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
 
   return {
     success: false,
-    error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (ทดสอบ Super Admin: admin / 2547 หรือ อาจารย์: 1234)'
+    error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง'
   };
 }
 
