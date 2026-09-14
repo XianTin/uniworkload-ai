@@ -396,8 +396,8 @@ export default function IngestionModule({
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all cursor-pointer shadow-sm shadow-blue-500/20 active:scale-95"
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>คลังเอกสารราชการจริง (11 ฉบับ)</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">11</span>
+            <span>คลังเอกสารราชการจริง ({REAL_OFFICIAL_DOCUMENTS.length} ฉบับ)</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">{REAL_OFFICIAL_DOCUMENTS.length}</span>
           </button>
           <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">หรือ Preset ด่วน:</span>
           {DEMO_RAW_ORDERS.map((sample, idx) => (
@@ -878,7 +878,7 @@ export default function IngestionModule({
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    คลังเอกสารคำสั่งราชการจริงสำหรับทดสอบระบบ (11 ฉบับ)
+                    คลังเอกสารคำสั่งราชการจริงสำหรับทดสอบระบบ ({REAL_OFFICIAL_DOCUMENTS.length} ฉบับ)
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     คลิกเลือกฉบับที่ต้องการเพื่อทดสอบ AI OCR & Thai Parser ทันที หรือทดสอบ Drag & Drop ไฟล์จากโฟลเดอร์เครื่อง
