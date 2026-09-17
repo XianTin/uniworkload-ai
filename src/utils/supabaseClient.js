@@ -265,6 +265,42 @@ export async function updateOrderStatusInSupabase(orderId, status) {
 }
 
 /**
+ * Delete order from Supabase
+ */
+export async function deleteOrderFromSupabase(orderId) {
+  try {
+    await supabase.from('order_evidences').delete().eq('order_id', orderId);
+    const { error } = await supabase.from('orders').delete().eq('id', orderId);
+    if (error) {
+      console.error('[Supabase] Error deleting order:', error);
+    }
+  } catch (err) {
+    console.error('[deleteOrderFromSupabase] Exception:', err);
+  }
+}
+
+/**
+ * Clear all orders from Supabase (by faculty_id or all)
+ */
+export async function clearAllOrdersFromSupabase(facultyId = null) {
+  try {
+    if (facultyId) {
+      const { data: orderList } = await supabase.from('orders').select('id').eq('faculty_id', facultyId);
+      if (orderList && orderList.length > 0) {
+        const ids = orderList.map(o => o.id);
+        await supabase.from('order_evidences').delete().in('order_id', ids);
+        await supabase.from('orders').delete().eq('faculty_id', facultyId);
+      }
+    } else {
+      await supabase.from('order_evidences').delete().neq('id', 'none');
+      await supabase.from('orders').delete().neq('id', 'none');
+    }
+  } catch (err) {
+    console.error('[clearAllOrdersFromSupabase] Exception:', err);
+  }
+}
+
+/**
  * Insert new faculty to Supabase
  */
 export async function saveFacultyToSupabase(faculty) {

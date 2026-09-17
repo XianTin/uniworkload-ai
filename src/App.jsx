@@ -9,6 +9,8 @@ import {
   fetchOrdersFromSupabase, 
   saveOrderToSupabase, 
   updateOrderStatusInSupabase, 
+  deleteOrderFromSupabase,
+  clearAllOrdersFromSupabase,
   saveFacultyToSupabase 
 } from './utils/supabaseClient';
 import Navbar from './components/Navbar';
@@ -36,13 +38,30 @@ import {
   Sparkles
 } from 'lucide-react';
 
+const ORDERS_STORAGE_KEY = 'uniworkload_orders_data_v2';
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredSession());
   const [facultyList, setFacultyList] = useState(FACULTY_MEMBERS);
   const [activeFaculty, setActiveFaculty] = useState(FACULTY_MEMBERS[0]);
   const [userRole, setUserRole] = useState('faculty'); // 'faculty' | 'admin'
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'ingestion' | 'drawer' | 'calendar' | 'eportfolio'
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  
+  // Orders state with localStorage persistence (defaults to empty array per user request)
+  const [orders, setOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+      // Start with clean empty drawer as requested
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify([]));
+      return [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const [selectedOrderIdForEportfolio, setSelectedOrderIdForEportfolio] = useState(null);
   const [highlightOrderId, setHighlightOrderId] = useState(null);
   const [isIcalOpen, setIsIcalOpen] = useState(false);
@@ -50,13 +69,22 @@ export default function App() {
   const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Keep localStorage synced with orders
+  useEffect(() => {
+    try {
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    } catch (e) {
+      // ignore
+    }
+  }, [orders]);
+
   // Sync with Supabase on mount
   useEffect(() => {
     async function syncFromSupabase() {
       try {
         const [facs, ords] = await Promise.all([
           fetchFacultiesFromSupabase(FACULTY_MEMBERS),
-          fetchOrdersFromSupabase(INITIAL_ORDERS)
+          fetchOrdersFromSupabase([])
         ]);
         if (facs && facs.length > 0) {
           setFacultyList(facs);
@@ -69,7 +97,9 @@ export default function App() {
             setActiveFaculty(facs[0]);
           }
         }
-        if (ords && ords.length > 0) {
+        // Only load from remote if user has not explicitly cleared/set local data
+        const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
+        if (saved === null && ords && ords.length > 0) {
           setOrders(ords);
         }
       } catch (err) {
@@ -328,6 +358,34 @@ export default function App() {
     showToast(`จำลองส่งคำสั่งแต่งตั้ง [${sampleOrder.orderNumber}] เข้าตู้ลิ้นชักอาจารย์เรียบร้อยแล้ว!`, 'success');
   };
 
+  // Delete order completely
+  const handleDeleteOrder = (orderId) => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    deleteOrderFromSupabase(orderId);
+    showToast('ลบคำสั่งราชการออกจากตู้ลิ้นชักเรียบร้อยแล้ว', 'info');
+  };
+
+  // Clear orders (faculty-specific or all)
+  const handleClearDrawer = (facultyId, clearAll = false) => {
+    setOrders((prev) => {
+      if (clearAll || !facultyId) {
+        return [];
+      }
+      return prev.filter((o) => !(o.facultyAssigned || []).some((f) => f.id === facultyId));
+    });
+    clearAllOrdersFromSupabase(clearAll ? null : facultyId);
+    showToast(
+      clearAll ? 'ล้างข้อมูลคำสั่งทั้งหมดออกจากระบบเรียบร้อยแล้ว (ตู้ว่างเปล่า)' : 'ล้างคำสั่งทั้งหมดในตู้ลิ้นชักของอาจารย์เรียบร้อยแล้ว',
+      'success'
+    );
+  };
+
+  // Restore demo mock orders (42 orders)
+  const handleRestoreDemoOrders = () => {
+    setOrders(INITIAL_ORDERS);
+    showToast('กู้คืนชุดข้อมูลคำสั่งจำลองสำหรับสาธิต (42 ฉบับ) สำเร็จ!', 'success');
+  };
+
   // Jump directly to e-portfolio tab for a specific order
   const handleJumpToEportfolio = (order) => {
     const targetId = typeof order === 'object' && order !== null ? order.id : order;
@@ -434,6 +492,10 @@ export default function App() {
                 onToggleStatus={handleToggleStatus}
                 onSaveEvidence={handleSaveEvidence}
                 onDeleteEvidence={handleDeleteEvidence}
+                onDeleteOrder={handleDeleteOrder}
+                onClearDrawer={handleClearDrawer}
+                onRestoreDemoOrders={handleRestoreDemoOrders}
+                onJumpToIngestion={() => setActiveTab('ingestion')}
                 onJumpToEportfolio={handleJumpToEportfolio}
                 onNotify={showToast}
                 onAddSampleOrder={handleAddSampleOrderForActiveFaculty}

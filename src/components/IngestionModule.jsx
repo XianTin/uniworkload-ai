@@ -48,7 +48,7 @@ export default function IngestionModule({
   facultyList = FACULTY_MEMBERS,
   activeFaculty = FACULTY_MEMBERS[0]
 }) {
-  const [selectedChannel, setSelectedChannel] = useState('pdf'); // 'pdf' | 'photo' | 'chat' | 'text'
+  const [selectedChannel, setSelectedChannel] = useState('pdf'); // 'pdf' | 'photo' | 'facebook' | 'chat' | 'text'
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanMessage, setScanMessage] = useState('');
@@ -56,6 +56,8 @@ export default function IngestionModule({
   const [activeFile, setActiveFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [pastedText, setPastedText] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [facebookCaption, setFacebookCaption] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [scanDuration, setScanDuration] = useState(0);
   const [activeResultTab, setActiveResultTab] = useState('form'); // 'form' | 'raw' | 'preview'
@@ -251,13 +253,105 @@ export default function IngestionModule({
     }
   };
 
-  // Process Drag & Drop
-  const handleDrop = async (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      await processRealDocument(files[0]);
+  // Global Clipboard Paste (Ctrl+V) listener for instant screenshot upload
+  useEffect(() => {
+    const handleGlobalPaste = async (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            if (onNotify) {
+              onNotify('📸 ตรวจพบภาพแคปหน้าจอจาก Clipboard! เริ่มประมวลผลด้วย AI...', 'info');
+            }
+            if (selectedChannel === 'text') {
+              setSelectedChannel('facebook');
+            }
+            await processRealDocument(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [selectedChannel, onNotify]);
+
+  // Process Facebook Post with Caption & Link
+  const handleProcessFacebookPost = async () => {
+    const textToProcess = (facebookCaption || pastedText || '').trim();
+    if (!textToProcess && !previewUrl) {
+      if (onNotify) onNotify('กรุณาแคปรูปโพสต์ Facebook (Ctrl+V) หรือวางข้อความแคปชั่นก่อนประมวลผล', 'warning');
+      return;
+    }
+
+    if (!textToProcess && previewUrl) {
+      if (onNotify) onNotify('ภาพแคป Facebook ได้รับการประมวลผลผ่าน AI Vision แล้ว กรุณาตรวจสอบข้อมูลในแบบฟอร์ม', 'info');
+      return;
+    }
+
+    setIsScanning(true);
+    setScanProgress(30);
+    setScanMessage('AI กำลังสกัดข้อมูลจากโพสต์ Facebook...');
+    setScanResult(null);
+
+    const startTime = performance.now();
+    try {
+      let parsedData;
+      let engineUsed = aiMode;
+
+      if (aiMode === 'gemini') {
+        try {
+          parsedData = await parseOfficialOrderWithGemini(textToProcess, 'Facebook Post', facultyList);
+        } catch (geminiErr) {
+          console.warn('Gemini parser fallback to local:', geminiErr);
+          engineUsed = 'local_fallback';
+          const localParsed = parseThaiOfficialOrder(textToProcess, 'Facebook Post', facultyList);
+          parsedData = localParsed.parsedData;
+        }
+      } else {
+        const localParsed = parseThaiOfficialOrder(textToProcess, 'Facebook Post', facultyList);
+        parsedData = localParsed.parsedData;
+      }
+
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+      setScanDuration(elapsed);
+      setScanProgress(100);
+      setIsScanning(false);
+
+      setScanResult({
+        filename: 'โพสต์กิจกรรม Facebook',
+        detectedConfidence: engineUsed === 'gemini' ? 98 : 90,
+        detectedText: textToProcess,
+        parsedData,
+        engine: engineUsed
+      });
+
+      setFormData({
+        orderNumber: parsedData.orderNumber || `FB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
+        title: parsedData.title,
+        signDate: parsedData.signDate || new Date().toISOString().split('T')[0],
+        eventDate: parsedData.eventDate || new Date().toISOString().split('T')[0],
+        eventTime: parsedData.eventTime || '09:00 - 16:30 น.',
+        location: parsedData.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+        category: parsedData.category || 'บริการวิชาการแก่สังคม',
+        categoryCode: parsedData.categoryCode || 'service',
+        categoryColor: parsedData.categoryColor || 'emerald',
+        workloadHours: parsedData.estimatedHours || 3,
+        status: 'upcoming',
+        facultyAssigned: parsedData.facultyAssigned
+      });
+
+      setActiveResultTab('form');
+      if (onNotify) onNotify(`AI สกัดข้อมูลจากโพสต์ Facebook สำเร็จใน ${elapsed} วินาที!`, 'success');
+    } catch (err) {
+      console.error('FB Post Parser Error:', err);
+      setIsScanning(false);
+      if (onNotify) onNotify('เกิดข้อผิดพลาดในการประมวลผลข้อความ Facebook', 'error');
     }
   };
 
@@ -416,6 +510,39 @@ export default function IngestionModule({
       color: formData.categoryColor
     };
 
+    const isFacebookSource = selectedChannel === 'facebook' || Boolean(facebookUrl);
+    const orderEvidences = [
+      {
+        id: `ev-${Date.now()}`,
+        name: isFacebookSource ? (activeFile?.name || 'ภาพแคปโพสต์_Facebook.png') : (activeFile?.name || scanResult.filename || 'เอกสารคำสั่ง.pdf'),
+        size: activeFile?.size ? (activeFile.size / (1024 * 1024)).toFixed(1) + ' MB' : '1.8 MB',
+        type: activeFile?.type?.includes('pdf') ? 'pdf' : 'image',
+        url: previewUrl || null,
+        uploadedAt: new Date().toISOString().split('T')[0]
+      }
+    ];
+
+    if (facebookUrl) {
+      orderEvidences.push({
+        id: `ev-fb-${Date.now()}`,
+        name: `ลิงก์โพสต์ Facebook: ${facebookUrl.slice(0, 45)}...`,
+        size: 'Facebook URL',
+        type: 'link',
+        url: facebookUrl,
+        uploadedAt: new Date().toISOString().split('T')[0]
+      });
+    }
+
+    const orderActualPhotos = [];
+    if (previewUrl && (isFacebookSource || selectedChannel === 'photo')) {
+      orderActualPhotos.push({
+        id: `photo-${Date.now()}`,
+        url: previewUrl,
+        name: activeFile?.name || 'ภาพแคปหลักฐาน_Facebook.jpg',
+        uploadedAt: new Date().toISOString().split('T')[0]
+      });
+    }
+
     const newOrderObj = {
       id: newOrderId,
       orderNumber: formData.orderNumber,
@@ -432,18 +559,11 @@ export default function IngestionModule({
       facultyAssigned: formData.facultyAssigned,
       status: formData.status || 'upcoming',
       rawOcrText: scanResult.detectedText || '',
-      documentFileName: activeFile?.name || scanResult.filename || 'เอกสารคำสั่ง.pdf',
-      evidenceFiles: [
-        {
-          id: `ev-${Date.now()}`,
-          name: activeFile?.name || scanResult.filename || 'เอกสารคำสั่ง.pdf',
-          size: activeFile?.size ? (activeFile.size / (1024 * 1024)).toFixed(1) + ' MB' : '1.8 MB',
-          type: activeFile?.type?.includes('pdf') ? 'pdf' : 'image',
-          url: previewUrl || null,
-          uploadedAt: new Date().toISOString().split('T')[0]
-        }
-      ],
-      actualPhotos: [],
+      documentFileName: activeFile?.name || (isFacebookSource ? 'ภาพแคปโพสต์_Facebook.png' : scanResult.filename) || 'เอกสารคำสั่ง.pdf',
+      facebookUrl: facebookUrl || null,
+      sourceChannel: isFacebookSource ? 'facebook' : selectedChannel,
+      evidenceFiles: orderEvidences,
+      actualPhotos: orderActualPhotos,
       ePortfolio: {
         year: formData.signDate ? String(new Date(formData.signDate).getFullYear() + 543) : '2569',
         round: 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)',
@@ -463,6 +583,8 @@ export default function IngestionModule({
     setScanProgress(0);
     setActiveFile(null);
     setPreviewUrl(null);
+    setFacebookUrl('');
+    setFacebookCaption('');
   };
 
   return (
@@ -529,7 +651,7 @@ export default function IngestionModule({
         {/* Left Col: Upload & Channel Picker (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Channel Selectors */}
-          <div className="grid grid-cols-4 gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-5 gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
             <button
               onClick={() => setSelectedChannel('pdf')}
               className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -539,7 +661,7 @@ export default function IngestionModule({
               }`}
             >
               <FileText className="w-4 h-4" />
-              <span>ไฟล์ PDF</span>
+              <span className="text-[11px]">ไฟล์ PDF</span>
             </button>
             <button
               onClick={() => setSelectedChannel('photo')}
@@ -550,7 +672,20 @@ export default function IngestionModule({
               }`}
             >
               <ImageIcon className="w-4 h-4" />
-              <span>ภาพถ่าย</span>
+              <span className="text-[11px]">ภาพถ่าย</span>
+            </button>
+            <button
+              onClick={() => setSelectedChannel('facebook')}
+              className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                selectedChannel === 'facebook'
+                  ? 'bg-white text-blue-600 shadow-xs font-semibold ring-1 ring-blue-500/20'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <svg className="w-4 h-4 fill-current text-blue-600" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span className="text-[11px]">แคป FB</span>
             </button>
             <button
               onClick={() => setSelectedChannel('chat')}
@@ -561,7 +696,7 @@ export default function IngestionModule({
               }`}
             >
               <MessageSquare className="w-4 h-4" />
-              <span>แคป LINE</span>
+              <span className="text-[11px]">แคป LINE</span>
             </button>
             <button
               onClick={() => setSelectedChannel('text')}
@@ -572,12 +707,132 @@ export default function IngestionModule({
               }`}
             >
               <FileCheck className="w-4 h-4" />
-              <span>วางข้อความ</span>
+              <span className="text-[11px]">วางข้อความ</span>
             </button>
           </div>
 
-          {/* Conditional Channel View: File Upload vs Textarea */}
-          {selectedChannel !== 'text' ? (
+          {/* Conditional Channel View: Facebook vs File Upload vs Textarea */}
+          {selectedChannel === 'facebook' ? (
+            <div className="bg-white border border-blue-200/90 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                    <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">นำเข้าจาก Facebook (แคปรูป + ลิงก์)</h4>
+                    <p className="text-[10px] text-slate-500">สกัดโพสต์กิจกรรม, โปสเตอร์ประชาสัมพันธ์, หรือภาพประกาศ</p>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold text-[10px] border border-blue-200">
+                  AI Dual-Engine
+                </span>
+              </div>
+
+              {/* Facebook Link Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span>🔗 ลิงก์โพสต์ Facebook (URL อ้างอิง)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">ระบบจะผูกเป็น Deep-Link ตรวจสอบ</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    placeholder="วางลิงก์ เช่น https://www.facebook.com/nsru.official/posts/..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden font-mono"
+                  />
+                  {facebookUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFacebookUrl('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Screenshot Dropzone with Ctrl+V support */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={handleTriggerFileSelect}
+                className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-50/70 scale-[0.99]'
+                    : 'border-blue-200 hover:border-blue-400 bg-blue-50/30 hover:bg-blue-50/60'
+                }`}
+              >
+                {previewUrl ? (
+                  <div className="space-y-2">
+                    <img src={previewUrl} alt="Facebook Screenshot" className="max-h-36 mx-auto rounded-lg border border-blue-200 object-contain shadow-2xs" />
+                    <p className="text-[11px] text-emerald-700 font-semibold flex items-center justify-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>โหลดภาพแคป Facebook สำเร็จแล้ว คลิกเพื่อเปลี่ยนภาพ</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 mx-auto rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shadow-2xs">
+                      <ImageIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800">
+                        ลากภาพแคปหน้าจอ Facebook มาวาง หรือคลิกเลือกรูป
+                      </h5>
+                      <p className="text-[11px] text-blue-600 font-semibold mt-0.5">
+                        💡 เคล็ดลับ: กด <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-blue-300 font-mono text-[10px] text-slate-800 shadow-2xs">Ctrl + V</kbd> วางภาพจาก Clipboard ได้ทันที!
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Optional Caption Textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span>📝 ข้อความแคปชั่นในโพสต์ Facebook (ทางเลือก)</span>
+                  <span className="text-[10px] text-slate-400">{facebookCaption.length} ตัวอักษร</span>
+                </label>
+                <textarea
+                  value={facebookCaption}
+                  onChange={(e) => setFacebookCaption(e.target.value)}
+                  placeholder="คัดลอกข้อความแคปชั่นในโพสต์ Facebook มาวางที่นี่ (หากมี) เพื่อช่วย AI จับคู่ชื่องานและรายละเอียด..."
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden resize-none"
+                />
+              </div>
+
+              {/* Action button */}
+              {facebookCaption.trim() && !isScanning && (
+                <button
+                  type="button"
+                  onClick={handleProcessFacebookPost}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>สกัดข้อมูลจากแคปชั่นและลิงก์ด้วย AI</span>
+                </button>
+              )}
+
+              {/* Technical Facts Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 space-y-1">
+                <div className="font-bold text-slate-800 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>ทำไมการแคปรูป (Cap) ถึงเสถียรกว่าการดึงลิงก์เพียวๆ?</span>
+                </div>
+                <p className="text-slate-500 leading-relaxed text-[10.5px]">
+                  Facebook มีระบบป้องกันบอท (Login Wall / Walled Garden) และติดนโยบาย CORS ของเบราว์เซอร์ การแคปรูปหน้าจอโปสเตอร์แล้วกด Ctrl+V จึงเป็นวิธีที่ AI อ่านภาษาไทยได้แม่นยำที่สุด 100% พร้อมบันทึกลิงก์ Facebook ไว้เป็นหลักฐานอ้างอิง
+                </p>
+              </div>
+            </div>
+          ) : selectedChannel !== 'text' ? (
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
