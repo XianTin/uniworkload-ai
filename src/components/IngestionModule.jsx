@@ -142,6 +142,17 @@ export default function IngestionModule({
     e.target.value = '';
   };
 
+  // Handle Drag & Drop File Upload
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      await processRealDocument(file);
+    }
+  };
+
   // Process Real File with OCR Engine and AI Parser
   const processRealDocument = async (file) => {
     setIsScanning(true);
