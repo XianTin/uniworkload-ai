@@ -39,7 +39,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-const ORDERS_STORAGE_KEY = 'uniworkload_orders_data_v3';
+const ORDERS_STORAGE_KEY = 'uniworkload_orders_data_clean_zero';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredSession());
@@ -52,9 +52,15 @@ export default function App() {
   const [orders, setOrders] = useState(() => {
     try {
       // Clean up legacy cached storage keys from older releases
-      localStorage.removeItem('uniworkload_orders_data');
-      localStorage.removeItem('uniworkload_orders_data_v1');
-      localStorage.removeItem('uniworkload_orders_data_v2');
+      [
+        'uniworkload_orders_data',
+        'uniworkload_orders_data_v1',
+        'uniworkload_orders_data_v2',
+        'uniworkload_orders_data_v3',
+        'uniworkload_orders'
+      ].forEach((k) => {
+        try { localStorage.removeItem(k); } catch(e) {}
+      });
 
       const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
       if (saved !== null) {

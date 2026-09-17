@@ -18,11 +18,11 @@ const defaultFaculties = [
     email: "pimra.t@nsru.ac.th",
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
     stats: {
-      totalOrders: 42,
-      completedOrders: 36,
-      pendingOrders: 6,
-      totalHours: 112.6,
-      evidenceReadyPct: 88,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      totalHours: 0,
+      evidenceReadyPct: 0,
     }
   },
   {
@@ -34,11 +34,11 @@ const defaultFaculties = [
     email: "thanaphat.s@nsru.ac.th",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     stats: {
-      totalOrders: 18,
-      completedOrders: 15,
-      pendingOrders: 3,
-      totalHours: 56.5,
-      evidenceReadyPct: 92,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      totalHours: 0,
+      evidenceReadyPct: 0,
     }
   },
   {
@@ -172,11 +172,11 @@ class Database {
 
     this.data = {
       faculties: defaultFaculties,
-      orders: [...defaultOrders, ...pimraOrders],
+      orders: [],
       tunnelUrl: null
     };
     this.save();
-    console.log(`[Database] Seeded with ${this.data.orders.length} orders.`);
+    console.log(`[Database] Initialized with clean empty state (0 orders).`);
   }
 
   getFaculties() {
