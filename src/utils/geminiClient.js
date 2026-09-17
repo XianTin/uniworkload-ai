@@ -21,10 +21,10 @@ const STORAGE_KEYS = {
 // ค่าเริ่มต้น
 const DEFAULT_CONFIG = {
   mode: AI_MODES.GEMINI,
-  baseUrl: typeof window !== 'undefined' ? '/ai-proxy/v1' : 'http://127.0.0.1:8080/v1',
+  baseUrl: typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '/ai-proxy/v1' : '',
   fallbackBaseUrl: 'http://127.0.0.1:8080/v1',
-  model: 'gemini-3.6-flash-high',
-  apiKey: 'sk-antigravity'
+  model: 'gemini-1.5-flash',
+  apiKey: ''
 };
 
 /**
@@ -32,9 +32,13 @@ const DEFAULT_CONFIG = {
  */
 export function getAiSettings() {
   if (typeof window === 'undefined') return DEFAULT_CONFIG;
+  const storedKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env) ? (import.meta.env.VITE_GEMINI_API_KEY || '') : '';
+  const apiKey = storedKey || envKey || '';
+
   return {
     mode: localStorage.getItem(STORAGE_KEYS.MODE) || DEFAULT_CONFIG.mode,
-    apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : '') || DEFAULT_CONFIG.apiKey,
+    apiKey,
     baseUrl: localStorage.getItem(STORAGE_KEYS.BASE_URL) || DEFAULT_CONFIG.baseUrl,
     model: localStorage.getItem(STORAGE_KEYS.MODEL) || DEFAULT_CONFIG.model
   };
@@ -52,140 +56,165 @@ export function saveAiSettings({ mode, apiKey, baseUrl, model }) {
 }
 
 /**
- * ทดสอบการเชื่อมต่อกับ Gemini Engine (Local Bridge หรือ Direct API)
+ * ทดสอบการเชื่อมต่อกับ Gemini Engine (Direct Google API หรือ Local Bridge)
  */
 export async function checkGeminiStatus() {
   const config = getAiSettings();
 
-  // 1. ตรวจสอบผ่าน Proxy ก่อน
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-    const res = await fetch(`${config.baseUrl}/models`, {
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`
-      },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        online: true,
-        type: 'local_bridge',
-        endpoint: config.baseUrl,
-        model: config.model,
-        modelsAvailable: data.data ? data.data.map(m => m.id) : []
-      };
-    }
-  } catch (err) {
-    // ลองเช็ค Direct Port 8080
+  // 1. ตรวจสอบ Direct Google API Key ก่อน (AIza... หรือคีย์ยาว > 20)
+  if (config.apiKey && (config.apiKey.startsWith('AIza') || config.apiKey.length >= 25)) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const res = await fetch('http://127.0.0.1:8080/v1/models', {
-        headers: { 'Authorization': `Bearer ${config.apiKey}` },
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`, {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
-      if (res.ok) {
-        return {
-          online: true,
-          type: 'local_bridge_direct',
-          endpoint: 'http://127.0.0.1:8080/v1',
-          model: config.model
-        };
-      }
-    } catch {
-      // Offline / Unreachable
-    }
-  }
 
-  // 2. หากเป็น Google Direct API Key (AIza...)
-  if (config.apiKey && config.apiKey.startsWith('AIza')) {
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`);
       if (res.ok) {
+        const data = await res.json();
+        const availableModels = (data.models || []).map(m => m.name.replace('models/', ''));
         return {
           online: true,
           type: 'google_direct',
           endpoint: 'generativelanguage.googleapis.com',
-          model: 'gemini-1.5-flash'
+          model: config.model || 'gemini-1.5-flash',
+          message: 'เชื่อมต่อ Google Gemini Flash API สำเร็จ',
+          modelsAvailable: availableModels
+        };
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        return {
+          online: false,
+          type: 'google_direct_error',
+          message: errJson.error?.message || `API Key ไม่ถูกต้อง (${res.status})`
+        };
+      }
+    } catch (err) {
+      return {
+        online: false,
+        type: 'network_error',
+        message: 'ไม่สามารถติดต่อ Google Gemini API: ' + err.message
+      };
+    }
+  }
+
+  // 2. หากทำงานบน Localhost ตรวจสอบ Local Bridge (Port 8080)
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  if (isLocalHost && config.baseUrl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${config.baseUrl}/models`, {
+        headers: { 'Authorization': `Bearer ${config.apiKey || 'sk-antigravity'}` },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        return {
+          online: true,
+          type: 'local_bridge',
+          endpoint: config.baseUrl,
+          model: config.model,
+          message: 'เชื่อมต่อ Local Antigravity Bridge (Port 8080) สำเร็จ'
         };
       }
     } catch {
-      // ignore
+      // ลองต่อตรง 8080
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch('http://127.0.0.1:8080/v1/models', {
+          headers: { 'Authorization': `Bearer ${config.apiKey || 'sk-antigravity'}` },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          return {
+            online: true,
+            type: 'local_bridge_direct',
+            endpoint: 'http://127.0.0.1:8080/v1',
+            model: config.model,
+            message: 'เชื่อมต่อ Local Port 8080 ตรงสำเร็จ'
+          };
+        }
+      } catch {
+        // Offline
+      }
     }
   }
 
   return {
     online: false,
-    type: 'offline',
-    message: 'ไม่พบ Local Bridge (Port 8080) หรือยังไม่ได้ระบุ Google Gemini API Key'
+    type: 'not_configured',
+    message: 'ยังไม่ได้ระบุ Gemini API Key (กำลังใช้งาน Local Heuristic Engine สำรอง)'
   };
 }
 
 /**
- * ส่งคำขอ Chat Completion เข้าสู่ Gemini ผ่าน OpenAI-compatible bridge หรือ Direct API
+ * ส่งคำขอ Chat Completion เข้าสู่ Gemini ผ่าน Direct Google API หรือ Local Bridge
  */
 async function callGeminiApi({ messages, temperature = 0.2, maxTokens = 2000, timeoutMs = 35000 }) {
   const config = getAiSettings();
 
-  // กรณีเป็น Google AI API Key ตรง (AIza...)
-  if (config.apiKey && config.apiKey.startsWith('AIza')) {
-    return callGoogleDirectApi({ messages, apiKey: config.apiKey, temperature });
+  // 1. Google Direct API (ใช้ได้ทุกเครื่อง ทุกเบราว์เซอร์ ทั้งมือถือและคอม)
+  if (config.apiKey && (config.apiKey.startsWith('AIza') || config.apiKey.length >= 25)) {
+    return callGoogleDirectApi({ 
+      messages, 
+      apiKey: config.apiKey, 
+      temperature,
+      model: config.model || 'gemini-1.5-flash'
+    });
   }
 
-  // ส่งผ่าน Local Antigravity Bridge
-  const endpointsToTry = Array.from(new Set([
-    config.baseUrl,
-    'http://127.0.0.1:8080/v1'
-  ])).filter(Boolean);
-  let lastError = null;
+  // 2. Local Antigravity Bridge (เฉพาะเครื่องที่มี port 8080 รันอยู่)
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  if (isLocalHost || (config.apiKey && config.apiKey.startsWith('sk-'))) {
+    const endpointsToTry = Array.from(new Set([
+      config.baseUrl,
+      'http://127.0.0.1:8080/v1'
+    ])).filter(Boolean);
 
-  for (const endpoint of endpointsToTry) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+    for (const endpoint of endpointsToTry) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-      const response = await fetch(`${endpoint}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.apiKey || 'sk-antigravity'}`
-        },
-        body: JSON.stringify({
-          model: config.model || 'gemini-3.6-flash-high',
-          messages,
-          temperature,
-          max_tokens: maxTokens
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timer);
+        const response = await fetch(`${endpoint}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.apiKey || 'sk-antigravity'}`
+          },
+          body: JSON.stringify({
+            model: config.model || 'gemini-1.5-flash',
+            messages,
+            temperature,
+            max_tokens: maxTokens
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timer);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || '';
+          if (content) return content;
+        }
+      } catch (err) {
+        // try next
       }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
-      return content;
-    } catch (err) {
-      lastError = err;
     }
   }
 
-  throw lastError || new Error('ไม่สามารถเชื่อมต่อ Gemini API ได้');
+  throw new Error('ไม่พบ Gemini API Key หรือเครื่องนี้ไม่สามารถเข้าถึง Local Port 8080 ได้ กรุณาระบุ Gemini API Key ในการตั้งค่า AI');
 }
 
 /**
- * เรียก Google Generative AI REST API แบบตรง
+ * เรียก Google Generative AI REST API แบบตรง (CORS Support 100% จากเบราว์เซอร์)
  */
-async function callGoogleDirectApi({ messages, apiKey, temperature = 0.2 }) {
+async function callGoogleDirectApi({ messages, apiKey, temperature = 0.2, model = 'gemini-1.5-flash' }) {
   const systemMsg = messages.find(m => m.role === 'system')?.content || '';
   const contents = messages
     .filter(m => m.role !== 'system')
@@ -194,47 +223,68 @@ async function callGoogleDirectApi({ messages, apiKey, temperature = 0.2 }) {
       parts: [{ text: m.content }]
     }));
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: systemMsg ? { parts: [{ text: systemMsg }] } : undefined,
-      contents,
-      generationConfig: {
-        temperature
-      }
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Google Gemini Direct API Error: ${errorText}`);
+  const requestBody = {
+    contents,
+    generationConfig: {
+      temperature
+    }
+  };
+  if (systemMsg) {
+    requestBody.systemInstruction = { parts: [{ text: systemMsg }] };
   }
 
-  const data = await response.json();
-  const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return candidate;
+  // ลำดับโมเดลสำรองถ้าโมเดลแรกไม่พบ
+  const modelsToTry = Array.from(new Set([
+    model,
+    'gemini-2.0-flash',
+    'gemini-1.5-flash'
+  ])).filter(Boolean);
+
+  let lastError = null;
+
+  for (const m of modelsToTry) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (candidate) return candidate;
+      } else {
+        const errorText = await response.text();
+        lastError = new Error(`Google Gemini API (${m}): ${response.status} ${errorText}`);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('Google Gemini API ไม่สามารถประมวลผลได้');
 }
 
 /**
  * ให้ Gemini สกัดและแปลงข้อมูลคำสั่งราชการเป็น JSON ที่ถูกต้อง 100%
  */
-export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', facultyList = []) {
+export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', facultyList = [], activeFaculty = null) {
   const facultyNames = facultyList.map(f => f.name).join(', ');
 
-  const systemPrompt = `คุณคือ AI ผู้เชี่ยวชาญการวิเคราะห์และตรวจสอบเอกสารคำสั่งราชการภาษาไทย (มหาวิทยาลัยราชภัฏนครสวรรค์) สำหรับระบบบริหารภาระงานอาจารย์ UniWorkload AI
-หน้าที่ของคุณคือรับข้อความ OCR ดิบจากเอกสารคำสั่ง แล้วสกัดเป็น Structured JSON เท่านั้น
+  const systemPrompt = `คุณคือ AI ผู้เชี่ยวชาญการวิเคราะห์และตรวจสอบเอกสารคำสั่งราชการภาษาไทย โพสต์ประชาสัมพันธ์ และหนังสือราชการ (มหาวิทยาลัยราชภัฏนครสวรรค์) สำหรับระบบบริหารภาระงานอาจารย์ UniWorkload AI
+หน้าที่ของคุณคือรับข้อความ OCR ดิบ หรือข้อความโพสต์/แคปชั่น แล้วสกัดเป็น Structured JSON เท่านั้น
 
 กฎสำคัญในการสกัดข้อมูล:
 1. แก้อักขระที่ผิดเพี้ยนจากการสแกน OCR ให้เป็นภาษาไทยทางการที่ถูกต้อง 100% (เช่น "คําสัง" -> "คำสั่ง", "แต่งตัง" -> "แต่งตั้ง", "ปการศึกษา" -> "ปีการศึกษา", "เรือง" หรือ "เรื อง" -> "เรื่อง")
-2. สกัด "title" (เรื่อง) ให้สมบูรณ์ หากชื่อเรื่องยาวหรือเคาะหลายบรรทัดให้รวมเป็นประโยคเดียวที่อ่านรู้เรื่องและสละสลวย
-3. สกัด "orderNumber" เช่น "222/2569", "๐๐๒/๒๕๖๙", "087/2567" หรือตามที่ปรากฏ
+2. สกัด "title" (เรื่อง/ชื่อโครงการ/กิจกรรม) ให้สมบูรณ์และชัดเจน หากไม่มีคำว่าเรื่อง ให้นำหัวข้อหรือประโยคสำคัญของกิจกรรมมาตั้งเป็นชื่อเรื่อง
+3. สกัด "orderNumber" เช่น "222/2569", "๐๐๒/๒๕๖๙", "087/2567" หากไม่มีเลขคำสั่งในข้อความ ให้ระบุเป็น "รอระบุเลขที่คำสั่ง" (ห้ามแต่งเลขมั่วเด็ดขาด)
 4. แปลงวันที่ พ.ศ. เป็น ค.ศ. ในฟอร์แมต ISO YYYY-MM-DD:
-   - "signDate" คือ วันที่สั่งการ (เช่น สั่ง ณ วันที่ 22 ธันวาคม 2569 -> 2026-12-22)
+   - "signDate" คือ วันที่สั่งการหรือลงประกาศ
    - "eventDate" คือ วันที่จัดกิจกรรมหรือเริ่มปฏิบัติหน้าที่ (ถ้าไม่มีให้ใช้วันเดียวกับ signDate)
-5. ระบุเวลา "eventTime" (เช่น "08:30 - 16:30 น." หรือ "ไม่ระบุ")
-6. ระบุสถานที่ "location" (ค่าเริ่มต้น: "มหาวิทยาลัยราชภัฏนครสวรรค์")
+5. ระบุเวลา "eventTime" (เช่น "08:30 - 16:30 น." หรือหากไม่ระบุในข้อความให้ส่ง "ไม่ระบุเวลา")
+6. ระบุสถานที่ "location" (หากไม่ระบุให้ส่ง "มหาวิทยาลัยราชภัฏนครสวรรค์ (รอระบุสถานที่)")
 7. จำแนกหมวดหมู่ กพอ. ให้ตรง 1 ใน 6 หมวด:
    - "การจัดการเรียนการสอน" (categoryCode: "teaching", categoryColor: "amber")
    - "งานวิจัยและงานสร้างสรรค์" (categoryCode: "research", categoryColor: "indigo")
@@ -253,7 +303,7 @@ export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', fa
   "title": "...",
   "signDate": "YYYY-MM-DD",
   "eventDate": "YYYY-MM-DD",
-  "eventTime": "08:30 - 16:30 น.",
+  "eventTime": "...",
   "location": "...",
   "category": "...",
   "categoryCode": "...",
@@ -310,19 +360,19 @@ export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', fa
   });
 
   return {
-    orderNumber: parsed.orderNumber || 'มรภ.นว. คำสั่งราชการ',
-    title: parsed.title || filename.replace(/\.[^/.]+$/, ''),
+    orderNumber: parsed.orderNumber || 'รอระบุเลขที่คำสั่ง',
+    title: parsed.title || (filename && !filename.includes('ข้อความคำสั่ง') ? filename.replace(/\.[^/.]+$/, '') : 'กิจกรรมและภาระงาน (รอระบุชื่อเรื่อง)'),
     signDate: parsed.signDate || new Date().toISOString().split('T')[0],
     eventDate: parsed.eventDate || parsed.signDate || new Date().toISOString().split('T')[0],
-    eventTime: parsed.eventTime || '08:30 - 16:30 น.',
-    location: parsed.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+    eventTime: parsed.eventTime || 'ไม่ระบุเวลา',
+    location: parsed.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์ (รอระบุสถานที่)',
     category: parsed.category || 'บริการวิชาการแก่สังคม',
     categoryCode: parsed.categoryCode || 'service',
     categoryColor: parsed.categoryColor || 'emerald',
     estimatedHours: parsed.estimatedHours || 3,
     facultyAssigned: enrichedFacultyAssigned.length > 0 ? enrichedFacultyAssigned : [{
-      id: facultyList[0]?.id || 'fac-1',
-      name: facultyList[0]?.name || 'อาจารย์ผู้รับผิดชอบ',
+      id: activeFaculty?.id || facultyList[0]?.id || 'fac-1',
+      name: activeFaculty?.name || facultyList[0]?.name || 'อาจารย์ผู้รับผิดชอบ',
       roleInOrder: 'ผู้รับผิดชอบโครงการ'
     }],
     summary: parsed.summary || ''

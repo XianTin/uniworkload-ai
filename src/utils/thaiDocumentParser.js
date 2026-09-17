@@ -57,30 +57,30 @@ export function cleanOcrArtifacts(text = '') {
   return cleaned;
 }
 
-// เดือนภาษาไทยเป็นเลขเดือน 01-12
+// เดือนภาษาไทยเป็นเลขเดือน 01-12 (รองรับทั้งชื่อเต็ม อักษรย่อ มีจุดและไม่มีจุด)
 const THAI_MONTH_MAP = {
-  'มกราคม': '01', 'ม.ค.': '01',
-  'กุมภาพันธ์': '02', 'ก.พ.': '02',
-  'มีนาคม': '03', 'มี.ค.': '03',
-  'เมษายน': '04', 'เม.ย.': '04',
-  'พฤษภาคม': '05', 'พ.ค.': '05',
-  'มิถุนายน': '06', 'มิ.ย.': '06',
-  'กรกฎาคม': '07', 'ก.ค.': '07',
-  'สิงหาคม': '08', 'ส.ค.': '08',
-  'กันยายน': '09', 'ก.ย.': '09',
-  'ตุลาคม': '10', 'ต.ค.': '10',
-  'พฤศจิกายน': '11', 'พ.ย.': '11',
-  'ธันวาคม': '12', 'ธ.ค.': '12',
+  'มกราคม': '01', 'ม.ค.': '01', 'ม.ค': '01', 'มค': '01',
+  'กุมภาพันธ์': '02', 'ก.พ.': '02', 'ก.พ': '02', 'กพ': '02',
+  'มีนาคม': '03', 'มี.ค.': '03', 'มี.ค': '03', 'มีค': '03',
+  'เมษายน': '04', 'เม.ย.': '04', 'เม.ย': '04', 'เมย': '04',
+  'พฤษภาคม': '05', 'พ.ค.': '05', 'พ.ค': '05', 'พค': '05',
+  'มิถุนายน': '06', 'มิ.ย.': '06', 'มิ.ย': '06', 'มิย': '06',
+  'กรกฎาคม': '07', 'ก.ค.': '07', 'ก.ค': '07', 'กค': '07',
+  'สิงหาคม': '08', 'ส.ค.': '08', 'ส.ค': '08', 'สค': '08',
+  'กันยายน': '09', 'ก.ย.': '09', 'ก.ย': '09', 'กย': '09',
+  'ตุลาคม': '10', 'ต.ค.': '10', 'ต.ค': '10', 'ตค': '10',
+  'พฤศจิกายน': '11', 'พ.ย.': '11', 'พ.ย': '11', 'พย': '11',
+  'ธันวาคม': '12', 'ธ.ค.': '12', 'ธ.ค': '12', 'ธค': '12',
 };
 
-// แปลงวันที่ภาษาไทย (เช่น 18 กันยายน 2569) เป็น ISO YYYY-MM-DD (2026-09-18)
+// แปลงวันที่ภาษาไทย (เช่น 25 ก.ย. 69, 18 กันยายน 2569) เป็น ISO YYYY-MM-DD (2026-09-18)
 export function parseThaiDateToIso(dayStr, monthName, yearStr) {
   const d = parseInt(convertThaiNumerals(dayStr), 10);
-  const cleanMonth = (monthName || '').trim();
+  const cleanMonth = (monthName || '').trim().replace(/\s+/g, '');
   let m = THAI_MONTH_MAP[cleanMonth];
   if (!m) {
     for (const [name, code] of Object.entries(THAI_MONTH_MAP)) {
-      if (cleanMonth.includes(name) || name.includes(cleanMonth)) {
+      if (cleanMonth === name || cleanMonth.includes(name) || name.includes(cleanMonth)) {
         m = code;
         break;
       }
@@ -89,6 +89,13 @@ export function parseThaiDateToIso(dayStr, monthName, yearStr) {
   if (!m) m = '01';
 
   let y = parseInt(convertThaiNumerals(yearStr), 10);
+  if (isNaN(y)) {
+    y = new Date().getFullYear();
+  } else if (y < 100) {
+    // กรณี พ.ศ. 2 หลัก เช่น 67, 68, 69, 70 -> แปลงเป็น 2567, 2568, 2569...
+    y += 2500;
+  }
+
   // ถ้าเป็น พ.ศ. (>= 2400) ให้แปลงเป็น ค.ศ.
   if (y >= 2400) {
     y = y - 543;
@@ -99,28 +106,30 @@ export function parseThaiDateToIso(dayStr, monthName, yearStr) {
 }
 
 /**
- * สกัดข้อมูลคำสั่งราชการจากข้อความดิบ (Local Rule-based & Heuristics)
+ * สกัดข้อมูลคำสั่งราชการจากข้อความดิบ (Local Rule-based & Heuristics ที่แม่นยำสูง)
+ * ไม่สร้างข้อมูลเท็จ ไม่ยัดเยียดชื่ออาจารย์สุ่มมั่ว
  */
-export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสารคำสั่ง.pdf', existingFacultyList = []) {
+export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสารคำสั่ง.pdf', existingFacultyList = [], activeFaculty = null) {
   // ทำความสะอาดอักขระและแปลงเลขไทยเป็นเลขอารบิก
-  const preCleaned = cleanOcrArtifacts(rawText);
+  const preCleaned = cleanOcrArtifacts(rawText || '');
   const normalizedText = convertThaiNumerals(preCleaned);
-  let confidenceScore = 55;
+  let confidenceScore = 60;
 
   // 1. สกัดเลขที่คำสั่ง (Order Number)
   let orderNumber = '';
   const orderNumRegexes = [
-    /(?:คำสั่ง[^\n\r]*?ที่|ที่)\s*([A-Za-zก-๙0-9\.\s\-]+\s*\/\s*(?:25[0-9]{2}|[0-9]{4}))/i,
-    /(?:มรภ\.นว\.|คก\.|ทส\.|สพ\.)\s*[0-9]+\s*\/\s*(?:25[0-9]{2}|[0-9]{4})/i,
-    /(?:คำสั่ง[^\n\r]*?ที่|ที่)\s*([0-9]{1,4}\s*\/\s*(?:25[0-9]{2}|[0-9]{4}))/,
-    /([0-9]{1,4}\s*\/\s*25[0-9]{2})/
+    /(?:คำสั่ง[^\n\r]*?ที่|ประกาศ[^\n\r]*?ที่|ที่)\s*([A-Za-zก-๙0-9\.\s\-]+\s*\/\s*(?:25[0-9]{2}|[0-9]{2,4}))/i,
+    /(?:มรภ\.นว\.|คก\.|ทส\.|สพ\.)\s*[0-9]+\s*\/\s*(?:25[0-9]{2}|[0-9]{2,4})/i,
+    /(?:คำสั่ง[^\n\r]*?ที่|ที่)\s*([0-9]{1,4}\s*\/\s*(?:25[0-9]{2}|[0-9]{2,4}))/,
+    /([0-9]{1,4}\s*\/\s*25[0-9]{2})/,
+    /([0-9]{1,4}\s*\/\s*[0-9]{2})(?=\s|$)/
   ];
 
   for (const regex of orderNumRegexes) {
     const match = normalizedText.match(regex);
     if (match) {
       orderNumber = (match[1] || match[0]).replace(/\s+/g, ' ').trim();
-      confidenceScore += 12;
+      confidenceScore += 15;
       break;
     }
   }
@@ -131,55 +140,86 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
       orderNumber = `มรภ.นว. ${fileMatch[1]}/${fileMatch[2]}`;
       confidenceScore += 8;
     } else {
-      orderNumber = `มรภ.นว. 2569`;
+      // หากไม่มีเลขคำสั่ง ให้แสดงเป็น รอระบุเลขที่คำสั่ง (ไม่สร้างเลขเท็จ)
+      orderNumber = 'รอระบุเลขที่คำสั่ง';
     }
   }
 
-  // 2. สกัดชื่อคำสั่ง / เรื่อง (Title) - รองรับหลายบรรทัดต่อเนื่องและอักขระ OCR
+  // 2. สกัดชื่อคำสั่ง / เรื่อง (Title) - รองรับทั้งเอกสารทางการและข้อความโพสต์/แคปชั่น
   let title = '';
   const titleMultiLineMatch = normalizedText.match(/(?:เรื่อง|เรื\s*อง|เร่\s*ือง)\s*[:\-\s]*([^\n\r]+(?:\n[ \t]*[^\n\r]+){0,3})/i);
   if (titleMultiLineMatch) {
     const rawTitleChunk = titleMultiLineMatch[1];
-    // ตัดทิ้งหากขึ้นต้นด้วยข้อความเนื้อหาคำสั่ง
     const lines = rawTitleChunk.split('\n').map(l => l.trim()).filter(Boolean);
     const validTitleLines = [];
 
     for (const line of lines) {
-      if (/^(ด้วย|ตามที่|ตามประกาศ|อาศัยอำนาจ|จึงขอ|จึงแต่งตั้ง|เพื่อให้|เพื่อให|ข้อ\s*[0-9๑-๙]|๑\.|1\.|---|หน้าที่)/.test(line)) {
+      if (/^(ด้วย|ตามที่|ตามประกาศ|อาศัยอำนาจ|จึงขอ|จึงแต่งตั้ง|เพื่อให้|เพื่อให|ข้อ\s*[0-9๑-๙]|๑\.|1\.|---|หน้าที่|สั่ง\s*ณ|ลงวันที่|ทั้งนี้)/.test(line)) {
         break;
       }
-      // ข้ามบรรทัดที่เป็นเศษขยะ OCR สั้นๆ
+      if (/แต่งตั้ง.+?(?:เป็นประธาน|เป็นกรรมการ|เป็นวิทยากร)/.test(line)) {
+        break;
+      }
       if (line.length <= 2 && !/[0-9ก-๙]/.test(line)) continue;
       validTitleLines.push(line);
     }
 
     if (validTitleLines.length > 0) {
       title = validTitleLines.join(' ').replace(/\s+/g, ' ').trim();
-      confidenceScore += 18;
+      confidenceScore += 20;
     }
   }
 
-  // หากยังไม่ได้ชื่อเรื่อง ให้ค้นหาบรรทัดที่ขึ้นต้นด้วย "แต่งตั้ง..." หรือ "โครงการ..."
+  // หากยังไม่ได้ชื่อเรื่อง ให้สแกนหาบรรทัดที่มีคีย์เวิร์ดโครงการ/กิจกรรม/คำสั่ง
   if (!title || title.length < 6) {
-    const lines = normalizedText.split(/[\n\r]+/);
+    const lines = normalizedText.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.length > 3);
     for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('แต่งตั้ง') || trimmed.includes('โครงการ') || trimmed.includes('สัมมนา') || trimmed.includes('คณะกรรมการ') || trimmed.includes('ผลการพิจารณา')) {
-        if (trimmed.length > 10 && trimmed.length < 180 && !trimmed.startsWith('ด้วย') && !trimmed.startsWith('อาศัย') && !trimmed.startsWith('เพื่อให้')) {
-          title = trimmed;
-          confidenceScore += 12;
+      // ข้ามบรรทัดหัวกระดาษราชการสั้นๆ
+      if (/^(คำสั่งมหาวิทยาลัย|ประกาศมหาวิทยาลัย|บันทึกข้อความ|ส่วนราชการ|ที่\s*[0-9]+)/.test(line) && line.length < 50) {
+        continue;
+      }
+      if (
+        line.startsWith('แต่งตั้ง') || 
+        line.includes('โครงการ') || 
+        line.includes('สัมมนา') || 
+        line.includes('อบรม') || 
+        line.includes('การประชุม') || 
+        line.includes('คณะกรรมการ') || 
+        line.includes('ผลการพิจารณา') ||
+        line.includes('ขอเชิญ') ||
+        line.includes('ประชาสัมพันธ์') ||
+        line.includes('กิจกรรม')
+      ) {
+        if (line.length > 8 && line.length < 180 && !line.startsWith('ด้วย') && !line.startsWith('อาศัย') && !line.startsWith('เพื่อให้')) {
+          title = line;
+          confidenceScore += 14;
           break;
         }
       }
     }
   }
 
-  // Fallback ถ้ายังไม่ได้ชื่อเรื่อง
-  if (!title) {
-    title = filename.replace(/\.[^/.]+$/, '').replace(/[_\\-]/g, ' ') || 'คำสั่งปฏิบัติราชการและภาระงาน';
+  // กรณีเป็นข้อความแคปชั่น FB หรือแชตที่ไม่มีคีย์เวิร์ดชัดเจน ให้ใช้บรรทัดแรกที่มีความหมาย
+  if (!title || title.length < 6) {
+    const cleanLines = normalizedText.split(/[\n\r]+/)
+      .map(l => l.replace(/^[#\-\*\s]+/, '').trim())
+      .filter(l => l.length > 5 && !l.startsWith('http') && !l.startsWith('www') && !l.includes('Facebook'));
+    if (cleanLines.length > 0) {
+      title = cleanLines[0].slice(0, 120);
+      confidenceScore += 10;
+    }
   }
 
-  // ทำความสะอาดชื่อเรื่องครั้งสุดท้าย
+  // Fallback สะอาด
+  if (!title) {
+    if (filename && !filename.includes('ข้อความคำสั่ง') && !filename.includes('เอกสารคำสั่ง') && !filename.includes('Facebook')) {
+      title = filename.replace(/\.[^/.]+$/, '').replace(/[_\\-]/g, ' ');
+    } else {
+      title = 'กิจกรรมและภาระงาน (รอระบุชื่อเรื่อง)';
+    }
+  }
+
+  // ทำความสะอาดชื่อเรื่อง
   title = title
     .replace(/^[:\-\s\.\_\~\"\'\`\=\*]+/, '')
     .replace(/[:\-\s\.\_\~\"\'\`\=\*]+$/, '')
@@ -195,50 +235,71 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
     .replace(/\s+/g, ' ')
     .trim();
 
-  // 3. สกัดวันสั่งการ (Sign Date)
+  // 3. สกัดวันที่ (Sign Date & Event Date) - รองรับทุกรูปแบบทั้งทางการและย่อ
   let signDate = new Date().toISOString().split('T')[0];
-  const signDateMatch = normalizedText.match(/(?:สั่ง\s*ณ\s*วันที่|วันที่|ลงวันที่)\s*([0-9]{1,2})\s*([มกพพมสสตพธ][^\s0-9]+)\s*(?:พ\.ศ\.\s*)?([0-9]{4})/);
+  let eventDate = signDate;
+
+  // ค้นหาวันที่สั่งการ (Sign Date)
+  const signDateMatch = normalizedText.match(/(?:สั่ง\s*ณ\s*วันที่|ลงวันที่)\s*([0-9]{1,2})\s*([ก-๙\.]+)\s*(?:พ\.ศ\.\s*)?([0-9]{2,4})/i);
   if (signDateMatch) {
     try {
       signDate = parseThaiDateToIso(signDateMatch[1], signDateMatch[2], signDateMatch[3]);
-      confidenceScore += 8;
+      eventDate = signDate;
+      confidenceScore += 10;
     } catch {
       // fallback
     }
   }
 
-  // 4. สกัดวันจัดกิจกรรม (Event Date)
-  let eventDate = signDate;
-  const eventDateMatch = normalizedText.match(/(?:ในวันที่|ระหว่างวันที่|จัดขึ้นในวันที่|กำหนดจัดงานวันที่)\s*([0-9]{1,2})\s*(?:ถึง|-)?\s*([0-9]{1,2})?\s*([มกพพมสสตพธ][^\s0-9]+)\s*(?:พ\.ศ\.\s*)?([0-9]{4})/);
+  // ค้นหาวันจัดกิจกรรม (Event Date)
+  const eventDateMatch = normalizedText.match(/(?:ในวันที่|ระหว่างวันที่|จัดขึ้นในวันที่|กำหนดจัดงานวันที่|จัดงานวันที่|วันที่)\s*([0-9]{1,2})\s*(?:ถึง|-)?\s*([0-9]{1,2})?\s*([ก-๙\.]+)\s*(?:พ\.ศ\.\s*)?([0-9]{2,4})/i);
   if (eventDateMatch) {
     try {
       eventDate = parseThaiDateToIso(eventDateMatch[1], eventDateMatch[3], eventDateMatch[4]);
-      confidenceScore += 10;
+      if (!signDateMatch) signDate = eventDate;
+      confidenceScore += 12;
     } catch {
-      eventDate = signDate;
+      // fallback
+    }
+  } else {
+    // ลองค้นหาวันที่ตัวเลขสแลช เช่น 25/09/2569 หรือ 25/9/69
+    const slashMatch = normalizedText.match(/([0-9]{1,2})[\/\-\.]([0-9]{1,2})[\/\-\.](25[0-9]{2}|20[0-9]{2}|[0-9]{2})/);
+    if (slashMatch) {
+      try {
+        let d = String(parseInt(slashMatch[1], 10)).padStart(2, '0');
+        let m = String(parseInt(slashMatch[2], 10)).padStart(2, '0');
+        let y = parseInt(slashMatch[3], 10);
+        if (y < 100) y += 2500;
+        if (y >= 2400) y -= 543;
+        eventDate = `${y}-${m}-${d}`;
+        if (!signDateMatch) signDate = eventDate;
+        confidenceScore += 10;
+      } catch {
+        // fallback
+      }
     }
   }
 
-  // 5. สกัดเวลา (Event Time)
-  let eventTime = '08:30 - 16:30 น.';
-  const timeMatch = normalizedText.match(/เวลา\s*([0-9]{1,2}[:\.][0-9]{2}(?:\s*-\s*[0-9]{1,2}[:\.][0-9]{2})?\s*(?:น\.|นาฬิกา)?)/);
+  // 4. สกัดเวลา (Event Time)
+  let eventTime = 'ไม่ระบุเวลา';
+  const timeMatch = normalizedText.match(/(?:เวลา\s*)?([0-9]{1,2}[:\.][0-9]{2}(?:\s*(?:-|ถึง)\s*[0-9]{1,2}[:\.][0-9]{2})?\s*(?:น\.|นาฬิกา))/);
   if (timeMatch) {
     eventTime = timeMatch[1].trim();
     if (!eventTime.endsWith('น.') && !eventTime.endsWith('นาฬิกา')) {
       eventTime += ' น.';
     }
-    confidenceScore += 5;
+    confidenceScore += 6;
   }
 
-  // 6. สกัดสถานที่ (Location)
+  // 5. สกัดสถานที่ (Location)
   let location = 'มหาวิทยาลัยราชภัฏนครสวรรค์';
-  const locationMatch = normalizedText.match(/(?:ณ|สถานที่)\s*([^\n\r,\.]{4,100}?(?:ห้อง|อาคาร|ศูนย์|คณะ|มหาวิทยาลัย|โรงแรม|หอประชุม|จังหวัด)[^\n\r,\.]*)/);
+  const locationMatch = normalizedText.match(/(?:ณ|สถานที่|ห้องประชุม|ห้องปฏิบัติการ|ห้อง|อาคาร|ศูนย์)\s*([^\n\r,\.]{3,80}?(?:ห้อง|อาคาร|ศูนย์|คณะ|มหาวิทยาลัย|โรงแรม|หอประชุม|จังหวัด|มรภ\.)[^\n\r,\.]*)/);
   if (locationMatch) {
-    location = locationMatch[1].trim();
+    location = locationMatch[0].replace(/^(?:ณ|สถานที่)\s*/, '').trim();
     confidenceScore += 8;
   }
 
-  // 7. จำแนกหมวดหมู่ กพอ. 1-6 (Category Classification)
+  // 6. จำแนกหมวดหมู่ กพอ. 1-6 (Category Classification)
   let category = 'บริการวิชาการแก่สังคม';
   let categoryCode = 'service';
   let categoryColor = 'emerald';
@@ -271,7 +332,7 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
     categoryColor = 'purple';
   }
 
-  // 8. ตรวจจับรายชื่ออาจารย์และบุคลากร (Assigned Faculty Detection)
+  // 7. ตรวจจับรายชื่ออาจารย์และบุคลากร (Smart Faculty Detection - ไม่ยัดเยียดชื่อมั่ว)
   const detectedFaculty = [];
   const lines = normalizedText.split(/[\n\r]+/);
 
@@ -334,13 +395,22 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
     }
   }
 
-  // ถ้ายังไม่พบใครเลย ให้ใส่อาจารย์เริ่มต้นเป็นผู้รับผิดชอบ
-  if (detectedFaculty.length === 0 && existingFacultyList.length > 0) {
-    detectedFaculty.push({
-      id: existingFacultyList[0].id,
-      name: existingFacultyList[0].name,
-      roleInOrder: 'ผู้รับผิดชอบโครงการ / ประธานกรรมการ'
-    });
+  // ถ้ายังไม่พบใครเลยในข้อความ ให้ใช้อาจารย์ที่ล็อกอินอยู่ปัจจุบัน (activeFaculty)
+  // เพื่อป้องกันการยัดเยียดชื่ออาจารย์ท่านอื่นที่ไม่ได้อยู่ในเอกสาร
+  if (detectedFaculty.length === 0) {
+    if (activeFaculty) {
+      detectedFaculty.push({
+        id: activeFaculty.id,
+        name: activeFaculty.name,
+        roleInOrder: 'ผู้รับผิดชอบโครงการ / ผู้ปฏิบัติงาน'
+      });
+    } else if (existingFacultyList.length > 0) {
+      detectedFaculty.push({
+        id: existingFacultyList[0].id,
+        name: existingFacultyList[0].name,
+        roleInOrder: 'ผู้รับผิดชอบโครงการ'
+      });
+    }
   }
 
   // คำนวณชั่วโมงภาระงานตามบทบาท
@@ -352,7 +422,7 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
     estimatedHours = 4;
   }
 
-  const finalConfidence = Math.min(Math.max(confidenceScore, 85), 98);
+  const finalConfidence = Math.min(Math.max(confidenceScore, 75), 98);
 
   return {
     filename,
