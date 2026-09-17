@@ -37,7 +37,7 @@ export default function DashboardOverview({
 }) {
   // Orders assigned to this faculty
   const facultyOrders = (orders || []).filter(o => 
-    (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
+    (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id
   );
 
   // Recent 3 orders
@@ -80,8 +80,17 @@ export default function DashboardOverview({
             </div>
 
             {recentOrders.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                ยังไม่มีคำสั่งที่ได้รับมอบหมายในขณะนี้
+              <div className="py-8 text-center text-slate-400 text-xs space-y-2">
+                <p>ยังไม่มีคำสั่งที่ระบุชื่อ {activeFaculty?.name || 'อาจารย์'} ในตู้ลิ้นชักนี้</p>
+                {orders && orders.length > 0 && (
+                  <button
+                    onClick={() => onNavigateTab('drawer')}
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer"
+                  >
+                    <span>ตรวจพบคำสั่งรวมในระบบ {orders.length} ฉบับ (คลิกเปิดตู้ลิ้นชัก)</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

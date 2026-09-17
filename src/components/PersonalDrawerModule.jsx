@@ -26,13 +26,16 @@ import {
   X,
   Tag,
   ExternalLink,
-  UploadCloud
+  UploadCloud,
+  Share2,
+  Copy
 } from 'lucide-react';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
 import DossierSummaryModal from './DossierSummaryModal';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
+import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
 
 // Helper function to format date into Thai Buddhist Era string
 function formatThaiDate(dateStr) {
@@ -126,6 +129,20 @@ export default function PersonalDrawerModule({
       default:
         break;
     }
+  };
+
+  // 1-Click Direct Deep-Link Copy
+  const handleShareDirectLink = (order) => {
+    const directUrl = getDirectDrawerUrl(order.id, activeFaculty?.id, window.location.origin);
+    navigator.clipboard.writeText(directUrl);
+    onNotify?.(`คัดลอกลิงก์เปิดตรง [${order.orderNumber}] แล้ว! สามารถส่งลง LINE หรือปฏิทินได้ทันที 📋`, 'success');
+  };
+
+  // 1-Click Google Calendar Sync from Drawer
+  const handleSyncGoogleCalendar = (order) => {
+    const gcalUrl = createGoogleCalendarUrl(order, activeFaculty?.id, window.location.origin);
+    window.open(gcalUrl, '_blank', 'noopener,noreferrer');
+    onNotify?.(`เปิด Google Calendar เพื่อซิงค์คำสั่ง [${order.orderNumber}] เรียบร้อย! 🎯`, 'success');
   };
 
   // Base list of orders assigned to active faculty or all faculties
@@ -969,8 +986,8 @@ export default function PersonalDrawerModule({
                 </div>
 
                 {/* Card Footer */}
-                <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs mt-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs mt-2">
+                  <div className="flex items-center gap-2">
                     {hasPhotos ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -981,11 +998,35 @@ export default function PersonalDrawerModule({
                         รอภาพหลักฐาน
                       </span>
                     )}
+
+                    {/* Copy Direct Deep-Link */}
+                    <button
+                      type="button"
+                      onClick={() => handleShareDirectLink(order)}
+                      className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-blue-700 bg-slate-100 hover:bg-blue-50 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-slate-200 hover:border-blue-200"
+                      title="คัดลอกลิงก์เปิดตรงสู่คำสั่งนี้ (ส่งต่อใน LINE หรือบันทึก)"
+                    >
+                      <Share2 className="w-3 h-3 text-slate-400 hover:text-blue-600" />
+                      <span className="hidden sm:inline">คัดลอกลิงก์</span>
+                    </button>
+
+                    {/* Google Calendar Sync */}
+                    {order.eventDate && (
+                      <button
+                        type="button"
+                        onClick={() => handleSyncGoogleCalendar(order)}
+                        className="inline-flex items-center gap-1 text-[11px] text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-sky-200"
+                        title="ซิงค์คำสั่งนี้ลง Google Calendar ทันที"
+                      >
+                        <Calendar className="w-3 h-3 text-sky-600" />
+                        <span className="hidden sm:inline">Google Cal</span>
+                      </button>
+                    )}
                   </div>
 
                   <button
                     onClick={() => onJumpToEportfolio(order)}
-                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer text-xs"
                   >
                     <span>จัดเตรียม e-Portfolio</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />

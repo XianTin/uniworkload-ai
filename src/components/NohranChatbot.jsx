@@ -46,7 +46,7 @@ export default function NohranChatbot({
 
   // Filter orders for active faculty
   const facultyOrders = orders.filter(o => 
-    !activeFaculty || (o.facultyAssigned || []).some(f => f.id === activeFaculty.id)
+    !activeFaculty || (o.facultyAssigned || []).some(f => f.id === activeFaculty.id) || o.facultyId === activeFaculty.id
   );
 
   const initialGreeting = {
@@ -183,6 +183,16 @@ export default function NohranChatbot({
       const withPhotos = facultyOrders.filter(o => o.actualPhotos && o.actualPhotos.length > 0).length;
       const pctPhotos = total > 0 ? Math.round((withPhotos / total) * 100) : 0;
 
+      if (total === 0) {
+        return {
+          text: `📋 **รายงานตู้ลิ้นชักของ ${activeFaculty?.name || 'อาจารย์'}:**\n\nขณะนี้ในตู้ลิ้นชักของอาจารย์ยังไม่มีคำสั่งที่ได้รับมอบหมายโดยตรงครับ ${orders && orders.length > 0 ? `แต่ตรวจพบคำสั่งรวมในระบบคลาวด์ทั้งหมด **${orders.length} ฉบับ** จากอาจารย์ท่านอื่นในคณะครับ` : ''}\n\nอาจารย์สามารถ:\n1. กดเปิดตู้ลิ้นชักเพื่อสลับดูคำสั่งรวมทุกท่าน\n2. นำเข้าคำสั่งใหม่ผ่านระบบ AI Ingestion\n3. จำลองส่งคำสั่งเข้าตู้ 1 รายการเพื่อเริ่มทดสอบ`,
+          actions: [
+            { label: 'เปิดตู้ลิ้นชักหลักฐาน', tab: 'drawer', icon: 'Layers' },
+            { label: 'นำเข้าคำสั่งใหม่ (AI OCR)', tab: 'ingestion', icon: 'Sparkles' }
+          ]
+        };
+      }
+
       let responseText = `📋 **สรุปภาพรวมภาระงานของ ${activeFaculty?.name || 'อาจารย์'}:**\n\n`;
       responseText += `• 📂 **จำนวนคำสั่งทั้งหมดในระบบ**: **${total}** รายการ\n`;
       responseText += `• ✅ **ดำเนินการเสร็จสิ้นแล้ว**: **${completed}** รายการ (${total > 0 ? Math.round((completed/total)*100) : 0}%)\n`;
@@ -206,7 +216,7 @@ export default function NohranChatbot({
 
     // 5. Memo Drafting (ร่างบันทึกข้อความ)
     if (q.includes('ร่าง') || q.includes('บันทึกข้อความ') || q.includes('ส่งงาน') || q.includes('หนังสือ')) {
-      const firstOrder = facultyOrders[0];
+      const firstOrder = facultyOrders[0] || (orders && orders[0]);
       const memoText = `บันทึกข้อความ
 ส่วนราชการ: สาขาวิชาเทคโนโลยีสารสนเทศ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์
 ที่: อว 0625.05/พิเศษ
@@ -231,10 +241,11 @@ export default function NohranChatbot({
     }
 
     // 6. Keyword Search across Orders (เช่น AI, ชุมชน, สัมมนา)
-    const matchedOrders = facultyOrders.filter(o => 
-      o.title.toLowerCase().includes(q) ||
-      o.orderNumber.toLowerCase().includes(q) ||
-      o.category.toLowerCase().includes(q) ||
+    const searchTarget = facultyOrders.length > 0 ? facultyOrders : orders;
+    const matchedOrders = searchTarget.filter(o => 
+      (o.title || '').toLowerCase().includes(q) ||
+      (o.orderNumber || '').toLowerCase().includes(q) ||
+      (o.category || '').toLowerCase().includes(q) ||
       (o.location && o.location.toLowerCase().includes(q))
     );
 

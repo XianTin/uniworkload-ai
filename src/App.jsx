@@ -782,7 +782,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-slate-400 text-[11px]">
             <span>สาขาวิชาเทคโนโลยีสารสนเทศ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์</span>
             <span>•</span>
-            <span className="font-mono text-slate-600 font-medium">Interactive Mockup v2.0.0</span>
+            <span className="font-mono text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Release v3.7.0 • Production Ready</span>
           </div>
         </div>
       </footer>

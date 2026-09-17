@@ -12,9 +12,14 @@ import {
   AlertCircle,
   Shield,
   Layers,
-  FileCheck
+  FileCheck,
+  Crown,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  CheckCircle2
 } from 'lucide-react';
-import { authenticateUser } from '../utils/auth';
+import { authenticateUser, DEMO_PRESET_ACCOUNTS } from '../utils/auth';
 
 export default function LoginPage({ onLoginSuccess, facultyList }) {
   const [identifier, setIdentifier] = useState('');
@@ -23,6 +28,7 @@ export default function LoginPage({ onLoginSuccess, facultyList }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
@@ -48,6 +54,45 @@ export default function LoginPage({ onLoginSuccess, facultyList }) {
         setErrorMsg(result.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
       }
     }, 450);
+  };
+
+  const handleSelectPreset = (preset, autoSubmit = true) => {
+    setIdentifier(preset.username);
+    setPassword(preset.passwordHint);
+    setErrorMsg(null);
+
+    if (autoSubmit) {
+      setIsLoading(true);
+      setTimeout(() => {
+        const result = authenticateUser(preset.username, preset.passwordHint, facultyList);
+        setIsLoading(false);
+        if (result.success) {
+          onLoginSuccess(result.user, rememberMe);
+        } else {
+          setErrorMsg(result.error || 'เข้าสู่ระบบไม่สำเร็จ');
+        }
+      }, 350);
+    }
+  };
+
+  const handleGuestLogin = () => {
+    const guestUser = {
+      id: 'user-guest',
+      username: 'guest',
+      email: 'guest@nsru.ac.th',
+      name: 'ผู้เยี่ยมชมระบบ (Guest Preview)',
+      role: 'guest',
+      roleLabel: 'ผู้เยี่ยมชมระบบ (Guest)',
+      department: 'สาขาวิชาเทคโนโลยีสารสนเทศ',
+      faculty: 'คณะวิทยาการจัดการ',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      facultyId: 'fac-1',
+      isSuperAdmin: false,
+      isCoAdmin: false,
+      canSwitchFaculty: true,
+      permissions: ['view_own_drawer', 'view_all_drawers']
+    };
+    onLoginSuccess(guestUser, false);
   };
 
   return (
@@ -88,7 +133,7 @@ export default function LoginPage({ onLoginSuccess, facultyList }) {
           <div className="lg:col-span-6 space-y-6 text-left hidden lg:block">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-xs font-semibold text-sky-300">
               <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span>UniWorkload AI Portal v3.6.0</span>
+              <span>UniWorkload AI Portal v3.7.0</span>
             </div>
 
             <div className="space-y-3">
@@ -260,6 +305,82 @@ export default function LoginPage({ onLoginSuccess, facultyList }) {
                   )}
                 </button>
               </form>
+
+              {/* Quick Demo Access & Testing Profiles (Collapsible) */}
+              <div className="mt-5 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoAccounts(!showDemoAccounts)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-sky-300 transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>⚡ เข้าใช้งานด่วนสำหรับการทดสอบ (1-Click Demo)</span>
+                  </span>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400 font-normal">
+                    <span>{showDemoAccounts ? 'ซ่อน' : 'แสดงบัญชี'}</span>
+                    {showDemoAccounts ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </div>
+                </button>
+
+                {showDemoAccounts && (
+                  <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <p className="text-[10px] text-slate-400 px-1">
+                      คลิกเพื่อทดสอบระบบตามบทบาทหน้าที่ได้ทันที (จำลองการสาธิต):
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {DEMO_PRESET_ACCOUNTS.map((preset) => {
+                        const isSuper = preset.username === 'admin';
+                        const isCo = preset.username === 'pimmy';
+
+                        return (
+                          <button
+                            key={preset.username}
+                            type="button"
+                            onClick={() => handleSelectPreset(preset, true)}
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5 group ${
+                              isSuper 
+                                ? 'bg-amber-950/25 hover:bg-amber-900/40 border-amber-500/30 hover:border-amber-400/50'
+                                : isCo
+                                ? 'bg-purple-950/25 hover:bg-purple-900/40 border-purple-500/30 hover:border-purple-400/50'
+                                : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'
+                            }`}
+                          >
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                              isSuper ? 'bg-amber-500/20 text-amber-300' : isCo ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-sky-300'
+                            }`}>
+                              {isSuper ? <Crown className="w-4 h-4 text-amber-400" /> : <User className="w-3.5 h-3.5" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-xs font-bold text-white truncate group-hover:text-sky-300 transition-colors">
+                                  {preset.label}
+                                </span>
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/10 text-slate-300 shrink-0">
+                                  {preset.passwordHint}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                                {preset.sublabel}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Guest Direct Entry */}
+                    <button
+                      type="button"
+                      onClick={handleGuestLogin}
+                      className="w-full mt-2 py-2 px-3 rounded-xl bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/20 text-xs text-sky-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer font-medium"
+                    >
+                      <span>เข้าชมในโหมดผู้เยี่ยมชมชั่วคราว (Guest Preview Mode)</span>
+                      <ExternalLink className="w-3 h-3 text-sky-400" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Institutional Security Notice */}
               <div className="mt-6 pt-5 border-t border-white/10 space-y-2 text-center text-[11px] text-slate-400">

@@ -104,7 +104,7 @@ export default function DualCalendarModule({
   };
 
   const handleGoToToday = () => {
-    setCurrentDate(new Date(2026, 8, 11)); // Jump to academic session date (Sep 2026) or real today
+    setCurrentDate(new Date());
   };
 
   // Calendar math for current month
@@ -415,7 +415,8 @@ export default function DualCalendarModule({
                 {/* Days of month */}
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
                   const events = getEventsForDay(day);
-                  const isToday = currentYear === 2026 && currentMonth === 8 && day === 11;
+                  const todayObj = new Date();
+                  const isToday = currentYear === todayObj.getFullYear() && currentMonth === todayObj.getMonth() && day === todayObj.getDate();
                   const hasSelectedEvent = events.some(e => e.id === selectedOrderId);
 
                   return (
