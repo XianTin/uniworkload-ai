@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
+import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
 
 const THAI_MONTHS = [
@@ -670,6 +671,10 @@ export default function DualCalendarModule({
                             src={photoObj.url}
                             alt={photoObj.name || 'หลักฐาน'}
                             className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                            }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-1">
                             <span className="text-[8px] text-white truncate max-w-[80%]">

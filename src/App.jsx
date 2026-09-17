@@ -13,7 +13,9 @@ import {
   updateOrderStatusInSupabase, 
   deleteOrderFromSupabase,
   clearAllOrdersFromSupabase,
-  saveFacultyToSupabase 
+  saveFacultyToSupabase,
+  saveMultipleEvidencesToSupabase,
+  deleteEvidenceFromSupabase
 } from './utils/supabaseClient';
 import Navbar from './components/Navbar';
 import StatsOverview from './components/StatsOverview';
@@ -28,6 +30,7 @@ import AddFacultyModal from './components/AddFacultyModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './components/LoginPage';
 import { getStoredSession, storeSession, clearSession } from './utils/auth';
+import { compressImageFile } from './utils/imageUtils';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -115,9 +118,25 @@ export default function App() {
           }
         }
 
+        // Helper to merge remote orders while preserving any local photos
+        const mergePreservingPhotos = (remoteOrders, currentOrders) => {
+          if (!currentOrders || currentOrders.length === 0) return remoteOrders;
+          return remoteOrders.map((rOrd) => {
+            const localOrd = currentOrders.find(l => l.id === rOrd.id);
+            if (localOrd && (localOrd.actualPhotos || []).length > (rOrd.actualPhotos || []).length) {
+              return {
+                ...rOrd,
+                actualPhotos: localOrd.actualPhotos,
+                evidenceStatus: 'ready'
+              };
+            }
+            return rOrd;
+          });
+        };
+
         // Supabase is the central shared database (Single Source of Truth)
         if (ords && Array.isArray(ords) && ords.length > 0) {
-          setOrders(ords);
+          setOrders((prev) => mergePreservingPhotos(ords, prev));
         } else {
           // If remote is empty, check if we have local cached orders
           const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
@@ -149,7 +168,16 @@ export default function App() {
           try {
             const latestOrders = await fetchOrdersFromSupabase([]);
             if (isMounted && latestOrders) {
-              setOrders(latestOrders);
+              setOrders((prev) => {
+                if (!prev || prev.length === 0) return latestOrders;
+                return latestOrders.map((rOrd) => {
+                  const localOrd = prev.find(l => l.id === rOrd.id);
+                  if (localOrd && (localOrd.actualPhotos || []).length > (rOrd.actualPhotos || []).length) {
+                    return { ...rOrd, actualPhotos: localOrd.actualPhotos, evidenceStatus: 'ready' };
+                  }
+                  return rOrd;
+                });
+              });
               if (payload.eventType === 'INSERT') {
                 showToast('⚡ ซิงก์คำสั่งใหม่จากผู้ใช้ในระบบแบบเรียลไทม์!', 'success');
               } else if (payload.eventType === 'DELETE') {
@@ -158,6 +186,36 @@ export default function App() {
             }
           } catch (err) {
             console.warn('[Supabase Realtime] Error updating orders:', err);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_evidences' },
+        async (payload) => {
+          if (!isMounted) return;
+          console.log('[Supabase Realtime] Evidence table change:', payload.eventType);
+          try {
+            const latestOrders = await fetchOrdersFromSupabase([]);
+            if (isMounted && latestOrders) {
+              setOrders((prev) => {
+                if (!prev || prev.length === 0) return latestOrders;
+                return latestOrders.map((rOrd) => {
+                  const localOrd = prev.find(l => l.id === rOrd.id);
+                  if (localOrd && (localOrd.actualPhotos || []).length > (rOrd.actualPhotos || []).length) {
+                    return { ...rOrd, actualPhotos: localOrd.actualPhotos, evidenceStatus: 'ready' };
+                  }
+                  return rOrd;
+                });
+              });
+              if (payload.eventType === 'INSERT') {
+                showToast('📸 ซิงก์ภาพถ่ายหลักฐานใหม่ลงในระบบแบบเรียลไทม์!', 'success');
+              } else if (payload.eventType === 'DELETE') {
+                showToast('🗑️ ซิงก์การลบภาพถ่ายหลักฐานจากระบบคลาวด์', 'info');
+              }
+            }
+          } catch (err) {
+            console.warn('[Supabase Realtime] Error updating evidences:', err);
           }
         }
       )
@@ -362,13 +420,37 @@ export default function App() {
   };
 
   // Save additional evidence photo (supports single photo or multiple batch photos)
-  const handleSaveEvidence = (orderId, newEvidence) => {
-    const itemsToAdd = Array.isArray(newEvidence) ? newEvidence : [newEvidence];
+  const handleSaveEvidence = async (orderId, newEvidence) => {
+    const rawItems = Array.isArray(newEvidence) ? newEvidence : [newEvidence];
+
+    // Ensure all items have lightweight, persistent Data URLs before state and DB sync
+    const itemsToAdd = await Promise.all(rawItems.map(async (item) => {
+      let finalUrl = item.url || item.dataUrl;
+      let finalSize = item.size;
+      if (finalUrl && (finalUrl.startsWith('blob:') || (finalUrl.startsWith('data:image/') && finalUrl.length > 300000))) {
+        try {
+          const comp = await compressImageFile(finalUrl, 1200, 1200, 0.75);
+          if (comp?.dataUrl) {
+            finalUrl = comp.dataUrl;
+            finalSize = comp.size;
+          }
+        } catch (e) {
+          console.warn('[handleSaveEvidence] Compression failed:', e);
+        }
+      }
+      return {
+        ...item,
+        url: finalUrl,
+        size: finalSize || item.size
+      };
+    }));
+
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
           return {
             ...ord,
+            evidenceStatus: 'ready',
             actualPhotos: [...(ord.actualPhotos || []), ...itemsToAdd]
           };
         }
@@ -381,22 +463,38 @@ export default function App() {
         : 'แนบภาพถ่ายหลักฐานเข้าลิ้นชักเรียบร้อยแล้ว!',
       'success'
     );
+
+    try {
+      const targetOrder = orders.find(o => o.id === orderId);
+      const assignedFacId = targetOrder?.facultyId || activeFaculty?.id || 'fac-pimra';
+      await saveMultipleEvidencesToSupabase(orderId, assignedFacId, itemsToAdd);
+    } catch (err) {
+      console.error('[handleSaveEvidence] Error saving to Supabase:', err);
+    }
   };
 
   // Delete evidence photo
-  const handleDeleteEvidence = (orderId, photoId) => {
+  const handleDeleteEvidence = async (orderId, photoId) => {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
+          const updatedPhotos = (ord.actualPhotos || []).filter(p => p.id !== photoId);
           return {
             ...ord,
-            actualPhotos: (ord.actualPhotos || []).filter(p => p.id !== photoId)
+            evidenceStatus: updatedPhotos.length > 0 ? 'ready' : 'none',
+            actualPhotos: updatedPhotos
           };
         }
         return ord;
       })
     );
     showToast('ลบภาพหลักฐานเรียบร้อยแล้ว', 'info');
+
+    try {
+      await deleteEvidenceFromSupabase(orderId, photoId);
+    } catch (err) {
+      console.error('[handleDeleteEvidence] Error deleting from Supabase:', err);
+    }
   };
 
   // Simulate adding sample order for active faculty

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { compressImageFile, FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { 
   X, 
   UploadCloud, 
@@ -15,7 +16,8 @@ import {
   Copy,
   Layers,
   Check,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 const PRESET_SAMPLES = [
@@ -55,24 +57,15 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
   const fileInputRef = useRef(null);
   const defaultDate = order.eventDate || new Date().toISOString().split('T')[0];
 
-  // List of queued evidence items
-  const [queuedPhotos, setQueuedPhotos] = useState(() => [
-    {
-      id: `ev-init-${Date.now()}`,
-      name: PRESET_SAMPLES[0].name,
-      url: PRESET_SAMPLES[0].url,
-      size: PRESET_SAMPLES[0].size,
-      type: PRESET_SAMPLES[0].type,
-      uploadedAt: defaultDate,
-      note: PRESET_SAMPLES[0].caption,
-      isPreset: true
-    }
-  ]);
+  // List of queued evidence items (starts clean without dummy defaults)
+  const [queuedPhotos, setQueuedPhotos] = useState([]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [pasteNotice, setPasteNotice] = useState(null);
   const [applyAllSuccess, setApplyAllSuccess] = useState(false);
+
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // Safely ensure activeIndex is valid
   const currentPhoto = queuedPhotos[activeIndex] || queuedPhotos[0] || null;
@@ -117,57 +110,103 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
   }, [pasteNotice]);
 
   // Read and process incoming files (from file dialog, drag-drop, or clipboard)
-  const processIncomingFiles = (files, source = 'local') => {
+  const processIncomingFiles = async (files, source = 'local') => {
     if (!files || files.length === 0) return;
 
+    setIsCompressing(true);
     const filesArray = Array.from(files);
-    const newItems = [];
-    let completedCount = 0;
 
-    filesArray.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
+    try {
+      const processedItems = await Promise.all(filesArray.map(async (file, index) => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         const autoName = source === 'clipboard' 
-          ? `ภาพถ่าย_Clipboard_${timestamp}_${index + 1}.png`
+          ? `ภาพถ่าย_Clipboard_${timestamp}_${index + 1}.jpg`
           : file.name;
-
-        const sizeFormatted = file.size > 1024 * 1024 
-          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-          : `${(file.size / 1024).toFixed(0)} KB`;
 
         const isDoc = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
-        newItems.push({
-          id: `ev-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-          name: autoName,
-          url: event.target.result,
-          size: sizeFormatted,
-          type: isDoc ? 'attendance' : 'photo',
-          uploadedAt: defaultDate,
-          note: `ภาพถ่ายหลักฐานการปฏิบัติหน้าที่: ${autoName.replace(/\.[^/.]+$/, '')}`,
-          isPreset: false
+        if (isDoc) {
+          // Document file (PDF)
+          const sizeFormatted = file.size > 1024 * 1024 
+            ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+            : `${(file.size / 1024).toFixed(0)} KB`;
+          
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              resolve({
+                id: `ev-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                name: autoName,
+                url: e.target.result,
+                size: sizeFormatted,
+                type: 'document',
+                uploadedAt: defaultDate,
+                note: `เอกสารหลักฐาน: ${autoName.replace(/\.[^/.]+$/, '')}`,
+                isPreset: false
+              });
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          });
+        }
+
+        // Image file -> compress to lightweight (~100-150KB) crisp JPEG
+        try {
+          const comp = await compressImageFile(file, 1200, 1200, 0.75);
+          if (comp && comp.dataUrl) {
+            return {
+              id: `ev-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+              name: comp.name || autoName,
+              url: comp.dataUrl,
+              size: comp.size || '150 KB',
+              type: 'photo',
+              uploadedAt: defaultDate,
+              note: `ภาพถ่ายหลักฐานการปฏิบัติหน้าที่: ${autoName.replace(/\.[^/.]+$/, '')}`,
+              isPreset: false
+            };
+          }
+        } catch (compErr) {
+          console.warn('[EvidenceUploadModal] Compression failed, fallback to raw reader:', compErr);
+        }
+
+        // Fallback to standard reader
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({
+              id: `ev-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+              name: autoName,
+              url: e.target.result,
+              size: `${Math.round(file.size / 1024)} KB`,
+              type: 'photo',
+              uploadedAt: defaultDate,
+              note: `ภาพถ่ายหลักฐานการปฏิบัติหน้าที่: ${autoName.replace(/\.[^/.]+$/, '')}`,
+              isPreset: false
+            });
+          };
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
+      }));
+
+      const validItems = processedItems.filter(Boolean);
+      if (validItems.length > 0) {
+        setQueuedPhotos((prev) => {
+          const isOnlyDefaultPreset = prev.length === 1 && prev[0].isPreset;
+          const updated = isOnlyDefaultPreset ? validItems : [...prev, ...validItems];
+          setActiveIndex(isOnlyDefaultPreset ? 0 : prev.length);
+          return updated;
         });
 
-        completedCount++;
-        if (completedCount === filesArray.length) {
-          setQueuedPhotos((prev) => {
-            // If previous only contained the untouched initial preset sample, replace it
-            const isOnlyDefaultPreset = prev.length === 1 && prev[0].isPreset;
-            const updated = isOnlyDefaultPreset ? newItems : [...prev, ...newItems];
-            setActiveIndex(isOnlyDefaultPreset ? 0 : prev.length);
-            return updated;
-          });
-
-          if (source === 'clipboard') {
-            setPasteNotice(`วางภาพจาก Clipboard สำเร็จ (${filesArray.length} รายการ)`);
-          } else {
-            setPasteNotice(`เพิ่มรูปภาพสำเร็จ (${filesArray.length} รายการ)`);
-          }
+        if (source === 'clipboard') {
+          setPasteNotice(`วางภาพจาก Clipboard สำเร็จ (${validItems.length} รายการ)`);
+        } else {
+          setPasteNotice(`เพิ่มรูปภาพสำเร็จ (${validItems.length} รายการ)`);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      }
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   // Local File Input Change
@@ -175,8 +214,8 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
     const files = e.target.files;
     if (files && files.length > 0) {
       processIncomingFiles(files, 'local');
+      e.target.value = '';
     }
-    e.target.value = '';
   };
 
   // Drag & Drop Handlers
@@ -392,6 +431,13 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                 รองรับ JPG, PNG, WEBP, PDF (ไม่จำกัดจำนวนภาพ)
               </p>
             </div>
+
+            {isCompressing && (
+              <div className="flex items-center justify-center gap-2 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-800 font-semibold animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                <span>กำลังปรับขนาดและบีบอัดภาพเพื่อการบันทึกที่รวดเร็วและปลอดภัย...</span>
+              </div>
+            )}
           </div>
 
           {/* Quick Preset Samples */}
@@ -457,6 +503,10 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                         src={photo.url}
                         alt={photo.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                        }}
                       />
                       <span className="absolute top-1 left-1 bg-slate-900/80 text-white font-mono text-[9px] px-1 rounded-sm">
                         #{idx + 1}
@@ -508,6 +558,10 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                   src={currentPhoto.url}
                   alt={currentPhoto.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                  }}
                 />
                 <div className="absolute bottom-2 left-2 right-2 bg-slate-950/75 backdrop-blur-xs text-white p-2 rounded-lg text-[11px] flex items-center justify-between">
                   <span className="truncate">{currentPhoto.name || 'ภาพถ่ายปฏิบัติหน้าที่จริง.jpg'}</span>

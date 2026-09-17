@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
 import sampleDocsCache from '../data/sampleDocsOcrCache.json';
+import { compressImageFile } from './imageUtils';
 
 // กำหนด Worker สำหรับ PDF.js
 try {
@@ -164,7 +165,22 @@ export async function extractTextFromDocument(file, onProgress = () => {}) {
   }
 
   // หากเป็นไฟล์ภาพ (PNG, JPG, JPEG, WebP, แคป LINE)
-  const imagePreviewUrl = URL.createObjectURL(file);
+  let imagePreviewUrl = null;
+  try {
+    const comp = await compressImageFile(file, 1200, 1200, 0.75);
+    if (comp?.dataUrl) {
+      imagePreviewUrl = comp.dataUrl;
+    }
+  } catch (compErr) {
+    console.warn('[ocrEngine] compressImageFile failed:', compErr);
+  }
+
+  if (!imagePreviewUrl) {
+    try {
+      imagePreviewUrl = URL.createObjectURL(file);
+    } catch (e) {}
+  }
+
   try {
     const ocrText = await runTesseractOcr(file, onProgress);
     return {

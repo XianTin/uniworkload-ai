@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { compressImageFile } from './imageUtils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ufkenphuidmujarfpeoz.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVma2VucGh1aWRtdWphcmZwZW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDU3MjgsImV4cCI6MjEwNDg4MTcyOH0.TO-SzgBcRabRjdO4dbzpahdVdpj56rFnfYmz39UJuWU';
@@ -144,50 +145,77 @@ export async function fetchOrdersFromSupabase(fallback = []) {
 }
 
 /**
- * Upload an evidence photo to Supabase Storage & insert record in order_evidences
+ * Save single evidence photo to order_evidences table in Supabase
  */
-export async function uploadEvidenceToSupabase(orderId, facultyId, file, title = 'ภาพถ่ายหลักฐานหน้างาน', description = '') {
+export async function saveSingleEvidenceToSupabase(orderId, facultyId, evidence) {
+  return saveMultipleEvidencesToSupabase(orderId, facultyId, [evidence]);
+}
+
+/**
+ * Save multiple evidence photos to order_evidences table in Supabase
+ */
+export async function saveMultipleEvidencesToSupabase(orderId, facultyId, evidences) {
   try {
-    const ext = file.name.split('.').pop() || 'jpg';
-    const cleanName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const path = `${facultyId}/${orderId}/${Date.now()}_${cleanName}.${ext}`;
+    if (!evidences || evidences.length === 0) return [];
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('evidences')
-      .upload(path, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
+    const rawRecords = evidences.map((ev, idx) => {
+      const photoObj = typeof ev === 'string'
+        ? { id: `ev-${orderId}-${idx}`, url: ev, name: `ภาพถ่าย_${idx + 1}.jpg` }
+        : ev;
 
-    if (uploadError) {
-      console.error('[Supabase Storage] Upload error:', uploadError);
-      throw uploadError;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('evidences')
-      .getPublicUrl(path);
-
-    const publicUrl = publicUrlData.publicUrl;
-    const evidenceId = 'ev-' + Date.now();
-    const fileSizeStr = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
-
-    const { data: evRecord, error: insertError } = await supabase
-      .from('order_evidences')
-      .insert({
-        id: evidenceId,
+      return {
+        id: photoObj.id || `ev-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
         order_id: orderId,
-        faculty_id: facultyId,
-        title: title,
-        image_url: publicUrl,
-        file_size: fileSizeStr,
-        description: description
-      })
-      .select()
-      .single();
+        faculty_id: facultyId || 'fac-pimra',
+        title: photoObj.name || photoObj.title || `ภาพถ่ายหลักฐาน_${idx + 1}.jpg`,
+        rawUrl: photoObj.url || photoObj.dataUrl || '',
+        file_size: photoObj.size || '1.2 MB',
+        description: photoObj.note || photoObj.description || 'หลักฐานบันทึกการปฏิบัติหน้าที่ตามคำสั่งราชการ'
+      };
+    }).filter(r => r.rawUrl && r.rawUrl.trim().length > 0);
 
-    if (insertError) {
-      console.error('[Supabase DB] Error inserting order_evidences:', insertError);
+    if (rawRecords.length === 0) return [];
+
+    // Ensure every record has a persistent, lightweight Data URL or HTTP URL (no temporary blob: URLs)
+    const records = await Promise.all(rawRecords.map(async (r) => {
+      let finalUrl = r.rawUrl;
+      let finalSize = r.file_size;
+
+      if (finalUrl.startsWith('blob:') || (finalUrl.startsWith('data:image/') && finalUrl.length > 300000)) {
+        try {
+          const comp = await compressImageFile(finalUrl, 1200, 1200, 0.75);
+          if (comp?.dataUrl) {
+            finalUrl = comp.dataUrl;
+            finalSize = comp.size;
+          }
+        } catch (e) {
+          console.warn('[saveMultipleEvidencesToSupabase] Compression failed for record:', e);
+        }
+      }
+
+      return {
+        id: r.id,
+        order_id: r.order_id,
+        faculty_id: r.faculty_id,
+        title: r.title,
+        image_url: finalUrl,
+        file_size: finalSize,
+        description: r.description
+      };
+    }));
+
+    // Filter out any invalid blob URLs that couldn't be converted
+    const safeRecords = records.filter(r => r.image_url && !r.image_url.startsWith('blob:'));
+    if (safeRecords.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('order_evidences')
+      .upsert(safeRecords, { onConflict: 'id' })
+      .select();
+
+    if (error) {
+      console.error('[Supabase DB] Error upserting order_evidences:', error);
+      return [];
     }
 
     // Update order evidence status to ready
@@ -196,18 +224,54 @@ export async function uploadEvidenceToSupabase(orderId, facultyId, file, title =
       .update({ evidence_status: 'ready' })
       .eq('id', orderId);
 
-    return {
-      id: evidenceId,
-      title,
-      url: publicUrl,
-      fileSize: fileSizeStr,
-      uploadedAt: new Date().toISOString(),
-      description
-    };
+    return data;
   } catch (err) {
-    console.error('[uploadEvidenceToSupabase] Failed:', err);
-    throw err;
+    console.error('[saveMultipleEvidencesToSupabase] Exception:', err);
+    return [];
   }
+}
+
+/**
+ * Delete evidence photo from Supabase
+ */
+export async function deleteEvidenceFromSupabase(orderId, evidenceId) {
+  try {
+    const { error } = await supabase
+      .from('order_evidences')
+      .delete()
+      .eq('id', evidenceId);
+
+    if (error) {
+      console.error('[Supabase DB] Error deleting evidence:', error);
+    }
+
+    // Check if there are remaining evidences for this order
+    const { count } = await supabase
+      .from('order_evidences')
+      .select('*', { count: 'exact', head: true })
+      .eq('order_id', orderId);
+
+    if (count === 0) {
+      await supabase
+        .from('orders')
+        .update({ evidence_status: 'none' })
+        .eq('id', orderId);
+    }
+  } catch (err) {
+    console.error('[deleteEvidenceFromSupabase] Exception:', err);
+  }
+}
+
+/**
+ * Upload an evidence photo to Supabase (direct dataUrl fallback)
+ */
+export async function uploadEvidenceToSupabase(orderId, facultyId, file, title = 'ภาพถ่ายหลักฐานหน้างาน', description = '') {
+  return saveSingleEvidenceToSupabase(orderId, facultyId, {
+    title,
+    description,
+    url: typeof file === 'string' ? file : URL.createObjectURL(file),
+    size: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+  });
 }
 
 /**
@@ -215,6 +279,8 @@ export async function uploadEvidenceToSupabase(orderId, facultyId, file, title =
  */
 export async function saveOrderToSupabase(order, facultyId = 'fac-1') {
   try {
+    const hasPhotos = Boolean(order.actualPhotos && order.actualPhotos.length > 0);
+
     const record = {
       id: order.id,
       faculty_id: facultyId,
@@ -228,7 +294,7 @@ export async function saveOrderToSupabase(order, facultyId = 'fac-1') {
       status: order.status || 'pending',
       role: order.role || (order.facultyAssigned?.[0]?.roleInOrder) || 'กรรมการ',
       workload_hours: order.workloadHours || order.ePortfolio?.hours || 3,
-      evidence_status: order.evidenceStatus || 'none',
+      evidence_status: hasPhotos ? 'ready' : (order.evidenceStatus || 'none'),
       doc_file_name: order.documentFileName || null,
       raw_ocr_text: order.rawOcrText || null
     };
@@ -240,6 +306,12 @@ export async function saveOrderToSupabase(order, facultyId = 'fac-1') {
     if (error) {
       console.error('[Supabase] Error upserting order:', error);
     }
+
+    // Persist any attached photos to order_evidences table in Supabase
+    if (hasPhotos) {
+      await saveMultipleEvidencesToSupabase(order.id, facultyId, order.actualPhotos);
+    }
+
     return data;
   } catch (err) {
     console.error('[saveOrderToSupabase] Exception:', err);

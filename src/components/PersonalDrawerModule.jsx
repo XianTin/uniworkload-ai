@@ -31,6 +31,7 @@ import {
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
 import DossierSummaryModal from './DossierSummaryModal';
+import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
 
 // Helper function to format date into Thai Buddhist Era string
@@ -937,6 +938,10 @@ export default function PersonalDrawerModule({
                                   src={photoObj.url}
                                   alt={photoObj.name || 'ภาพหลักฐาน'}
                                   className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                                  onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                                  }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
                                   <span className="text-[9px] text-white truncate max-w-[80%] font-medium">

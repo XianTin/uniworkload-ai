@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Layers
 } from 'lucide-react';
+import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 
 export default function EvidenceLightboxModal({ 
   photo, 
@@ -140,6 +141,10 @@ export default function EvidenceLightboxModal({
               src={currentPhoto.url}
               alt={currentPhoto.name}
               className="max-h-[60vh] md:max-h-[68vh] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-all"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+              }}
             />
 
             {allPhotos.length > 1 && (
@@ -173,8 +178,12 @@ export default function EvidenceLightboxModal({
                   >
                     <img
                       src={itemObj.url}
-                      alt={`Thumb ${idx + 1}`}
+                      alt={itemObj.name || `ภาพที่ ${idx + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                      }}
                     />
                     <span className="absolute bottom-0 right-0 bg-slate-950/80 text-[8px] font-mono text-white px-0.5">
                       #{idx + 1}

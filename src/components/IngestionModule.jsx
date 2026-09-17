@@ -32,6 +32,7 @@ import {
   Zap
 } from 'lucide-react';
 import { extractTextFromDocument } from '../utils/ocrEngine';
+import { compressImageFile, FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { parseThaiOfficialOrder } from '../utils/thaiDocumentParser';
 import { 
   getAiSettings, 
@@ -163,10 +164,13 @@ export default function IngestionModule({
 
     const startTime = performance.now();
 
-    // Create preview URL if image
+    // Create preview URL if image (compressed Data URL for persistence across reloads)
     if (file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+      compressImageFile(file, 1200, 1200, 0.75).then((comp) => {
+        if (comp?.dataUrl) setPreviewUrl(comp.dataUrl);
+      }).catch(() => {
+        try { setPreviewUrl(URL.createObjectURL(file)); } catch (e) {}
+      });
     } else {
       setPreviewUrl(null);
     }
@@ -547,11 +551,16 @@ export default function IngestionModule({
     }
 
     const orderActualPhotos = [];
-    if (previewUrl && (isFacebookSource || selectedChannel === 'photo')) {
+    const isImageFile = activeFile?.type?.startsWith('image/') ||
+                        isFacebookSource ||
+                        selectedChannel === 'photo' ||
+                        (previewUrl && (previewUrl.startsWith('data:image/') || previewUrl.startsWith('http')));
+
+    if (previewUrl && isImageFile) {
       orderActualPhotos.push({
         id: `photo-${Date.now()}`,
         url: previewUrl,
-        name: activeFile?.name || 'ภาพแคปหลักฐาน_Facebook.jpg',
+        name: activeFile?.name || (isFacebookSource ? 'ภาพแคปหลักฐาน_Facebook.jpg' : 'ภาพถ่ายหลักฐาน.jpg'),
         uploadedAt: new Date().toISOString().split('T')[0]
       });
     }
@@ -853,7 +862,15 @@ export default function IngestionModule({
               >
                 {previewUrl ? (
                   <div className="space-y-2">
-                    <img src={previewUrl} alt="Facebook Screenshot" className="max-h-36 mx-auto rounded-lg border border-blue-200 object-contain shadow-2xs" />
+                    <img 
+                      src={previewUrl} 
+                      alt="Facebook Screenshot" 
+                      className="max-h-36 mx-auto rounded-lg border border-blue-200 object-contain shadow-2xs" 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                      }}
+                    />
                     <p className="text-[11px] text-emerald-700 font-semibold flex items-center justify-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>โหลดภาพแคป Facebook สำเร็จแล้ว คลิกเพื่อเปลี่ยนภาพ</span>
@@ -1316,6 +1333,10 @@ export default function IngestionModule({
                         src={previewUrl} 
                         alt="Scanned Document Preview" 
                         className="max-h-68 object-contain rounded-lg shadow-xs"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                        }}
                       />
                     </div>
                   </div>
