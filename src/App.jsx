@@ -304,20 +304,26 @@ export default function App() {
     showToast('อัปเดตสถานะการปฏิบัติงานเรียบร้อยแล้ว', 'info');
   };
 
-  // Save additional evidence photo
+  // Save additional evidence photo (supports single photo or multiple batch photos)
   const handleSaveEvidence = (orderId, newEvidence) => {
+    const itemsToAdd = Array.isArray(newEvidence) ? newEvidence : [newEvidence];
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
           return {
             ...ord,
-            actualPhotos: [...(ord.actualPhotos || []), newEvidence]
+            actualPhotos: [...(ord.actualPhotos || []), ...itemsToAdd]
           };
         }
         return ord;
       })
     );
-    showToast('แนบภาพถ่ายหลักฐานเข้าลิ้นชักเรียบร้อยแล้ว!', 'success');
+    showToast(
+      itemsToAdd.length > 1
+        ? `แนบภาพถ่ายหลักฐาน ${itemsToAdd.length} ภาพ เข้าลิ้นชักเรียบร้อยแล้ว!`
+        : 'แนบภาพถ่ายหลักฐานเข้าลิ้นชักเรียบร้อยแล้ว!',
+      'success'
+    );
   };
 
   // Delete evidence photo

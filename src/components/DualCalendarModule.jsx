@@ -183,7 +183,6 @@ export default function DualCalendarModule({
         onSaveEvidence={(orderId, newEvidence) => {
           onSaveEvidence?.(orderId, newEvidence);
           setIsEvidenceModalOpen(false);
-          onNotify?.('แนบภาพถ่ายหลักฐานเข้าคำสั่งในปฏิทินเรียบร้อยแล้ว!', 'success');
         }}
       />
 
