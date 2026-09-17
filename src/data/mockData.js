@@ -23,11 +23,11 @@ export const FACULTY_MEMBERS = [
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
     icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/calendar/feed/fac-pimra.ics",
     stats: {
-      totalOrders: 42,
-      completedOrders: 36,
-      pendingOrders: 6,
-      totalHours: 112.6,
-      evidenceReadyPct: 88,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      totalHours: 0,
+      evidenceReadyPct: 0,
     }
   },
   {
@@ -40,11 +40,11 @@ export const FACULTY_MEMBERS = [
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/v1/ical/thanaphat-84920.ics",
     stats: {
-      totalOrders: 18,
-      completedOrders: 15,
-      pendingOrders: 3,
-      totalHours: 56.5,
-      evidenceReadyPct: 92,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      totalHours: 0,
+      evidenceReadyPct: 0,
     }
   },
   {
@@ -57,11 +57,11 @@ export const FACULTY_MEMBERS = [
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
     icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/v1/ical/somchai-19284.ics",
     stats: {
-      totalOrders: 24,
-      completedOrders: 21,
-      pendingOrders: 3,
-      totalHours: 68.0,
-      evidenceReadyPct: 94,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      totalHours: 0,
+      evidenceReadyPct: 0,
     }
   },
   {
@@ -74,16 +74,20 @@ export const FACULTY_MEMBERS = [
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
     icalFeedUrl: "webcal://uniworkload.nsru.ac.th/api/v1/ical/waranya-37291.ics",
     stats: {
-      totalOrders: 12,
-      completedOrders: 10,
-      pendingOrders: 2,
-      totalHours: 35.0,
-      evidenceReadyPct: 85,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      totalHours: 0,
+      evidenceReadyPct: 0,
     }
   }
 ];
 
-export const INITIAL_ORDERS = [
+// Clean empty orders array for fresh system state (0 orders)
+export const INITIAL_ORDERS = [];
+
+// Demo mock orders preserved for optional user-triggered demonstration / testing
+export const DEMO_MOCK_ORDERS = [
   ...seedPimraOrders,
   // --- ปีการศึกษา 2569 (ปัจจุบัน) ---
   {

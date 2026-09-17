@@ -12,16 +12,33 @@ import {
   Award
 } from 'lucide-react';
 
-export default function StatsOverview({ activeFaculty, currentUser, onOpenIngest, onNavigateTab }) {
+export default function StatsOverview({ activeFaculty, currentUser, orders = [], onOpenIngest, onNavigateTab }) {
   const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role === 'superadmin';
   const isCoAdmin = currentUser?.isCoAdmin || currentUser?.role === 'coadmin';
-  const stats = activeFaculty?.stats || {
-    totalOrders: 14,
-    completedOrders: 11,
-    pendingOrders: 3,
-    totalHours: 42.5,
-    evidenceReadyPct: 88
-  };
+
+  // Compute live stats for active faculty directly from current orders
+  const facultyOrders = React.useMemo(() => {
+    if (!orders || !Array.isArray(orders)) return [];
+    return orders.filter((o) =>
+      (o.facultyAssigned || []).some((f) => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id
+    );
+  }, [orders, activeFaculty?.id]);
+
+  const stats = React.useMemo(() => {
+    const totalOrders = facultyOrders.length;
+    const completedOrders = facultyOrders.filter((o) => o.status === 'done').length;
+    const pendingOrders = facultyOrders.filter((o) => o.status !== 'done').length;
+    const totalHours = facultyOrders.reduce((sum, o) => sum + (Number(o.workloadHours) || 0), 0);
+    const withPhotos = facultyOrders.filter((o) => o.actualPhotos && o.actualPhotos.length > 0).length;
+    const evidenceReadyPct = totalOrders > 0 ? Math.round((withPhotos / totalOrders) * 100) : 0;
+    return {
+      totalOrders,
+      completedOrders,
+      pendingOrders,
+      totalHours: Number(totalHours.toFixed(1)),
+      evidenceReadyPct
+    };
+  }, [facultyOrders]);
 
   return (
     <div className="space-y-6">

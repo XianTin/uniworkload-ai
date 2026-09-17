@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   FACULTY_MEMBERS, 
-  INITIAL_ORDERS 
+  INITIAL_ORDERS,
+  DEMO_MOCK_ORDERS 
 } from './data/mockData';
 import { 
   fetchFacultiesFromSupabase, 
@@ -38,7 +39,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-const ORDERS_STORAGE_KEY = 'uniworkload_orders_data_v2';
+const ORDERS_STORAGE_KEY = 'uniworkload_orders_data_v3';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredSession());
@@ -50,6 +51,11 @@ export default function App() {
   // Orders state with localStorage persistence (defaults to empty array per user request)
   const [orders, setOrders] = useState(() => {
     try {
+      // Clean up legacy cached storage keys from older releases
+      localStorage.removeItem('uniworkload_orders_data');
+      localStorage.removeItem('uniworkload_orders_data_v1');
+      localStorage.removeItem('uniworkload_orders_data_v2');
+
       const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
       if (saved !== null) {
         return JSON.parse(saved);
@@ -382,7 +388,7 @@ export default function App() {
 
   // Restore demo mock orders (42 orders)
   const handleRestoreDemoOrders = () => {
-    setOrders(INITIAL_ORDERS);
+    setOrders(DEMO_MOCK_ORDERS);
     showToast('กู้คืนชุดข้อมูลคำสั่งจำลองสำหรับสาธิต (42 ฉบับ) สำเร็จ!', 'success');
   };
 
@@ -455,6 +461,7 @@ export default function App() {
           {activeTab === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in duration-300">
               <StatsOverview
+                orders={orders}
                 activeFaculty={activeFaculty}
                 currentUser={currentUser}
                 onOpenIngest={() => setActiveTab('ingestion')}
