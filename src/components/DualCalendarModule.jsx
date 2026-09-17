@@ -38,6 +38,8 @@ const THAI_MONTHS = [
 export default function DualCalendarModule({ 
   orders = [], 
   activeFaculty, 
+  facultyList = [],
+  onSelectFaculty,
   onToggleStatus, 
   onSaveEvidence,
   onDeleteEvidence,
@@ -50,13 +52,15 @@ export default function DualCalendarModule({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all'); // all | upcoming | done
+  const [viewAllFaculties, setViewAllFaculties] = useState(false);
 
-  // Filter orders relevant to active faculty
+  // Filter orders relevant to active faculty or all faculties
   const facultyOrders = useMemo(() => {
+    if (viewAllFaculties) return orders || [];
     return (orders || []).filter(o => 
-      (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
+      (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id
     );
-  }, [orders, activeFaculty?.id]);
+  }, [orders, activeFaculty?.id, viewAllFaculties]);
 
   // Find initial month: if faculty has orders, find the closest order date or default to Sep 2026 / current date
   const [currentDate, setCurrentDate] = useState(() => {
@@ -218,6 +222,28 @@ export default function DualCalendarModule({
               <Smartphone className="w-4 h-4" />
               <span>ซิงค์เข้ามือถือ (iCal Feed)</span>
             </button>
+
+            {/* Faculty Scope Switcher */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setViewAllFaculties(false)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                  !viewAllFaculties ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewAllFaculties(true)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                  viewAllFaculties ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>รวมทุกคน ({orders?.length || 0})</span>
+              </button>
+            </div>
 
             {/* View switcher */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">

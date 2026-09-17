@@ -6,6 +6,7 @@ import {
   DEMO_MOCK_ORDERS 
 } from './data/mockData';
 import { 
+  supabase,
   fetchFacultiesFromSupabase, 
   fetchOrdersFromSupabase, 
   saveOrderToSupabase, 
@@ -90,14 +91,18 @@ export default function App() {
     }
   }, [orders]);
 
-  // Sync with Supabase on mount
+  // Sync with Supabase on mount & Live Realtime sync across all devices
   useEffect(() => {
+    let isMounted = true;
+
     async function syncFromSupabase() {
       try {
         const [facs, ords] = await Promise.all([
           fetchFacultiesFromSupabase(FACULTY_MEMBERS),
           fetchOrdersFromSupabase([])
         ]);
+        if (!isMounted) return;
+
         if (facs && facs.length > 0) {
           setFacultyList(facs);
           // If logged in as specific faculty, retain that faculty
@@ -109,16 +114,59 @@ export default function App() {
             setActiveFaculty(facs[0]);
           }
         }
-        // Only load from remote if user has not explicitly cleared/set local data
-        const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
-        if (saved === null && ords && ords.length > 0) {
+
+        // Supabase is the central shared database (Single Source of Truth)
+        if (ords && Array.isArray(ords) && ords.length > 0) {
           setOrders(ords);
+        } else {
+          // If remote is empty, check if we have local cached orders
+          const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
+          if (saved) {
+            try {
+              const localParsed = JSON.parse(saved);
+              if (Array.isArray(localParsed) && localParsed.length > 0) {
+                setOrders(localParsed);
+              }
+            } catch (e) {}
+          }
         }
       } catch (err) {
         console.warn('[Supabase Sync] Operating with local state fallback:', err);
       }
     }
+
     syncFromSupabase();
+
+    // Supabase Realtime Channel: broadcast inserts, updates, deletes to all users live
+    const channel = supabase
+      .channel('uniworkload-realtime-orders-feed')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        async (payload) => {
+          if (!isMounted) return;
+          console.log('[Supabase Realtime] Order table change:', payload.eventType);
+          try {
+            const latestOrders = await fetchOrdersFromSupabase([]);
+            if (isMounted && latestOrders) {
+              setOrders(latestOrders);
+              if (payload.eventType === 'INSERT') {
+                showToast('⚡ ซิงก์คำสั่งใหม่จากผู้ใช้ในระบบแบบเรียลไทม์!', 'success');
+              } else if (payload.eventType === 'DELETE') {
+                showToast('🗑️ ซิงก์การลบคำสั่งจากระบบคลาวด์', 'info');
+              }
+            }
+          } catch (err) {
+            console.warn('[Supabase Realtime] Error updating orders:', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // URL Deep-link listener (e.g. from Google Calendar, email, notifications)
@@ -263,8 +311,17 @@ export default function App() {
 
   // Add new order from AI Ingestion module
   const handleAddNewOrder = (newOrder) => {
-    setOrders((prev) => [newOrder, ...prev]);
-    saveOrderToSupabase(newOrder, activeFaculty?.id || 'fac-1');
+    const assignedFacId = newOrder.facultyAssigned?.[0]?.id || activeFaculty?.id || 'fac-pimra';
+    setOrders((prev) => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
+    saveOrderToSupabase(newOrder, assignedFacId);
+
+    // If order was assigned to a specific faculty, switch activeFaculty to that faculty so it displays immediately
+    if (assignedFacId && assignedFacId !== activeFaculty?.id) {
+      const targetFac = facultyList.find(f => f.id === assignedFacId);
+      if (targetFac) {
+        setActiveFaculty(targetFac);
+      }
+    }
     
     // Confetti celebration
     try {
@@ -277,7 +334,7 @@ export default function App() {
       // ignore
     }
 
-    showToast(`สกัดข้อมูลและกระจายคำสั่ง [${newOrder.orderNumber}] สู่ลิ้นชักอาจารย์เรียบร้อยแล้ว!`, 'success');
+    showToast(`สกัดข้อมูลและบันทึกคำสั่ง [${newOrder.orderNumber}] สู่ลิ้นชักเรียบร้อยแล้ว! 🎯`, 'success');
     setActiveTab('drawer');
   };
 
@@ -460,6 +517,7 @@ export default function App() {
         userRole={userRole}
         setUserRole={setUserRole}
         currentUser={currentUser}
+        orders={orders}
         onLogout={handleLogout}
         onOpenIngest={() => setActiveTab('ingestion')}
         onOpenIcal={() => setIsIcalOpen(true)}
@@ -507,6 +565,9 @@ export default function App() {
               <PersonalDrawerModule
                 orders={orders}
                 activeFaculty={activeFaculty}
+                facultyList={facultyList}
+                currentUser={currentUser}
+                onSelectFaculty={(fac) => setActiveFaculty(fac)}
                 highlightOrderId={highlightOrderId}
                 onToggleStatus={handleToggleStatus}
                 onSaveEvidence={handleSaveEvidence}
@@ -528,6 +589,8 @@ export default function App() {
               <DualCalendarModule
                 orders={orders}
                 activeFaculty={activeFaculty}
+                facultyList={facultyList}
+                onSelectFaculty={(fac) => setActiveFaculty(fac)}
                 onToggleStatus={handleToggleStatus}
                 onSaveEvidence={handleSaveEvidence}
                 onDeleteEvidence={handleDeleteEvidence}

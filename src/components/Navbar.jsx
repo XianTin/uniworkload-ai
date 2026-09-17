@@ -29,6 +29,7 @@ export default function Navbar({
   userRole, 
   setUserRole, 
   currentUser,
+  orders = [],
   onLogout,
   onOpenIngest, 
   onOpenIcal,
@@ -316,6 +317,10 @@ export default function Navbar({
                       <div className="max-h-44 overflow-y-auto space-y-0.5">
                         {facultyList.map((faculty) => {
                           const isSelected = faculty.id === activeFaculty?.id;
+                          const facOrdersCount = (orders || []).filter(o => 
+                            (o.facultyAssigned || []).some(f => f.id === faculty.id) || o.facultyId === faculty.id
+                          ).length;
+
                           return (
                             <button
                               key={faculty.id}
@@ -337,7 +342,16 @@ export default function Navbar({
                                 />
                                 <span className="truncate">{faculty.name}</span>
                               </div>
-                              {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                                  facOrdersCount > 0 
+                                    ? 'bg-blue-100 text-blue-700 font-bold' 
+                                    : 'bg-slate-100 text-slate-400'
+                                }`}>
+                                  {facOrdersCount} งาน
+                                </span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                              </div>
                             </button>
                           );
                         })}

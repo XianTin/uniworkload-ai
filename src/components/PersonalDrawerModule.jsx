@@ -52,6 +52,9 @@ function formatThaiDate(dateStr) {
 export default function PersonalDrawerModule({ 
   orders, 
   activeFaculty, 
+  facultyList = [],
+  currentUser,
+  onSelectFaculty,
   highlightOrderId,
   onToggleStatus, 
   onSaveEvidence, 
@@ -68,6 +71,7 @@ export default function PersonalDrawerModule({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | upcoming | done | missing_photo
   const [selectedCategory, setSelectedCategory] = useState('all'); // all | category name
+  const [viewAllFaculties, setViewAllFaculties] = useState(false);
   
   // Custom Date Range filter states
   const [startDate, setStartDate] = useState('');
@@ -122,13 +126,14 @@ export default function PersonalDrawerModule({
     }
   };
 
-  // Base list of orders assigned to active faculty
+  // Base list of orders assigned to active faculty or all faculties
   const assignedOrders = useMemo(() => {
     if (!orders || !Array.isArray(orders)) return [];
+    if (viewAllFaculties) return orders;
     return orders.filter((order) => 
-      (order.facultyAssigned || []).some(f => f.id === activeFaculty?.id)
+      (order.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || order.facultyId === activeFaculty?.id
     );
-  }, [orders, activeFaculty?.id]);
+  }, [orders, activeFaculty?.id, viewAllFaculties]);
 
   // Compute category counts
   const categoryCounts = useMemo(() => {
@@ -255,13 +260,39 @@ export default function PersonalDrawerModule({
               <Layers className="w-3.5 h-3.5 text-purple-600" />
               <span>โมดูลที่ 2: Smart Dispatch & Personal Evidence Drawer</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex flex-wrap items-center gap-2">
               <span>ตู้ลิ้นชักแฟ้มหลักฐานส่วนบุคคล:</span>
-              <span className="text-blue-700">{activeFaculty?.name || 'อาจารย์'}</span>
+              <span className="text-blue-700">{viewAllFaculties ? 'รวมทุกอาจารย์ในระบบ' : (activeFaculty?.name || 'อาจารย์')}</span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              จัดเก็บคำสั่งราชการ แนบภาพถ่ายหน้างานจริง กรองช่วงวันที่อิสระ และส่งต่อ e-Portfolio มรภ.นครสวรรค์
-            </p>
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              {/* View Scope Segmented Pill */}
+              <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(false)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    !viewAllFaculties
+                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5 text-blue-600" />
+                  <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    viewAllFaculties
+                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-purple-600" />
+                  <span>รวมทุกคน ({orders?.length || 0})</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -612,6 +643,46 @@ export default function PersonalDrawerModule({
             </p>
           </div>
 
+          {/* Smart Cloud Orders Alert (When orders exist in other faculties) */}
+          {orders && orders.length > 0 && !viewAllFaculties && (
+            <div className="max-w-lg mx-auto p-4 rounded-2xl bg-amber-50/95 border border-amber-200 text-amber-900 text-xs text-left space-y-3 shadow-xs animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-amber-950 text-xs sm:text-sm">
+                    ตรวจพบข้อมูลคำสั่งปฏิบัติงาน {orders.length} ฉบับในระบบคลาวด์!
+                  </h4>
+                  <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                    ข้อมูลไม่ได้สูญหาย แต่ถูกบันทึกไว้ในตู้ลิ้นชักของอาจารย์ท่านอื่น ท่านสามารถกดดูรวมทุกคน หรือคลิกสลับไปดูตู้ของอาจารย์ที่มีคำสั่งได้ทันที
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/80">
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(true)}
+                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+                >
+                  🌐 ดูคำสั่งรวมทุกคน ({orders.length} ฉบับ)
+                </button>
+                {facultyList && facultyList.map(f => {
+                  const count = (orders || []).filter(o => (o.facultyAssigned || []).some(fa => fa.id === f.id) || o.facultyId === f.id).length;
+                  if (count === 0 || f.id === activeFaculty?.id) return null;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => onSelectFaculty && onSelectFaculty(f)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                    >
+                      📂 สลับไปดูตู้ {f.name?.split(' ')?.[0] || f.name} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="max-w-lg mx-auto bg-white/90 rounded-xl p-4 border border-blue-100 text-left space-y-2.5 text-xs text-slate-700 shadow-2xs">
             <div className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -728,6 +799,12 @@ export default function PersonalDrawerModule({
                       <span className="text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                         {order.category}
                       </span>
+                      {viewAllFaculties && (
+                        <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 flex items-center gap-1">
+                          <User className="w-3 h-3 text-purple-600" />
+                          <span>{order.facultyAssigned?.[0]?.name || 'อาจารย์'}</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5">
