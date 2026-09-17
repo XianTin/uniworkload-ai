@@ -10,7 +10,8 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  Layers
+  Layers,
+  FolderOpen
 } from 'lucide-react';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 
@@ -124,7 +125,7 @@ export default function EvidenceLightboxModal({
             </span>
           </div>
 
-          {/* Central Image & Navigation Arrows */}
+          {/* Central Image / Google Drive Viewer & Navigation Arrows */}
           <div className="flex-1 flex items-center justify-center relative my-2 overflow-hidden">
             {allPhotos.length > 1 && (
               <button
@@ -137,15 +138,44 @@ export default function EvidenceLightboxModal({
               </button>
             )}
 
-            <img
-              src={currentPhoto.url}
-              alt={currentPhoto.name}
-              className="max-h-[60vh] md:max-h-[68vh] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-all"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
-              }}
-            />
+            {Boolean(currentPhoto?.isGoogleDrive || currentPhoto?.type === 'gdrive' || (currentPhoto?.url && (currentPhoto.url.includes('drive.google.com') || currentPhoto.url.includes('docs.google.com')))) ? (
+              <div className="w-full max-w-xl aspect-video rounded-2xl bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 border border-emerald-500/30 flex flex-col items-center justify-center p-6 text-white text-center shadow-2xl relative">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 mb-3 shadow-inner">
+                  <FolderOpen className="w-8 h-8" />
+                </div>
+                <h4 className="text-base font-bold text-emerald-100 max-w-md line-clamp-2">
+                  {currentPhoto.name || currentPhoto.title || 'คลังหลักฐาน Google Drive'}
+                </h4>
+                <p className="text-xs text-emerald-300/80 font-mono mt-1 max-w-md truncate">
+                  {currentPhoto.url}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <a
+                    href={currentPhoto.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-all hover:scale-105"
+                  >
+                    <span>เปิดดูใน Google Drive</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <div className="absolute bottom-3 inset-x-4 flex items-center justify-between text-[10px] text-emerald-400/70 border-t border-emerald-900/60 pt-2 font-mono">
+                  <span>☁️ Google Workspace Cloud Storage</span>
+                  <span>ความจุไม่จำกัด (Unlimited)</span>
+                </div>
+              </div>
+            ) : (
+              <img
+                src={currentPhoto.url}
+                alt={currentPhoto.name}
+                className="max-h-[60vh] md:max-h-[68vh] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-all"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                }}
+              />
+            )}
 
             {allPhotos.length > 1 && (
               <button
@@ -165,6 +195,8 @@ export default function EvidenceLightboxModal({
               {allPhotos.map((p, idx) => {
                 const itemObj = typeof p === 'string' ? { url: p, id: idx } : p;
                 const isActive = idx === currentIndex;
+                const isThumbGDrive = itemObj.isGoogleDrive || itemObj.type === 'gdrive' || (itemObj.url && (itemObj.url.includes('drive.google.com') || itemObj.url.includes('docs.google.com')));
+
                 return (
                   <button
                     key={itemObj.id || idx}
@@ -176,15 +208,21 @@ export default function EvidenceLightboxModal({
                         : 'border-slate-700 opacity-60 hover:opacity-90 hover:border-slate-500'
                     }`}
                   >
-                    <img
-                      src={itemObj.url}
-                      alt={itemObj.name || `ภาพที่ ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
-                      }}
-                    />
+                    {isThumbGDrive ? (
+                      <div className="w-full h-full bg-emerald-950 flex flex-col items-center justify-center text-emerald-300">
+                        <FolderOpen className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <img
+                        src={itemObj.url}
+                        alt={itemObj.name || `ภาพที่ ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                        }}
+                      />
+                    )}
                     <span className="absolute bottom-0 right-0 bg-slate-950/80 text-[8px] font-mono text-white px-0.5">
                       #{idx + 1}
                     </span>
@@ -253,13 +291,25 @@ export default function EvidenceLightboxModal({
 
           {/* Action Buttons */}
           <div className="pt-6 border-t border-slate-800 flex items-center gap-2">
-            <button
-              onClick={handleDownload}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>ดาวน์โหลดภาพ</span>
-            </button>
+            {Boolean(currentPhoto?.isGoogleDrive || currentPhoto?.type === 'gdrive' || (currentPhoto?.url && (currentPhoto.url.includes('drive.google.com') || currentPhoto.url.includes('docs.google.com')))) ? (
+              <a
+                href={currentPhoto.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>เปิดดูใน Google Drive</span>
+              </a>
+            ) : (
+              <button
+                onClick={handleDownload}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>ดาวน์โหลดภาพ</span>
+              </button>
+            )}
             <button
               onClick={handleDelete}
               className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-rose-900/60 hover:text-rose-300 text-slate-400 flex items-center justify-center transition-colors cursor-pointer border border-slate-700"

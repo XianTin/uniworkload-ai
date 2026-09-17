@@ -42,6 +42,7 @@ import {
   AI_MODES 
 } from '../utils/geminiClient';
 import { DEMO_RAW_ORDERS, WORKLOAD_CATEGORIES, FACULTY_MEMBERS, REAL_OFFICIAL_DOCUMENTS } from '../data/mockData';
+import { parseGoogleDriveUrl, createGoogleDriveEvidenceItem, isGoogleDriveUrl, GDRIVE_SHARING_INSTRUCTION } from '../utils/googleDriveUtils';
 
 export default function IngestionModule({ 
   onAddNewOrder, 
@@ -49,7 +50,7 @@ export default function IngestionModule({
   facultyList = FACULTY_MEMBERS,
   activeFaculty = FACULTY_MEMBERS[0]
 }) {
-  const [selectedChannel, setSelectedChannel] = useState('pdf'); // 'pdf' | 'photo' | 'facebook' | 'chat' | 'text'
+  const [selectedChannel, setSelectedChannel] = useState('pdf'); // 'pdf' | 'photo' | 'gdrive' | 'facebook' | 'chat' | 'text'
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanMessage, setScanMessage] = useState('');
@@ -59,6 +60,7 @@ export default function IngestionModule({
   const [pastedText, setPastedText] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
   const [facebookCaption, setFacebookCaption] = useState('');
+  const [googleDriveUrl, setGoogleDriveUrl] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [scanDuration, setScanDuration] = useState(0);
   const [activeResultTab, setActiveResultTab] = useState('form'); // 'form' | 'raw' | 'preview'
@@ -155,6 +157,23 @@ export default function IngestionModule({
     }
   };
 
+  // Helper to ensure activeFaculty is always included in assigned faculty list
+  const ensureActiveFacultyAssigned = (assignedList = []) => {
+    const list = Array.isArray(assignedList) ? [...assignedList] : [];
+    if (activeFaculty && !list.some(f => f.id === activeFaculty.id)) {
+      list.unshift({
+        id: activeFaculty.id,
+        name: activeFaculty.name,
+        roleInOrder: list[0]?.roleInOrder || 'ผู้รับผิดชอบโครงการ / กรรมการ'
+      });
+    }
+    return list.length > 0 ? list : [{
+      id: activeFaculty?.id || 'fac-pimra',
+      name: activeFaculty?.name || 'อาจารย์ผู้รับผิดชอบ',
+      roleInOrder: 'ผู้รับผิดชอบโครงการ / กรรมการ'
+    }];
+  };
+
   // Process Real File with OCR Engine and AI Parser
   const processRealDocument = async (file) => {
     setIsScanning(true);
@@ -221,6 +240,9 @@ export default function IngestionModule({
         parsedData,
         engine: engineUsed
       });
+      // Ensure activeFaculty is always included in assigned faculty list so the order immediately displays in their drawer
+      const finalFacultyAssigned = ensureActiveFacultyAssigned(parsedData.facultyAssigned);
+
       setFormData({
         orderNumber: parsedData.orderNumber,
         title: parsedData.title,
@@ -234,7 +256,7 @@ export default function IngestionModule({
         categoryColor: parsedData.categoryColor,
         workloadHours: parsedData.estimatedHours || 3,
         status: 'upcoming',
-        facultyAssigned: parsedData.facultyAssigned
+        facultyAssigned: finalFacultyAssigned
       });
       setActiveResultTab('form');
       const engineLabel = engineUsed === 'gemini' ? 'Gemini Flash' : 'Smart Thai Parser';
@@ -243,7 +265,53 @@ export default function IngestionModule({
     } catch (err) {
       console.error('OCR Error:', err);
       setIsScanning(false);
-      if (onNotify) onNotify('เกิดข้อผิดพลาดในการประมวลผล OCR กรุณาลองใหม่อีกครั้ง หรือตรวจสอบไฟล์', 'error');
+
+      // Resilient Fallback: do not block the user! Open form with reasonable defaults
+      const cleanBaseName = (file.name || 'เอกสารคำสั่ง').replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+      const today = new Date().toISOString().split('T')[0];
+      const fallbackFaculty = ensureActiveFacultyAssigned([]);
+
+      const fallbackParsed = {
+        orderNumber: 'รอระบุเลขที่คำสั่ง',
+        title: cleanBaseName,
+        signDate: today,
+        eventDate: today,
+        eventEndDate: today,
+        eventTime: '08:30 - 16:30 น.',
+        location: 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+        category: 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
+        categoryCode: 'admin',
+        categoryColor: 'purple',
+        estimatedHours: 3,
+        facultyAssigned: fallbackFaculty
+      };
+
+      setScanResult({
+        filename: file.name,
+        detectedConfidence: 80,
+        detectedText: `[ระบบนำเข้าเอกสารฉุกเฉิน]\nชื่อไฟล์: ${file.name}\n(ไม่สามารถสกัดข้อความอัตโนมัติจากไฟล์นี้ได้ สามารถตรวจสอบและแก้ไขข้อมูลในแบบฟอร์มด้านล่างเพื่อบันทึกคำสั่งได้ทันที)`,
+        parsedData: fallbackParsed,
+        engine: 'manual_fallback'
+      });
+
+      setFormData({
+        orderNumber: 'รอระบุเลขที่คำสั่ง',
+        title: cleanBaseName,
+        signDate: today,
+        eventDate: today,
+        eventEndDate: today,
+        eventTime: '08:30 - 16:30 น.',
+        location: 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+        category: 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
+        categoryCode: 'admin',
+        categoryColor: 'purple',
+        workloadHours: 3,
+        status: 'upcoming',
+        facultyAssigned: fallbackFaculty
+      });
+
+      setActiveResultTab('form');
+      if (onNotify) onNotify(`ไม่สามารถสกัดข้อความอัตโนมัติจาก [${file.name}] ได้ แต่ระบบได้จัดเตรียมแบบฟอร์มให้ท่านระบุข้อมูลเพื่อบันทึกคำสั่งเข้าสู่ตู้ลิ้นชักเรียบร้อยแล้ว`, 'warning');
     }
   };
 
@@ -361,7 +429,7 @@ export default function IngestionModule({
         categoryColor: parsedData.categoryColor || 'amber',
         workloadHours: parsedData.estimatedHours || 3,
         status: 'upcoming',
-        facultyAssigned: parsedData.facultyAssigned
+        facultyAssigned: ensureActiveFacultyAssigned(parsedData.facultyAssigned)
       });
 
       setActiveResultTab('form');
@@ -434,7 +502,7 @@ export default function IngestionModule({
         categoryColor: parsedData.categoryColor,
         workloadHours: parsedData.estimatedHours || 3,
         status: 'upcoming',
-        facultyAssigned: parsedData.facultyAssigned
+        facultyAssigned: ensureActiveFacultyAssigned(parsedData.facultyAssigned)
       });
       setActiveResultTab('form');
       const engineLabel = engineUsed === 'gemini' ? 'Gemini Flash' : 'Smart Thai Parser';
@@ -521,11 +589,82 @@ export default function IngestionModule({
     }));
   };
 
+  // Process Google Drive URL Link
+  const handleProcessGoogleDrive = () => {
+    if (!googleDriveUrl.trim()) {
+      if (onNotify) onNotify('กรุณาวางลิงก์ Google Drive ก่อนดำเนินการ', 'warning');
+      return;
+    }
+    const parsed = parseGoogleDriveUrl(googleDriveUrl);
+    if (!parsed) {
+      if (onNotify) onNotify('รูปแบบลิงก์ Google Drive ไม่ถูกต้อง กรุณาใช้ลิงก์จาก drive.google.com หรือ docs.google.com', 'error');
+      return;
+    }
+
+    const defaultTitle = parsed.type === 'folder' 
+      ? 'โฟลเดอร์หลักฐานภาพถ่ายและคำสั่ง (Google Drive)' 
+      : 'เอกสารคำสั่งภาระงานราชการ (Google Drive)';
+
+    const defaultCategory = 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย';
+    const categoryInfo = WORKLOAD_CATEGORIES.find(c => c.name === defaultCategory) || {
+      name: defaultCategory,
+      code: 'admin',
+      color: 'purple'
+    };
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const initialFacAssigned = ensureActiveFacultyAssigned([]);
+
+    setScanResult({
+      filename: parsed.label,
+      detectedConfidence: 100,
+      detectedText: `[เชื่อมต่อคลังหลักฐาน Google Drive คลาวด์]\nประเภท: ${parsed.label}\nURL: ${parsed.originalUrl}\nความจุ: ไม่จำกัดพื้นที่ (Google Workspace / Google Drive)\nสถานะ: พร้อมแนบลิงก์ให้กรรมการประเมิน e-Portfolio ตรวจสอบ`,
+      parsedData: {
+        orderNumber: 'รอระบุเลขที่คำสั่ง',
+        title: defaultTitle,
+        signDate: dateStr,
+        eventDate: dateStr,
+        eventEndDate: dateStr,
+        eventTime: '08:30 - 16:30 น.',
+        location: 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+        category: defaultCategory,
+        categoryCode: categoryInfo.code,
+        categoryColor: categoryInfo.color,
+        facultyAssigned: initialFacAssigned,
+        estimatedHours: 3
+      },
+      engine: 'google_drive'
+    });
+
+    setFormData({
+      orderNumber: 'รอระบุเลขที่คำสั่ง',
+      title: defaultTitle,
+      signDate: dateStr,
+      eventDate: dateStr,
+      eventEndDate: dateStr,
+      eventTime: '08:30 - 16:30 น.',
+      location: 'มหาวิทยาลัยราชภัฏนครสวรรค์',
+      category: defaultCategory,
+      categoryCode: categoryInfo.code,
+      categoryColor: categoryInfo.color,
+      workloadHours: 3,
+      status: 'upcoming',
+      facultyAssigned: initialFacAssigned
+    });
+
+    if (parsed.thumbnailUrl) {
+      setPreviewUrl(parsed.thumbnailUrl);
+    }
+
+    setActiveResultTab('form');
+    if (onNotify) onNotify('เชื่อมต่อลิงก์ Google Drive สำเร็จ! ไม่จำกัดพื้นที่โควตาเครื่อง', 'success');
+  };
+
   // Confirm and dispatch to drawers & calendar
   const handleConfirmAndDispatch = () => {
     if (!scanResult) return;
 
-    const newOrderId = `ord-${Date.now().toString().slice(-4)}`;
+    const newOrderId = `ord-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const categoryInfo = WORKLOAD_CATEGORIES.find(c => c.name === formData.category) || {
       name: formData.category,
       code: formData.categoryCode,
@@ -533,18 +672,24 @@ export default function IngestionModule({
     };
 
     const isFacebookSource = selectedChannel === 'facebook' || Boolean(facebookUrl);
-    const isImageFile = activeFile?.type?.startsWith('image/') ||
-                        isFacebookSource ||
-                        selectedChannel === 'photo' ||
-                        (previewUrl && (previewUrl.startsWith('data:image/') || previewUrl.startsWith('http')));
+    const isGoogleDriveSource = selectedChannel === 'gdrive' || Boolean(googleDriveUrl);
+    const isPdf = activeFile?.type === 'application/pdf' || 
+                  activeFile?.name?.toLowerCase().endsWith('.pdf') || 
+                  selectedChannel === 'pdf';
+    const isImageFile = !isPdf && (
+      activeFile?.type?.startsWith('image/') ||
+      isFacebookSource ||
+      selectedChannel === 'photo' ||
+      (previewUrl && !isPdf && previewUrl.startsWith('data:image/'))
+    );
 
     const orderEvidences = [];
-    // Only put into orderEvidences if it's an actual document file (e.g. PDF), not a photo
-    if (!isImageFile && activeFile) {
+    // If it's a PDF document, put it into evidenceFiles as document
+    if (isPdf && (activeFile || scanResult)) {
       orderEvidences.push({
-        id: `ev-${Date.now()}`,
-        name: activeFile.name || scanResult.filename || 'เอกสารคำสั่ง.pdf',
-        size: activeFile.size ? (activeFile.size / (1024 * 1024)).toFixed(1) + ' MB' : '1.8 MB',
+        id: `ev-doc-${Date.now()}`,
+        name: activeFile?.name || scanResult.filename || 'เอกสารคำสั่ง.pdf',
+        size: activeFile?.size ? (activeFile.size / (1024 * 1024)).toFixed(1) + ' MB' : '1.8 MB',
         type: 'pdf',
         url: previewUrl || null,
         uploadedAt: new Date().toISOString().split('T')[0]
@@ -562,6 +707,17 @@ export default function IngestionModule({
       });
     }
 
+    if (googleDriveUrl) {
+      const gdriveItem = createGoogleDriveEvidenceItem({
+        url: googleDriveUrl,
+        title: `Google Drive: ${(formData.title || 'คลังหลักฐาน').slice(0, 35)}...`,
+        description: 'คลังหลักฐานบน Google Drive คลาวด์'
+      });
+      if (gdriveItem) {
+        orderEvidences.push(gdriveItem);
+      }
+    }
+
     const orderActualPhotos = [];
     if (previewUrl && isImageFile) {
       orderActualPhotos.push({
@@ -572,8 +728,13 @@ export default function IngestionModule({
       });
     }
 
+    // Ensure activeFaculty is always included in assigned faculty list
+    const finalFacultyAssigned = ensureActiveFacultyAssigned(formData.facultyAssigned);
+    const assignedFacId = activeFaculty?.id || finalFacultyAssigned[0]?.id || 'fac-pimra';
+
     const newOrderObj = {
       id: newOrderId,
+      facultyId: assignedFacId,
       orderNumber: formData.orderNumber || 'รอระบุเลขที่คำสั่ง',
       title: formData.title,
       signDate: formData.signDate,
@@ -585,20 +746,21 @@ export default function IngestionModule({
       categoryCode: categoryInfo.code,
       categoryColor: categoryInfo.color,
       workloadHours: Number(formData.workloadHours) || 3,
-      role: formData.facultyAssigned[0]?.roleInOrder || 'กรรมการ',
-      facultyAssigned: formData.facultyAssigned,
+      role: finalFacultyAssigned[0]?.roleInOrder || 'กรรมการ',
+      facultyAssigned: finalFacultyAssigned,
       status: formData.status || 'upcoming',
       rawOcrText: scanResult.detectedText || '',
       documentFileName: activeFile?.name || (isFacebookSource ? 'ภาพแคปโพสต์_Facebook.png' : scanResult.filename) || 'เอกสารคำสั่ง.pdf',
       facebookUrl: facebookUrl || null,
-      sourceChannel: isFacebookSource ? 'facebook' : selectedChannel,
+      googleDriveUrl: googleDriveUrl || null,
+      sourceChannel: isGoogleDriveSource ? 'gdrive' : (isFacebookSource ? 'facebook' : selectedChannel),
       evidenceFiles: orderEvidences,
       actualPhotos: orderActualPhotos,
       ePortfolio: {
         year: formData.signDate ? String(new Date(formData.signDate).getFullYear() + 543) : '2569',
         round: 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)',
         topic: formData.title,
-        role: formData.facultyAssigned[0]?.roleInOrder || 'กรรมการดำเนินงาน',
+        role: finalFacultyAssigned[0]?.roleInOrder || 'กรรมการดำเนินงาน',
         hours: Number(formData.workloadHours) || 3,
         workloadRef: `ภาระงานด้าน${formData.category} มหาวิทยาลัยราชภัฏนครสวรรค์`,
         resultSummary: (formData.status === 'done')
@@ -750,7 +912,7 @@ export default function IngestionModule({
         {/* Left Col: Upload & Channel Picker (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Channel Selectors */}
-          <div className="grid grid-cols-5 gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-6 gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
             <button
               onClick={() => setSelectedChannel('pdf')}
               className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -760,7 +922,7 @@ export default function IngestionModule({
               }`}
             >
               <FileText className="w-4 h-4" />
-              <span className="text-[11px]">ไฟล์ PDF</span>
+              <span className="text-[10.5px]">ไฟล์ PDF</span>
             </button>
             <button
               onClick={() => setSelectedChannel('photo')}
@@ -771,7 +933,25 @@ export default function IngestionModule({
               }`}
             >
               <ImageIcon className="w-4 h-4" />
-              <span className="text-[11px]">ภาพถ่าย</span>
+              <span className="text-[10.5px]">ภาพถ่าย</span>
+            </button>
+            <button
+              onClick={() => setSelectedChannel('gdrive')}
+              className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                selectedChannel === 'gdrive'
+                  ? 'bg-white text-emerald-700 shadow-xs font-semibold ring-1 ring-emerald-500/20'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 87.3 78" fill="currentColor">
+                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                <path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 0 0 0 53h27.5z" fill="#00ac47"/>
+                <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 10.15z" fill="#ea4335"/>
+                <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+              </svg>
+              <span className="text-[10.5px]">G-Drive</span>
             </button>
             <button
               onClick={() => setSelectedChannel('facebook')}
@@ -784,7 +964,7 @@ export default function IngestionModule({
               <svg className="w-4 h-4 fill-current text-blue-600" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
-              <span className="text-[11px]">แคป FB</span>
+              <span className="text-[10.5px]">แคป FB</span>
             </button>
             <button
               onClick={() => setSelectedChannel('chat')}
@@ -795,7 +975,7 @@ export default function IngestionModule({
               }`}
             >
               <MessageSquare className="w-4 h-4" />
-              <span className="text-[11px]">แคป LINE</span>
+              <span className="text-[10.5px]">แคป LINE</span>
             </button>
             <button
               onClick={() => setSelectedChannel('text')}
@@ -806,12 +986,78 @@ export default function IngestionModule({
               }`}
             >
               <FileCheck className="w-4 h-4" />
-              <span className="text-[11px]">วางข้อความ</span>
+              <span className="text-[10.5px]">ข้อความ</span>
             </button>
           </div>
 
-          {/* Conditional Channel View: Facebook vs File Upload vs Textarea */}
-          {selectedChannel === 'facebook' ? (
+          {/* Conditional Channel View: Google Drive vs Facebook vs File Upload vs Textarea */}
+          {selectedChannel === 'gdrive' ? (
+            <div className="bg-white border border-emerald-200/90 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                    <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
+                      <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">เชื่อมต่อคลังหลักฐาน Google Drive</h4>
+                    <p className="text-[10px] text-slate-500">ความจุไม่จำกัด (Unlimited Storage) ไม่กินโควตาเครื่อง</p>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                  Cloud Free
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span>🔗 วางลิงก์ Google Drive (ไฟล์ PDF, ภาพ หรือ โฟลเดอร์รวม):</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={googleDriveUrl}
+                    onChange={(e) => setGoogleDriveUrl(e.target.value)}
+                    placeholder="https://drive.google.com/file/d/... หรือ drive/folders/..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-hidden font-mono"
+                  />
+                  {googleDriveUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setGoogleDriveUrl('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {googleDriveUrl.trim() && (
+                <button
+                  type="button"
+                  onClick={handleProcessGoogleDrive}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold hover:from-emerald-700 hover:to-teal-700 shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>เชื่อมต่อและสกัดข้อมูลจาก Google Drive</span>
+                </button>
+              )}
+
+              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3 text-[11px] text-emerald-900 space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5 text-emerald-800">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>ทำไมแนะนำให้ใช้วิธี Google Drive?</span>
+                </div>
+                <ul className="list-disc list-inside text-[10.5px] text-emerald-800/80 space-y-0.5 leading-relaxed">
+                  <li>อาจารย์มีพื้นที่ Google Workspace (@nsru.ac.th) มหาศาล</li>
+                  <li>ไม่กินโควตาเบราว์เซอร์ 5MB ไม่เจอปัญหาพื้นที่เต็ม (Quota Exceeded)</li>
+                  <li>กรรมการตรวจประเมินคลิกเข้าไปดูภาพถ่ายและไฟล์ PDF ฉบับเต็มได้ทันที</li>
+                </ul>
+              </div>
+            </div>
+          ) : selectedChannel === 'facebook' ? (
             <div className="bg-white border border-blue-200/90 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-blue-100 pb-3">
                 <div className="flex items-center gap-2">
@@ -1289,6 +1535,36 @@ export default function IngestionModule({
                           </button>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Active Target Faculty Drawer Banner */}
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/80 border border-blue-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                          {activeFaculty?.name?.charAt(0) || 'อ'}
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-blue-700 font-bold uppercase tracking-wider flex items-center gap-1">
+                            <span>📥 ปลายทางตู้ลิ้นชักบันทึกภาระงาน:</span>
+                          </div>
+                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 flex-wrap mt-0.5">
+                            <span>{activeFaculty?.name}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-100/90 text-blue-800 font-semibold">
+                              {formData.facultyAssigned.some(f => f.id === activeFaculty?.id) ? '✓ อยู่ในตู้ลิ้นชักนี้แล้ว' : 'จะถูกผูกเข้าตู้นี้อัตโนมัติ'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {!formData.facultyAssigned.some(f => f.id === activeFaculty?.id) && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddFacultyToOrder(activeFaculty.id)}
+                          className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>เพิ่มฉันเข้าคำสั่งนี้ทันที</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Assigned Faculty Detection List */}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Printer, CheckCircle2, Download, FileText, Calendar, Layers, Image as ImageIcon } from 'lucide-react';
+import { X, Printer, CheckCircle2, Download, FileText, Calendar, Layers, Image as ImageIcon, FolderOpen } from 'lucide-react';
+import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 
 export default function DossierSummaryModal({ 
   isOpen, 
@@ -135,15 +136,36 @@ export default function DossierSummaryModal({
                           {order.actualPhotos?.length > 0 ? (
                             <div className="flex items-center justify-center gap-1">
                               {(order.actualPhotos || []).slice(0, 2).map((photo, pIdx) => {
-                                const photoUrl = typeof photo === 'string' ? photo : (photo?.url || '');
-                                const photoName = typeof photo === 'string' ? 'ภาพถ่ายหลักฐาน' : (photo?.name || 'ภาพถ่ายหลักฐาน');
+                                const photoObj = typeof photo === 'string' ? { url: photo } : photo;
+                                const isGDrive = photoObj?.isGoogleDrive || photoObj?.type === 'gdrive' || (photoObj?.url && (photoObj.url.includes('drive.google.com') || photoObj.url.includes('docs.google.com')));
+                                const photoName = photoObj?.name || (isGDrive ? 'Google Drive' : 'ภาพถ่ายหลักฐาน');
+
+                                if (isGDrive) {
+                                  return (
+                                    <a
+                                      key={photoObj?.id || `photo-${pIdx}`}
+                                      href={photoObj.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-500/40 text-emerald-300 flex flex-col items-center justify-center shadow-2xs hover:scale-110 transition-transform"
+                                      title={`Google Drive: ${photoName}`}
+                                    >
+                                      <FolderOpen className="w-4 h-4" />
+                                    </a>
+                                  );
+                                }
+
                                 return (
                                   <img
-                                    key={photo?.id || `photo-${pIdx}`}
-                                    src={photoUrl}
+                                    key={photoObj?.id || `photo-${pIdx}`}
+                                    src={photoObj?.url || ''}
                                     alt={photoName}
                                     className="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-2xs"
                                     title={photoName}
+                                    onError={(e) => {
+                                      e.currentTarget.onerror = null;
+                                      e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                                    }}
                                   />
                                 );
                               })}

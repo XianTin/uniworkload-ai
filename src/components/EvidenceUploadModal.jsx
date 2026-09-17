@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { compressImageFile, FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
+import { parseGoogleDriveUrl, createGoogleDriveEvidenceItem, isGoogleDriveUrl, GDRIVE_SHARING_INSTRUCTION } from '../utils/googleDriveUtils';
 import { 
   X, 
   UploadCloud, 
@@ -17,7 +18,9 @@ import {
   Layers,
   Check,
   AlertCircle,
-  Loader2
+  Loader2,
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 
 const PRESET_SAMPLES = [
@@ -59,6 +62,13 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
 
   // List of queued evidence items (starts clean without dummy defaults)
   const [queuedPhotos, setQueuedPhotos] = useState([]);
+
+  // Upload Method Tabs: 'upload' | 'gdrive' | 'presets'
+  const [activeUploadTab, setActiveUploadTab] = useState('upload');
+  const [gdriveUrl, setGdriveUrl] = useState('');
+  const [gdriveTitle, setGdriveTitle] = useState('');
+  const [gdriveNote, setGdriveNote] = useState('');
+  const [gdriveParsed, setGdriveParsed] = useState(null);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -259,6 +269,34 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
     setPasteNotice(`เพิ่มภาพตัวอย่าง "${preset.name.slice(0, 20)}..." แล้ว`);
   };
 
+  // Add Google Drive Item to Queue
+  const handleAddGoogleDriveItem = () => {
+    if (!gdriveUrl.trim()) return;
+    const item = createGoogleDriveEvidenceItem({
+      url: gdriveUrl,
+      title: gdriveTitle,
+      description: gdriveNote,
+      date: defaultDate
+    });
+    if (!item) {
+      setPasteNotice('ลิงก์ Google Drive ไม่ถูกต้อง กรุณาใช้ลิงก์จาก drive.google.com หรือ docs.google.com');
+      return;
+    }
+
+    setQueuedPhotos((prev) => {
+      const isOnlyDefaultPreset = prev.length === 1 && prev[0].isPreset;
+      const updated = isOnlyDefaultPreset ? [item] : [...prev, item];
+      setActiveIndex(updated.length - 1);
+      return updated;
+    });
+
+    setGdriveUrl('');
+    setGdriveTitle('');
+    setGdriveNote('');
+    setGdriveParsed(null);
+    setPasteNotice('เพิ่มหลักฐานจาก Google Drive เข้าสู่รายการเรียบร้อยแล้ว (ไม่จำกัดพื้นที่)!');
+  };
+
   // Remove an item from the queue
   const handleRemoveItem = (indexToRemove, e) => {
     e?.stopPropagation();
@@ -304,18 +342,24 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
     const safeOrderNum = (order?.orderNumber || 'order').replace(/[^a-zA-Z0-9ก-๙]/g, '_');
 
     const finalizedEvidences = queuedPhotos.map((item, idx) => {
+      const isGDrive = item.isGoogleDrive || (item.url && (item.url.includes('drive.google.com') || item.url.includes('docs.google.com')));
       const fallbackTitle = item.type === 'photo'
         ? `ภาพถ่ายปฏิบัติงานจริง_${safeOrderNum}_${idx + 1}.jpg`
-        : `หลักฐานลงทะเบียน_${safeOrderNum}_${idx + 1}.pdf`;
+        : (isGDrive ? 'หลักฐาน Google Drive' : `หลักฐานลงทะเบียน_${safeOrderNum}_${idx + 1}.pdf`);
 
       return {
         id: item.id || `ev-photo-${Date.now()}-${idx}`,
         name: item.name || fallbackTitle,
-        size: item.size || '3.0 MB',
+        title: item.title || item.name || fallbackTitle,
+        size: item.size || (isGDrive ? 'Google Drive' : '3.0 MB'),
         url: item.url,
-        type: item.type || 'photo',
+        type: isGDrive ? 'gdrive' : (item.type || 'photo'),
+        isGoogleDrive: isGDrive,
+        gdriveType: item.gdriveType || 'file',
+        thumbnailUrl: item.thumbnailUrl || (isGDrive ? item.url : null),
+        embedUrl: item.embedUrl || null,
         uploadedAt: item.uploadedAt || defaultDate,
-        note: item.note || 'หลักฐานบันทึกการปฏิบัติหน้าที่ตามคำสั่งราชการ มรภ.นครสวรรค์'
+        note: item.note || (isGDrive ? 'คลังหลักฐานบน Google Drive คลาวด์' : 'หลักฐานบันทึกการปฏิบัติหน้าที่ตามคำสั่งราชการ มรภ.นครสวรรค์')
       };
     });
 
@@ -374,104 +418,256 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
-          {/* Upload Dropzone / Clipboard Visual Area */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="font-semibold text-slate-700 flex items-center gap-1.5">
-                <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                <span>วางภาพ (Ctrl+V) หรือเลือกไฟล์รูปภาพจากเครื่อง</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-[11px] text-blue-600 font-semibold hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>เลือกไฟล์จากเครื่อง (เลือกได้หลายรูป)...</span>
-              </button>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.pdf"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
-
-            {/* Drop & Paste Area */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
-                isDragging 
-                  ? 'border-blue-500 bg-blue-50/60 scale-[1.01]' 
-                  : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50/60 bg-slate-50/30'
+          {/* Upload Method Tabs */}
+          <div className="flex border-b border-slate-200 gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveUploadTab('upload')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+                activeUploadTab === 'upload'
+                  ? 'border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
-              <div className="flex items-center justify-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
-                  <UploadCloud className="w-5 h-5" />
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-xs">
-                  <Clipboard className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="font-semibold text-slate-800 text-xs">
-                ลากและวางรูปภาพที่นี่ หรือกดคลิกเพื่อเลือกไฟล์ (เลือกได้หลายรูปพร้อมกัน)
-              </p>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-medium">
-                <Clipboard className="w-3 h-3 text-blue-600" />
-                <span>หรือกด <strong>Ctrl + V</strong> (Cmd + V) เพื่อวางภาพจาก Clipboard ได้ทันที</span>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                รองรับ JPG, PNG, WEBP, PDF (ไม่จำกัดจำนวนภาพ)
-              </p>
-            </div>
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>อัปโหลดไฟล์ / วางรูปภาพ (Ctrl+V)</span>
+            </button>
 
-            {isCompressing && (
-              <div className="flex items-center justify-center gap-2 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-800 font-semibold animate-pulse">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                <span>กำลังปรับขนาดและบีบอัดภาพเพื่อการบันทึกที่รวดเร็วและปลอดภัย...</span>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Preset Samples */}
-          <div>
-            <div className="flex items-center justify-between text-slate-500 text-[11px] font-medium mb-2">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>หรือคลิกเพื่อเพิ่มภาพตัวอย่างกิจกรรม (1-Click Sample):</span>
+            <button
+              type="button"
+              onClick={() => setActiveUploadTab('gdrive')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+                activeUploadTab === 'gdrive'
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="flex items-center gap-1">
+                <span>Google Drive</span>
+                <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold">ฟรี / ไม่จำกัดพื้นที่</span>
               </span>
-              <span className="text-[10px] text-slate-400">คลิกเพื่อเพิ่มลงในรายการ</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PRESET_SAMPLES.map((preset, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => addPresetSample(preset)}
-                  className="group relative rounded-xl overflow-hidden border border-slate-200 hover:border-blue-400 opacity-80 hover:opacity-100 transition-all cursor-pointer text-left bg-slate-900"
-                >
-                  <img
-                    src={preset.url}
-                    alt={preset.name}
-                    className="w-full h-14 object-cover group-hover:scale-105 transition-transform opacity-75 group-hover:opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-1.5 justify-between">
-                    <span className="text-[9px] text-white font-medium truncate drop-shadow-xs">
-                      + {preset.name.split('.')[0].slice(0, 16)}...
-                    </span>
-                    <Plus className="w-3 h-3 text-white shrink-0" />
-                  </div>
-                </button>
-              ))}
-            </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveUploadTab('presets')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+                activeUploadTab === 'presets'
+                  ? 'border-amber-600 text-amber-700 bg-amber-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>ภาพตัวอย่าง (Samples)</span>
+            </button>
           </div>
+
+          {/* TAB 1: File Upload & Clipboard */}
+          {activeUploadTab === 'upload' && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+                  <span>วางภาพ (Ctrl+V) หรือเลือกไฟล์รูปภาพ/PDF จากเครื่อง</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[11px] text-blue-600 font-semibold hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>เลือกไฟล์จากเครื่อง...</span>
+                </button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {/* Drop & Paste Area */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+                  isDragging 
+                    ? 'border-blue-500 bg-blue-50/60 scale-[1.01]' 
+                    : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50/60 bg-slate-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-xs">
+                    <Clipboard className="w-5 h-5" />
+                  </div>
+                </div>
+                <p className="font-semibold text-slate-800 text-xs">
+                  ลากและวางรูปภาพที่นี่ หรือกดคลิกเพื่อเลือกไฟล์ (เลือกได้หลายรูปพร้อมกัน)
+                </p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-medium">
+                  <Clipboard className="w-3 h-3 text-blue-600" />
+                  <span>หรือกด <strong>Ctrl + V</strong> (Cmd + V) เพื่อวางภาพจาก Clipboard ได้ทันที</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  รองรับ JPG, PNG, WEBP, PDF (ไฟล์ภาพจะถูกบีบอัดอัตโนมัติเพื่อประหยัดพื้นที่)
+                </p>
+              </div>
+
+              {isCompressing && (
+                <div className="flex items-center justify-center gap-2 p-3 mt-2 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-800 font-semibold animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <span>กำลังปรับขนาดและบีบอัดภาพเพื่อการบันทึกที่รวดเร็วและปลอดภัย...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: Google Drive Link (Zero Storage Quota) */}
+          {activeUploadTab === 'gdrive' && (
+            <div className="border border-emerald-200 bg-emerald-50/30 rounded-2xl p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <FolderOpen className="w-4 h-4 text-emerald-600" />
+                    <span>แนบหลักฐานผ่าน Google Drive (ประหยัดพื้นที่ 100%)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    เหมาะสำหรับอัลบั้มรูปภาพกิจกรรมความละเอียดสูง, ไฟล์วิดีโอ, หรือโฟลเดอร์รวบรวมหลักฐานทั้งโครงการ
+                  </p>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                  0 MB Storage
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    วางลิงก์ Google Drive (โฟลเดอร์ หรือ ไฟล์) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={gdriveUrl}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setGdriveUrl(val);
+                        const parsed = parseGoogleDriveUrl(val);
+                        setGdriveParsed(parsed);
+                        if (parsed && !gdriveTitle) {
+                          setGdriveTitle(parsed.type === 'folder' ? 'โฟลเดอร์หลักฐานภาพกิจกรรม' : 'เอกสารหลักฐาน Google Drive');
+                        }
+                      }}
+                      placeholder="https://drive.google.com/drive/folders/... หรือ file/d/..."
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-hidden"
+                    />
+                  </div>
+                  {gdriveParsed && (
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-emerald-700 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>ตรวจพบ: {gdriveParsed.type === 'folder' ? 'โฟลเดอร์ Google Drive' : 'ไฟล์ Google Drive'} (ID: {gdriveParsed.id.slice(0, 10)}...)</span>
+                      <a 
+                        href={gdriveParsed.viewUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-flex items-center gap-0.5 text-blue-600 hover:underline ml-auto text-[10px]"
+                      >
+                        <span>ทดสอบเปิดลิงก์</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      ชื่อแสดงของหลักฐาน
+                    </label>
+                    <input
+                      type="text"
+                      value={gdriveTitle}
+                      onChange={(e) => setGdriveTitle(e.target.value)}
+                      placeholder="เช่น อัลบั้มภาพถ่ายโครงการบริการวิชาการ"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      คำอธิบาย / รายละเอียดประกอบ
+                    </label>
+                    <input
+                      type="text"
+                      value={gdriveNote}
+                      onChange={(e) => setGdriveNote(e.target.value)}
+                      placeholder="เช่น คลังภาพต้นฉบับความละเอียดสูงและคลิปวิดีโอ"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-[10px] text-slate-400">
+                    💡 อย่าลืมตั้งค่าสิทธิ์แชร์ใน Google Drive เป็น "ทุกคนที่มีลิงก์ (Anyone with link)"
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAddGoogleDriveItem}
+                    disabled={!gdriveUrl.trim()}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold transition-all cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่มเข้าสู่รายการแนบ</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Quick Preset Samples */}
+          {activeUploadTab === 'presets' && (
+            <div>
+              <div className="flex items-center justify-between text-slate-500 text-[11px] font-medium mb-2">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>คลิกเพื่อเพิ่มภาพตัวอย่างกิจกรรม (1-Click Sample):</span>
+                </span>
+                <span className="text-[10px] text-slate-400">คลิกเพื่อเพิ่มลงในรายการ</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {PRESET_SAMPLES.map((preset, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => addPresetSample(preset)}
+                    className="group relative rounded-xl overflow-hidden border border-slate-200 hover:border-blue-400 opacity-80 hover:opacity-100 transition-all cursor-pointer text-left bg-slate-900"
+                  >
+                    <img
+                      src={preset.url}
+                      alt={preset.name}
+                      className="w-full h-14 object-cover group-hover:scale-105 transition-transform opacity-75 group-hover:opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-1.5 justify-between">
+                      <span className="text-[9px] text-white font-medium truncate drop-shadow-xs">
+                        + {preset.name.split('.')[0].slice(0, 16)}...
+                      </span>
+                      <Plus className="w-3 h-3 text-white shrink-0" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Queued Photos Carousel / Thumbnail Strip */}
           {queuedPhotos.length > 0 && (
@@ -489,6 +685,7 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
               <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
                 {queuedPhotos.map((photo, idx) => {
                   const isActive = idx === activeIndex;
+                  const isGDrive = photo.isGoogleDrive || photo.type === 'gdrive' || (photo.url && (photo.url.includes('drive.google.com') || photo.url.includes('docs.google.com')));
                   return (
                     <div
                       key={photo.id || idx}
@@ -499,15 +696,22 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                           : 'border-slate-200 hover:border-slate-300 opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <img
-                        src={photo.url}
-                        alt={photo.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
-                        }}
-                      />
+                      {isGDrive ? (
+                        <div className="w-full h-full bg-emerald-950/90 flex flex-col items-center justify-center text-white p-1">
+                          <FolderOpen className="w-5 h-5 text-emerald-400 mb-0.5" />
+                          <span className="text-[8px] font-bold text-emerald-200 leading-none">GDrive</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={photo.url}
+                          alt={photo.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                          }}
+                        />
+                      )}
                       <span className="absolute top-1 left-1 bg-slate-900/80 text-white font-mono text-[9px] px-1 rounded-sm">
                         #{idx + 1}
                       </span>
@@ -520,7 +724,7 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                         <X className="w-2.5 h-2.5" />
                       </button>
                       <div className="absolute bottom-0 inset-x-0 bg-slate-950/70 text-[8px] text-slate-200 px-1 truncate">
-                        {photo.size}
+                        {isGDrive ? 'Google Drive' : photo.size}
                       </div>
                     </div>
                   );
@@ -546,28 +750,56 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
               <div className="flex items-center justify-between text-[11px] text-slate-600">
                 <span className="font-semibold text-slate-800 flex items-center gap-1.5">
                   <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>รายละเอียดภาพที่ {activeIndex + 1} จาก {queuedPhotos.length}:</span>
+                  <span>รายละเอียดหลักฐานที่ {activeIndex + 1} จาก {queuedPhotos.length}:</span>
                 </span>
                 <span className="bg-white border border-slate-200 px-2 py-0.5 rounded-md font-mono text-[10px]">
-                  {currentPhoto.size || '3.2 MB'}
+                  {currentPhoto.isGoogleDrive ? 'Google Drive Cloud (0 MB)' : (currentPhoto.size || '3.2 MB')}
                 </span>
               </div>
 
-              <div className="relative rounded-xl overflow-hidden bg-slate-900 h-44 flex items-center justify-center shadow-inner">
-                <img
-                  src={currentPhoto.url}
-                  alt={currentPhoto.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
-                  }}
-                />
-                <div className="absolute bottom-2 left-2 right-2 bg-slate-950/75 backdrop-blur-xs text-white p-2 rounded-lg text-[11px] flex items-center justify-between">
-                  <span className="truncate">{currentPhoto.name || 'ภาพถ่ายปฏิบัติหน้าที่จริง.jpg'}</span>
-                  <span className="text-emerald-400 text-[10px] font-semibold shrink-0 ml-2">✓ พร้อมแนบ</span>
+              {/* Inspector Preview */}
+              {currentPhoto.isGoogleDrive || currentPhoto.type === 'gdrive' ? (
+                <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-emerald-900 to-slate-900 h-44 flex flex-col items-center justify-center p-4 text-white shadow-inner">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center mb-2 text-emerald-300">
+                    <FolderOpen className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-center max-w-[85%] truncate">
+                    {currentPhoto.name || currentPhoto.title || 'หลักฐาน Google Drive'}
+                  </p>
+                  <p className="text-[11px] text-emerald-300/80 font-mono mt-0.5">
+                    {currentPhoto.url ? (currentPhoto.url.length > 50 ? `${currentPhoto.url.slice(0, 48)}...` : currentPhoto.url) : 'Google Drive'}
+                  </p>
+                  <a
+                    href={currentPhoto.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors"
+                  >
+                    <span>เปิดดูใน Google Drive</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <div className="absolute bottom-2 left-2 right-2 bg-slate-950/75 backdrop-blur-xs text-white p-1.5 rounded-lg text-[10px] flex items-center justify-between">
+                    <span className="text-emerald-300 font-medium">☁️ จัดเก็บบน Google Drive ไม่เปลืองพื้นที่เครื่อง/เซิร์ฟเวอร์</span>
+                    <span className="text-emerald-400 font-semibold shrink-0">✓ พร้อมบันทึก</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden bg-slate-900 h-44 flex items-center justify-center shadow-inner">
+                  <img
+                    src={currentPhoto.url}
+                    alt={currentPhoto.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                    }}
+                  />
+                  <div className="absolute bottom-2 left-2 right-2 bg-slate-950/75 backdrop-blur-xs text-white p-2 rounded-lg text-[11px] flex items-center justify-between">
+                    <span className="truncate">{currentPhoto.name || 'ภาพถ่ายปฏิบัติหน้าที่จริง.jpg'}</span>
+                    <span className="text-emerald-400 text-[10px] font-semibold shrink-0 ml-2">✓ พร้อมแนบ</span>
+                  </div>
+                </div>
+              )}
 
               {/* Evidence Category Type for Active Photo */}
               <div>

@@ -31,6 +31,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './components/LoginPage';
 import { getStoredSession, storeSession, clearSession } from './utils/auth';
 import { compressImageFile } from './utils/imageUtils';
+import { saveOrdersSafely, loadOrdersSafely } from './utils/storageManager';
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -85,13 +86,9 @@ export default function App() {
   const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Keep localStorage synced with orders
+  // Keep storage safely synced with orders (immune to 5MB LocalStorage quota errors)
   useEffect(() => {
-    try {
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-    } catch (e) {
-      // ignore
-    }
+    saveOrdersSafely(orders);
   }, [orders]);
 
   // Sync with Supabase on mount & Live Realtime sync across all devices
@@ -118,10 +115,13 @@ export default function App() {
           }
         }
 
-        // Helper to merge remote orders while preserving any local photos
+        // Helper to merge remote orders while preserving any local photos and local-only pending orders
         const mergePreservingPhotos = (remoteOrders, currentOrders) => {
           if (!currentOrders || currentOrders.length === 0) return remoteOrders;
-          return remoteOrders.map((rOrd) => {
+          const remoteIds = new Set(remoteOrders.map(r => r.id));
+          const localOnly = currentOrders.filter(l => !remoteIds.has(l.id));
+
+          const mergedRemote = remoteOrders.map((rOrd) => {
             const localOrd = currentOrders.find(l => l.id === rOrd.id);
             if (localOrd && (localOrd.actualPhotos || []).length > (rOrd.actualPhotos || []).length) {
               return {
@@ -132,6 +132,8 @@ export default function App() {
             }
             return rOrd;
           });
+
+          return [...mergedRemote, ...localOnly];
         };
 
         // Supabase is the central shared database (Single Source of Truth)
@@ -139,15 +141,11 @@ export default function App() {
           setOrders((prev) => mergePreservingPhotos(ords, prev));
         } else {
           // If remote is empty, check if we have local cached orders
-          const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
-          if (saved) {
-            try {
-              const localParsed = JSON.parse(saved);
-              if (Array.isArray(localParsed) && localParsed.length > 0) {
-                setOrders(localParsed);
-              }
-            } catch (e) {}
-          }
+          loadOrdersSafely().then((cached) => {
+            if (isMounted && cached && cached.length > 0) {
+              setOrders(cached);
+            }
+          });
         }
       } catch (err) {
         console.warn('[Supabase Sync] Operating with local state fallback:', err);
@@ -170,13 +168,16 @@ export default function App() {
             if (isMounted && latestOrders) {
               setOrders((prev) => {
                 if (!prev || prev.length === 0) return latestOrders;
-                return latestOrders.map((rOrd) => {
+                const remoteIds = new Set(latestOrders.map(o => o.id));
+                const localOnly = prev.filter(l => !remoteIds.has(l.id));
+                const updated = latestOrders.map((rOrd) => {
                   const localOrd = prev.find(l => l.id === rOrd.id);
                   if (localOrd && (localOrd.actualPhotos || []).length > (rOrd.actualPhotos || []).length) {
                     return { ...rOrd, actualPhotos: localOrd.actualPhotos, evidenceStatus: 'ready' };
                   }
                   return rOrd;
                 });
+                return [...updated, ...localOnly];
               });
               if (payload.eventType === 'INSERT') {
                 showToast('⚡ ซิงก์คำสั่งใหม่จากผู้ใช้ในระบบแบบเรียลไทม์!', 'success');
@@ -200,13 +201,16 @@ export default function App() {
             if (isMounted && latestOrders) {
               setOrders((prev) => {
                 if (!prev || prev.length === 0) return latestOrders;
-                return latestOrders.map((rOrd) => {
+                const remoteIds = new Set(latestOrders.map(o => o.id));
+                const localOnly = prev.filter(l => !remoteIds.has(l.id));
+                const updated = latestOrders.map((rOrd) => {
                   const localOrd = prev.find(l => l.id === rOrd.id);
                   if (localOrd && (localOrd.actualPhotos || []).length > (rOrd.actualPhotos || []).length) {
                     return { ...rOrd, actualPhotos: localOrd.actualPhotos, evidenceStatus: 'ready' };
                   }
                   return rOrd;
                 });
+                return [...updated, ...localOnly];
               });
               if (payload.eventType === 'INSERT') {
                 showToast('📸 ซิงก์ภาพถ่ายหลักฐานใหม่ลงในระบบแบบเรียลไทม์!', 'success');
@@ -369,9 +373,27 @@ export default function App() {
 
   // Add new order from AI Ingestion module
   const handleAddNewOrder = (newOrder) => {
-    const assignedFacId = newOrder.facultyAssigned?.[0]?.id || activeFaculty?.id || 'fac-pimra';
-    setOrders((prev) => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
-    saveOrderToSupabase(newOrder, assignedFacId);
+    // Determine the primary faculty owner: order.facultyId > order.facultyAssigned[0].id > activeFaculty.id > fac-pimra
+    const assignedFacId = newOrder.facultyId || newOrder.facultyAssigned?.[0]?.id || activeFaculty?.id || 'fac-pimra';
+
+    // Ensure facultyId and facultyAssigned are strongly tied so it NEVER gets filtered out in the drawer
+    const baseFacultyAssigned = Array.isArray(newOrder.facultyAssigned) && newOrder.facultyAssigned.length > 0
+      ? newOrder.facultyAssigned
+      : [{ id: assignedFacId, name: activeFaculty?.name || 'อาจารย์ผู้รับผิดชอบ', roleInOrder: newOrder.role || 'ผู้รับผิดชอบโครงการ' }];
+
+    // Guarantee the assigned faculty is present in facultyAssigned list
+    const finalFacultyAssigned = baseFacultyAssigned.some(f => f.id === assignedFacId)
+      ? baseFacultyAssigned
+      : [{ id: assignedFacId, name: activeFaculty?.name || 'อาจารย์ผู้รับผิดชอบ', roleInOrder: newOrder.role || 'ผู้รับผิดชอบโครงการ' }, ...baseFacultyAssigned];
+
+    const finalOrder = {
+      ...newOrder,
+      facultyId: assignedFacId,
+      facultyAssigned: finalFacultyAssigned
+    };
+
+    setOrders((prev) => [finalOrder, ...prev.filter(o => o.id !== finalOrder.id)]);
+    saveOrderToSupabase(finalOrder, assignedFacId);
 
     // If order was assigned to a specific faculty, switch activeFaculty to that faculty so it displays immediately
     if (assignedFacId && assignedFacId !== activeFaculty?.id) {
@@ -392,7 +414,7 @@ export default function App() {
       // ignore
     }
 
-    showToast(`สกัดข้อมูลและบันทึกคำสั่ง [${newOrder.orderNumber}] สู่ลิ้นชักเรียบร้อยแล้ว! 🎯`, 'success');
+    showToast(`สกัดข้อมูลและบันทึกคำสั่ง [${finalOrder.orderNumber}] สู่ลิ้นชักเรียบร้อยแล้ว! 🎯`, 'success');
     setActiveTab('drawer');
   };
 
@@ -807,7 +829,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-slate-400 text-[11px]">
             <span>สาขาวิชาเทคโนโลยีสารสนเทศ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์</span>
             <span>•</span>
-            <span className="font-mono text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Release v3.7.1 • Production Ready</span>
+            <span className="font-mono text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Release v3.8.0 • Production Ready</span>
           </div>
         </div>
       </footer>

@@ -30,23 +30,44 @@ export async function extractTextFromDocument(file, onProgress = () => {}) {
       message: 'กำลังอ่านไฟล์ PDF และตรวจสอบเลเยอร์ข้อความ (Digital Text Layer)...'
     });
 
-    const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdfDoc = await loadingTask.promise;
-    const numPages = pdfDoc.numPages;
-
+    let pdfDoc = null;
+    let numPages = 1;
     let extractedText = '';
-    for (let pageNum = 1; pageNum <= Math.min(numPages, 5); pageNum++) {
-      onProgress({
-        phase: 'pdf_reading',
-        progress: 20 + Math.round((pageNum / Math.min(numPages, 5)) * 30),
-        message: `กำลังสกัดข้อความหน้า ${pageNum} จากทั้งหมด ${numPages} หน้า...`
-      });
 
-      const page = await pdfDoc.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageStrings = textContent.items.map(item => item.str).join(' ');
-      extractedText += `\n--- หน้า ${pageNum} ---\n` + pageStrings;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      pdfDoc = await loadingTask.promise;
+      numPages = pdfDoc.numPages;
+
+      for (let pageNum = 1; pageNum <= Math.min(numPages, 5); pageNum++) {
+        onProgress({
+          phase: 'pdf_reading',
+          progress: 20 + Math.round((pageNum / Math.min(numPages, 5)) * 30),
+          message: `กำลังสกัดข้อความหน้า ${pageNum} จากทั้งหมด ${numPages} หน้า...`
+        });
+
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageStrings = textContent.items.map(item => item.str).join(' ');
+        extractedText += `\n--- หน้า ${pageNum} ---\n` + pageStrings;
+      }
+    } catch (pdfLoadErr) {
+      console.warn('[ocrEngine] PDF.js getDocument failed:', pdfLoadErr);
+      if (sampleDocsCache[file.name]) {
+        return {
+          text: sampleDocsCache[file.name],
+          type: 'sample_cache',
+          pageCount: 1,
+          previewUrl: null
+        };
+      }
+      return {
+        text: `เอกสารคำสั่ง: ${file.name}\n(ไม่สามารถสกัดข้อความอัตโนมัติจากไฟล์นี้ได้ สามารถระบุรายละเอียดในแบบฟอร์มเพื่อบันทึกคำสั่งได้)`,
+        type: 'digital_pdf_fallback',
+        pageCount: 1,
+        previewUrl: null
+      };
     }
 
     // สร้างภาพ Preview จากหน้าแรกเสมอ

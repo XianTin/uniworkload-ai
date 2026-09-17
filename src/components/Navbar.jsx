@@ -121,7 +121,7 @@ export default function Navbar({
                   UniWorkload
                 </span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold">
-                  AI v3.7.1
+                  AI v3.8.0
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 hidden xl:block -mt-0.5">

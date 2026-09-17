@@ -67,14 +67,26 @@ export async function fetchOrdersFromSupabase(fallback = []) {
       const assignedFacId = ord.faculty_id || 'fac-pimra';
       const facInfo = facultyMap[assignedFacId] || { name: 'อาจารย์ผู้รับผิดชอบ', role: ord.role || 'กรรมการ' };
 
-      const photos = (ord.order_evidences || []).map((ev) => ({
-        id: ev.id,
-        name: ev.title || 'ภาพถ่ายหลักฐานหน้างาน.jpg',
-        url: ev.image_url,
-        size: ev.file_size || '1.2 MB',
-        uploadedAt: ev.uploaded_at ? ev.uploaded_at.split('T')[0] : (ord.event_date || new Date().toISOString().split('T')[0]),
-        type: 'photo'
-      }));
+      const photos = (ord.order_evidences || []).map((ev) => {
+        const isGDrive = ev.image_url && (ev.image_url.includes('drive.google.com') || ev.image_url.includes('docs.google.com'));
+        const fileIdMatch = isGDrive ? ev.image_url.match(/[-\w]{25,}/) : null;
+        const fileId = fileIdMatch ? fileIdMatch[0] : null;
+
+        return {
+          id: ev.id,
+          name: ev.title || (isGDrive ? 'หลักฐาน Google Drive' : 'ภาพถ่ายหลักฐานหน้างาน.jpg'),
+          title: ev.title || (isGDrive ? 'หลักฐาน Google Drive' : 'ภาพถ่ายหลักฐานหน้างาน.jpg'),
+          url: ev.image_url,
+          thumbnailUrl: isGDrive && fileId && !ev.image_url.includes('/folders/') 
+            ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w800` 
+            : ev.image_url,
+          size: ev.file_size || (isGDrive ? 'Google Drive Cloud' : '1.2 MB'),
+          uploadedAt: ev.uploaded_at ? ev.uploaded_at.split('T')[0] : (ord.event_date || new Date().toISOString().split('T')[0]),
+          type: isGDrive ? 'gdrive' : 'photo',
+          isGoogleDrive: isGDrive,
+          note: ev.description || (isGDrive ? 'คลังหลักฐานบน Google Drive' : '')
+        };
+      });
 
       const docFile = ord.doc_file_name || `${ord.order_number ? ord.order_number.replace(/[^a-zA-Z0-9ก-๙]/g, '_') : 'order'}.pdf`;
 
@@ -144,6 +156,21 @@ export async function fetchOrdersFromSupabase(fallback = []) {
   }
 }
 
+// Known valid faculty IDs in Supabase database to prevent foreign key constraint violations (23503)
+export const VALID_SUPABASE_FACULTY_IDS = new Set([
+  'fac-pimra',
+  'fac-1',
+  'fac-2',
+  'fac-3',
+  'fac-kritsana',
+  'fac-theerapat'
+]);
+
+export function getSafeFacultyId(id) {
+  if (id && VALID_SUPABASE_FACULTY_IDS.has(id)) return id;
+  return 'fac-pimra';
+}
+
 /**
  * Save single evidence photo to order_evidences table in Supabase
  */
@@ -158,38 +185,46 @@ export async function saveMultipleEvidencesToSupabase(orderId, facultyId, eviden
   try {
     if (!evidences || evidences.length === 0) return [];
 
+    const safeFacId = getSafeFacultyId(facultyId);
+
     const rawRecords = evidences.map((ev, idx) => {
       const photoObj = typeof ev === 'string'
         ? { id: `ev-${orderId}-${idx}`, url: ev, name: `ภาพถ่าย_${idx + 1}.jpg` }
         : ev;
 
+      const isGDrive = photoObj.isGoogleDrive || (photoObj.url && (photoObj.url.includes('drive.google.com') || photoObj.url.includes('docs.google.com')));
+
       return {
         id: photoObj.id || `ev-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
         order_id: orderId,
-        faculty_id: facultyId || 'fac-pimra',
-        title: photoObj.name || photoObj.title || `ภาพถ่ายหลักฐาน_${idx + 1}.jpg`,
-        rawUrl: photoObj.url || photoObj.dataUrl || '',
-        file_size: photoObj.size || '1.2 MB',
-        description: photoObj.note || photoObj.description || 'หลักฐานบันทึกการปฏิบัติหน้าที่ตามคำสั่งราชการ'
+        faculty_id: safeFacId,
+        title: photoObj.name || photoObj.title || (isGDrive ? 'หลักฐาน Google Drive' : `ภาพถ่ายหลักฐาน_${idx + 1}.jpg`),
+        rawUrl: photoObj.url || photoObj.dataUrl || photoObj.thumbnailUrl || '',
+        file_size: isGDrive ? 'Google Drive' : (photoObj.size || '1.2 MB'),
+        description: photoObj.note || photoObj.description || (isGDrive ? 'คลังหลักฐานบน Google Drive คลาวด์' : 'หลักฐานบันทึกการปฏิบัติหน้าที่ตามคำสั่งราชการ'),
+        isGDrive
       };
     }).filter(r => r.rawUrl && r.rawUrl.trim().length > 0);
 
     if (rawRecords.length === 0) return [];
 
-    // Ensure every record has a persistent, lightweight Data URL or HTTP URL (no temporary blob: URLs)
+    // Ensure every record has a persistent, lightweight Data URL, HTTP URL, or Google Drive URL
     const records = await Promise.all(rawRecords.map(async (r) => {
       let finalUrl = r.rawUrl;
       let finalSize = r.file_size;
 
-      if (finalUrl.startsWith('blob:') || (finalUrl.startsWith('data:image/') && finalUrl.length > 300000)) {
-        try {
-          const comp = await compressImageFile(finalUrl, 1200, 1200, 0.75);
-          if (comp?.dataUrl) {
-            finalUrl = comp.dataUrl;
-            finalSize = comp.size;
+      // Only compress if it's a giant raw base64 or temporary blob (skip Google Drive and external web URLs)
+      if (!r.isGDrive && !finalUrl.startsWith('https://drive.google.com') && !finalUrl.startsWith('https://docs.google.com')) {
+        if (finalUrl.startsWith('blob:') || (finalUrl.startsWith('data:image/') && finalUrl.length > 250000)) {
+          try {
+            const comp = await compressImageFile(finalUrl, 1200, 1200, 0.70);
+            if (comp?.dataUrl) {
+              finalUrl = comp.dataUrl;
+              finalSize = comp.size;
+            }
+          } catch (e) {
+            console.warn('[saveMultipleEvidencesToSupabase] Compression failed for record:', e);
           }
-        } catch (e) {
-          console.warn('[saveMultipleEvidencesToSupabase] Compression failed for record:', e);
         }
       }
 
@@ -275,16 +310,17 @@ export async function uploadEvidenceToSupabase(orderId, facultyId, file, title =
 }
 
 /**
- * Save new order to Supabase
+ * Save new order to Supabase with Foreign Key validation & auto-retry
  */
-export async function saveOrderToSupabase(order, facultyId = 'fac-1') {
+export async function saveOrderToSupabase(order, facultyId = 'fac-pimra') {
   try {
     const hasPhotos = Boolean(order.actualPhotos && order.actualPhotos.length > 0);
+    const safeFacId = getSafeFacultyId(facultyId || order.facultyId);
 
     const record = {
       id: order.id,
-      faculty_id: facultyId,
-      order_number: order.orderNumber,
+      faculty_id: safeFacId,
+      order_number: order.orderNumber || 'รอระบุเลขที่คำสั่ง',
       title: order.title,
       sign_date: order.signDate || null,
       event_date: order.eventDate || null,
@@ -299,9 +335,20 @@ export async function saveOrderToSupabase(order, facultyId = 'fac-1') {
       raw_ocr_text: order.rawOcrText || null
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('orders')
       .upsert(record, { onConflict: 'id' });
+
+    // Auto-fallback retry if foreign key violation occurs
+    if (error && (error.code === '23503' || error.message?.includes('foreign key constraint'))) {
+      console.warn('[Supabase] Foreign key error for faculty_id:', safeFacId, 'Retrying with fac-pimra fallback...');
+      record.faculty_id = 'fac-pimra';
+      const retryResult = await supabase
+        .from('orders')
+        .upsert(record, { onConflict: 'id' });
+      data = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       console.error('[Supabase] Error upserting order:', error);
@@ -309,7 +356,7 @@ export async function saveOrderToSupabase(order, facultyId = 'fac-1') {
 
     // Persist any attached photos to order_evidences table in Supabase
     if (hasPhotos) {
-      await saveMultipleEvidencesToSupabase(order.id, facultyId, order.actualPhotos);
+      await saveMultipleEvidencesToSupabase(order.id, record.faculty_id, order.actualPhotos);
     }
 
     return data;

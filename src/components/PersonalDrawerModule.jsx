@@ -26,6 +26,7 @@ import {
   X,
   Tag,
   ExternalLink,
+  FolderOpen,
   UploadCloud,
   Share2,
   Copy,
@@ -994,18 +995,32 @@ export default function PersonalDrawerModule({
                         {docFiles.length > 0 && (
                           <div className="space-y-1.5 mb-2.5">
                             {docFiles.map((f, fIdx) => (
-                              <div
+                              <a
                                 key={f.id || `f-${fIdx}`}
-                                className="flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200/80 transition-colors text-xs"
+                                href={f.url || '#'}
+                                target={f.url ? '_blank' : undefined}
+                                rel="noreferrer"
+                                onClick={(e) => {
+                                  if (!f.url) e.preventDefault();
+                                }}
+                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all text-xs group ${
+                                  f.url
+                                    ? 'bg-slate-50 hover:bg-blue-50/80 border-slate-200/80 hover:border-blue-200 text-slate-700 hover:text-blue-700 cursor-pointer shadow-2xs'
+                                    : 'bg-slate-50 border-slate-200/80 text-slate-700'
+                                }`}
+                                title={f.url ? 'คลิกเพื่อเปิดดูไฟล์เอกสารต้นฉบับ' : 'ไฟล์เอกสารคำสั่ง'}
                               >
                                 <div className="flex items-center gap-1.5 truncate">
-                                  <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0 group-hover:scale-110 transition-transform" />
                                   <span className="truncate font-medium">{f.name || 'เอกสารคำสั่ง.pdf'}</span>
                                 </div>
-                                <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
-                                  {f.size || '1.5 MB'}
-                                </span>
-                              </div>
+                                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {f.size || '1.5 MB'}
+                                  </span>
+                                  {f.url && <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-blue-600" />}
+                                </div>
+                              </a>
                             ))}
                           </div>
                         )}
@@ -1018,6 +1033,7 @@ export default function PersonalDrawerModule({
                                 const photoObj = typeof photo === 'string' 
                                   ? { id: `photo-${pIdx}`, url: photo, name: `ภาพถ่ายปฏิบัติงาน_${pIdx + 1}.jpg` }
                                   : photo;
+                                const isGDrive = photoObj.isGoogleDrive || photoObj.type === 'gdrive' || (photoObj.url && (photoObj.url.includes('drive.google.com') || photoObj.url.includes('docs.google.com')));
 
                                 return (
                                   <div
@@ -1025,18 +1041,35 @@ export default function PersonalDrawerModule({
                                     onClick={() => setLightboxData({ photo: photoObj, order })}
                                     className="group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
                                   >
-                                    <img
-                                      src={photoObj.url}
-                                      alt={photoObj.name || 'ภาพหลักฐาน'}
-                                      className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                                      onError={(e) => {
-                                        e.currentTarget.onerror = null;
-                                        e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
-                                      }}
-                                    />
+                                    {isGDrive ? (
+                                      <div className="w-full h-full bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-950 flex flex-col items-center justify-center p-2 text-white relative">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 mb-1 group-hover:scale-110 transition-transform">
+                                          <FolderOpen className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-[10px] font-bold text-emerald-200 text-center line-clamp-1 px-1">
+                                          {photoObj.name || photoObj.title || 'คลัง Google Drive'}
+                                        </span>
+                                        <span className="text-[8px] font-mono text-emerald-400/80 mt-0.5">
+                                          Google Drive Cloud
+                                        </span>
+                                        <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-sm bg-emerald-500/80 text-white font-mono text-[8px] font-bold">
+                                          GDrive
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <img
+                                        src={photoObj.url}
+                                        alt={photoObj.name || 'ภาพหลักฐาน'}
+                                        className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                                        onError={(e) => {
+                                          e.currentTarget.onerror = null;
+                                          e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                                        }}
+                                      />
+                                    )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
                                       <span className="text-[9px] text-white truncate max-w-[80%] font-medium">
-                                        {photoObj.name || 'ภาพหลักฐาน'}
+                                        {photoObj.name || photoObj.title || 'ภาพหลักฐาน'}
                                       </span>
                                       <Maximize2 className="w-3 h-3 text-white shrink-0" />
                                     </div>
