@@ -12,6 +12,7 @@ import {
   Plus, 
   ArrowUpRight, 
   ShieldCheck, 
+  User,
   UserCheck, 
   CalendarRange, 
   RotateCcw, 
