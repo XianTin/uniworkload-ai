@@ -112,6 +112,7 @@ export default function IngestionModule({
     title: '',
     signDate: '',
     eventDate: '',
+    eventEndDate: '',
     eventTime: '08:30 - 16:30 น.',
     location: '',
     category: 'บริการวิชาการแก่สังคม',
@@ -225,6 +226,7 @@ export default function IngestionModule({
         title: parsedData.title,
         signDate: parsedData.signDate,
         eventDate: parsedData.eventDate,
+        eventEndDate: parsedData.eventEndDate || parsedData.eventDate || '',
         eventTime: parsedData.eventTime,
         location: parsedData.location,
         category: parsedData.category,
@@ -351,6 +353,7 @@ export default function IngestionModule({
         title: parsedData.title,
         signDate: parsedData.signDate || new Date().toISOString().split('T')[0],
         eventDate: parsedData.eventDate || new Date().toISOString().split('T')[0],
+        eventEndDate: parsedData.eventEndDate || parsedData.eventDate || new Date().toISOString().split('T')[0],
         eventTime: parsedData.eventTime || 'ไม่ระบุเวลา',
         location: parsedData.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
         category: parsedData.category || 'การจัดการเรียนการสอน',
@@ -423,6 +426,7 @@ export default function IngestionModule({
         title: parsedData.title,
         signDate: parsedData.signDate,
         eventDate: parsedData.eventDate,
+        eventEndDate: parsedData.eventEndDate || parsedData.eventDate || '',
         eventTime: parsedData.eventTime,
         location: parsedData.location,
         category: parsedData.category,
@@ -468,6 +472,7 @@ export default function IngestionModule({
           title: sample.parsedData.title,
           signDate: sample.parsedData.signDate,
           eventDate: sample.parsedData.eventDate,
+          eventEndDate: sample.parsedData.eventEndDate || sample.parsedData.eventDate || '',
           eventTime: sample.parsedData.eventTime,
           location: sample.parsedData.location,
           category: sample.parsedData.category,
@@ -528,16 +533,23 @@ export default function IngestionModule({
     };
 
     const isFacebookSource = selectedChannel === 'facebook' || Boolean(facebookUrl);
-    const orderEvidences = [
-      {
+    const isImageFile = activeFile?.type?.startsWith('image/') ||
+                        isFacebookSource ||
+                        selectedChannel === 'photo' ||
+                        (previewUrl && (previewUrl.startsWith('data:image/') || previewUrl.startsWith('http')));
+
+    const orderEvidences = [];
+    // Only put into orderEvidences if it's an actual document file (e.g. PDF), not a photo
+    if (!isImageFile && activeFile) {
+      orderEvidences.push({
         id: `ev-${Date.now()}`,
-        name: isFacebookSource ? (activeFile?.name || 'ภาพแคปโพสต์_Facebook.png') : (activeFile?.name || scanResult.filename || 'เอกสารคำสั่ง.pdf'),
-        size: activeFile?.size ? (activeFile.size / (1024 * 1024)).toFixed(1) + ' MB' : '1.8 MB',
-        type: activeFile?.type?.includes('pdf') ? 'pdf' : 'image',
+        name: activeFile.name || scanResult.filename || 'เอกสารคำสั่ง.pdf',
+        size: activeFile.size ? (activeFile.size / (1024 * 1024)).toFixed(1) + ' MB' : '1.8 MB',
+        type: 'pdf',
         url: previewUrl || null,
         uploadedAt: new Date().toISOString().split('T')[0]
-      }
-    ];
+      });
+    }
 
     if (facebookUrl) {
       orderEvidences.push({
@@ -551,11 +563,6 @@ export default function IngestionModule({
     }
 
     const orderActualPhotos = [];
-    const isImageFile = activeFile?.type?.startsWith('image/') ||
-                        isFacebookSource ||
-                        selectedChannel === 'photo' ||
-                        (previewUrl && (previewUrl.startsWith('data:image/') || previewUrl.startsWith('http')));
-
     if (previewUrl && isImageFile) {
       orderActualPhotos.push({
         id: `photo-${Date.now()}`,
@@ -567,10 +574,11 @@ export default function IngestionModule({
 
     const newOrderObj = {
       id: newOrderId,
-      orderNumber: formData.orderNumber,
+      orderNumber: formData.orderNumber || 'รอระบุเลขที่คำสั่ง',
       title: formData.title,
       signDate: formData.signDate,
       eventDate: formData.eventDate,
+      eventEndDate: formData.eventEndDate || formData.eventDate,
       eventTime: formData.eventTime,
       location: formData.location,
       category: formData.category,
@@ -1174,16 +1182,52 @@ export default function IngestionModule({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          วันจัดกิจกรรม (ค.ศ. สำหรับปฏิทิน)
-                        </label>
-                        <input 
-                          type="date" 
-                          value={formData.eventDate}
-                          onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                          className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden"
-                        />
+                      <div className="sm:col-span-2 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>กำหนดการจัดกิจกรรม (รองรับงาน 1 วัน หรือหลายวันต่อเนื่อง เช่น 17 - 20)</span>
+                          </label>
+                          {formData.eventDate && (
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              {formData.eventEndDate && formData.eventEndDate !== formData.eventDate
+                                ? `จัดต่อเนื่อง ${formData.eventDate} ถึง ${formData.eventEndDate}`
+                                : `วันเดียว (${formData.eventDate})`}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
+                            <span className="block text-[10px] text-slate-500 font-medium mb-1">
+                              วันเริ่มจัดกิจกรรม
+                            </span>
+                            <input 
+                              type="date" 
+                              value={formData.eventDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  eventDate: val,
+                                  eventEndDate: (!prev.eventEndDate || prev.eventEndDate < val) ? val : prev.eventEndDate
+                                }));
+                              }}
+                              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden"
+                            />
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-slate-500 font-medium mb-1">
+                              วันสิ้นสุดกิจกรรม (หากจัดหลายวัน)
+                            </span>
+                            <input 
+                              type="date" 
+                              min={formData.eventDate}
+                              value={formData.eventEndDate}
+                              onChange={(e) => setFormData({ ...formData, eventEndDate: e.target.value })}
+                              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div>

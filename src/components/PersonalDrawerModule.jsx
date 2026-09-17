@@ -28,14 +28,17 @@ import {
   ExternalLink,
   UploadCloud,
   Share2,
-  Copy
+  Copy,
+  FileEdit
 } from 'lucide-react';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
 import DossierSummaryModal from './DossierSummaryModal';
+import EditOrderModal from './EditOrderModal';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
 import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
+import { canViewAllFaculties } from '../utils/auth';
 
 // Helper function to format date into Thai Buddhist Era string
 function formatThaiDate(dateStr) {
@@ -54,6 +57,24 @@ function formatThaiDate(dateStr) {
   return `${day} ${month} ${year}`;
 }
 
+// Helper function to format date range (e.g. 17 - 20 ก.ย. 2569)
+function formatThaiDateRange(startStr, endStr) {
+  if (!startStr) return '';
+  if (!endStr || endStr === startStr) return formatThaiDate(startStr);
+  const s = new Date(startStr);
+  const e = new Date(endStr);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return formatThaiDate(startStr);
+
+  const thaiMonths = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return `${s.getDate()} - ${e.getDate()} ${thaiMonths[s.getMonth()]} ${s.getFullYear() + 543}`;
+  }
+  return `${s.getDate()} ${thaiMonths[s.getMonth()]} - ${e.getDate()} ${thaiMonths[e.getMonth()]} ${e.getFullYear() + 543}`;
+}
+
 export default function PersonalDrawerModule({ 
   orders, 
   activeFaculty, 
@@ -65,6 +86,7 @@ export default function PersonalDrawerModule({
   onSaveEvidence, 
   onDeleteEvidence,
   onDeleteOrder,
+  onUpdateOrder,
   onClearDrawer,
   onRestoreDemoOrders,
   onJumpToIngestion,
@@ -73,6 +95,7 @@ export default function PersonalDrawerModule({
   onAddSampleOrder,
   onOpenAddFaculty
 }) {
+  const allowViewAll = canViewAllFaculties(currentUser);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | upcoming | done | missing_photo
   const [selectedCategory, setSelectedCategory] = useState('all'); // all | category name
@@ -92,6 +115,7 @@ export default function PersonalDrawerModule({
   const [isDossierOpen, setIsDossierOpen] = useState(false);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+  const [orderToEdit, setOrderToEdit] = useState(null);
 
   // Quick Preset Handlers
   const applyPresetDate = (preset) => {
@@ -148,11 +172,11 @@ export default function PersonalDrawerModule({
   // Base list of orders assigned to active faculty or all faculties
   const assignedOrders = useMemo(() => {
     if (!orders || !Array.isArray(orders)) return [];
-    if (viewAllFaculties) return orders;
+    if (allowViewAll && viewAllFaculties) return orders;
     return orders.filter((order) => 
       (order.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || order.facultyId === activeFaculty?.id
     );
-  }, [orders, activeFaculty?.id, viewAllFaculties]);
+  }, [orders, activeFaculty?.id, viewAllFaculties, allowViewAll]);
 
   // Compute category counts
   const categoryCounts = useMemo(() => {
@@ -281,37 +305,39 @@ export default function PersonalDrawerModule({
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex flex-wrap items-center gap-2">
               <span>ตู้ลิ้นชักแฟ้มหลักฐานส่วนบุคคล:</span>
-              <span className="text-blue-700">{viewAllFaculties ? 'รวมทุกอาจารย์ในระบบ' : (activeFaculty?.name || 'อาจารย์')}</span>
+              <span className="text-blue-700">{allowViewAll && viewAllFaculties ? 'รวมทุกอาจารย์ในระบบ' : (activeFaculty?.name || 'อาจารย์')}</span>
             </h2>
-            <div className="flex flex-wrap items-center gap-3 mt-2">
-              {/* View Scope Segmented Pill */}
-              <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setViewAllFaculties(false)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                    !viewAllFaculties
-                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <User className="w-3.5 h-3.5 text-blue-600" />
-                  <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewAllFaculties(true)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                    viewAllFaculties
-                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 text-purple-600" />
-                  <span>รวมทุกคน ({orders?.length || 0})</span>
-                </button>
+            {allowViewAll && (
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                {/* View Scope Segmented Pill (Admin/Staff only) */}
+                <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setViewAllFaculties(false)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                      !viewAllFaculties
+                        ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5 text-blue-600" />
+                    <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewAllFaculties(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                      viewAllFaculties
+                        ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5 text-purple-600" />
+                    <span>รวมทุกคน ({orders?.length || 0})</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -662,8 +688,8 @@ export default function PersonalDrawerModule({
             </p>
           </div>
 
-          {/* Smart Cloud Orders Alert (When orders exist in other faculties) */}
-          {orders && orders.length > 0 && !viewAllFaculties && (
+          {/* Smart Cloud Orders Alert (Only for Admin & Staff who have permissions to view other drawers) */}
+          {allowViewAll && orders && orders.length > 0 && !viewAllFaculties && (
             <div className="max-w-lg mx-auto p-4 rounded-2xl bg-amber-50/95 border border-amber-200 text-amber-900 text-xs text-left space-y-3 shadow-xs animate-in fade-in">
               <div className="flex items-start gap-2.5">
                 <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -812,13 +838,24 @@ export default function PersonalDrawerModule({
                   {/* Top Badge & Action */}
                   <div className="flex items-start justify-between gap-2 mb-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
-                        {order.orderNumber}
-                      </span>
+                      {(!order.orderNumber || order.orderNumber.includes('รอระบุ')) ? (
+                        <span 
+                          onClick={() => setOrderToEdit(order)}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200 transition-colors cursor-pointer"
+                          title="ยังไม่มีเลขที่คำสั่งอย่างเป็นทางการ (ไม่มีผลกระทบต่อระบบ — คลิกเพื่อแก้ไขหรือระบุเลขคำสั่ง)"
+                        >
+                          <Tag className="w-3 h-3 text-amber-500" />
+                          <span>ยังไม่ระบุเลขคำสั่ง</span>
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                          {order.orderNumber}
+                        </span>
+                      )}
                       <span className="text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                         {order.category}
                       </span>
-                      {viewAllFaculties && (
+                      {allowViewAll && viewAllFaculties && (
                         <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 flex items-center gap-1">
                           <User className="w-3 h-3 text-purple-600" />
                           <span>{order.facultyAssigned?.[0]?.name || 'อาจารย์'}</span>
@@ -827,6 +864,15 @@ export default function PersonalDrawerModule({
                     </div>
 
                     <div className="flex items-center gap-1.5">
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => setOrderToEdit(order)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 transition-colors cursor-pointer"
+                        title="แก้ไขข้อมูลคำสั่ง/ภาระงาน"
+                      >
+                        <FileEdit className="w-3.5 h-3.5" />
+                      </button>
+
                       <button
                         onClick={() => onToggleStatus(order.id)}
                         className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
@@ -885,11 +931,11 @@ export default function PersonalDrawerModule({
                     </div>
                   )}
 
-                  {/* Meta details */}
+                  {/* Meta details with multi-day range support */}
                   <div className="space-y-1 text-xs text-slate-600 mb-3 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>วันที่จัด: <strong>{formatThaiDate(order.eventDate)}</strong> ({order.eventTime || 'ตามกำหนดการ'})</span>
+                      <span>วันที่จัด: <strong>{formatThaiDateRange(order.eventDate, order.eventEndDate)}</strong> ({order.eventTime || 'ตามกำหนดการ'})</span>
                     </div>
                     {order.location && (
                       <div className="flex items-center gap-2 truncate">
@@ -899,90 +945,120 @@ export default function PersonalDrawerModule({
                     )}
                   </div>
 
-                  {/* Evidence Attachments Section */}
-                  <div className="border-t border-slate-100 pt-3 mb-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="text-xs font-bold text-slate-800">
-                          หลักฐานและภาพถ่าย ({((order.evidenceFiles || []).length) + ((order.actualPhotos || []).length)})
-                        </span>
-                      </div>
+                  {/* Evidence Attachments Section with Anti-Duplicate Filter */}
+                  {(() => {
+                    // Filter out duplicate files that are actually image files already rendered in actualPhotos
+                    const docFiles = (order.evidenceFiles || []).filter(f => {
+                      if (!f) return false;
+                      const isImg = f.type === 'image' || /\.(jpg|jpeg|png|webp)$/i.test(f.name || '');
+                      const dupInPhotos = (order.actualPhotos || []).some(p => 
+                        (p.url && f.url && p.url === f.url) || 
+                        (p.name && f.name && p.name === f.name)
+                      );
+                      return !isImg && !dupInPhotos;
+                    });
 
-                      <button
-                        onClick={() => setSelectedOrderForEvidence(order)}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>แนบรูปเพิ่ม</span>
-                      </button>
-                    </div>
+                    // Deduplicate photos so 1 photo never shows twice
+                    const uniquePhotos = (order.actualPhotos || []).filter((photo, idx, arr) => {
+                      const pUrl = typeof photo === 'string' ? photo : (photo.url || photo.dataUrl);
+                      if (!pUrl) return true;
+                      return arr.findIndex(item => {
+                        const iUrl = typeof item === 'string' ? item : (item.url || item.dataUrl);
+                        return iUrl && pUrl && iUrl === pUrl;
+                      }) === idx;
+                    });
 
-                    {/* Official PDF Document */}
-                    <div className="space-y-1.5 mb-2.5">
-                      {(order.evidenceFiles || []).map((f, fIdx) => (
-                        <div
-                          key={f.id || `f-${fIdx}`}
-                          className="flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200/80 transition-colors text-xs"
-                        >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                            <span className="truncate font-medium">{f.name || 'เอกสารคำสั่ง.pdf'}</span>
+                    const totalEvidenceCount = docFiles.length + uniquePhotos.length;
+                    const cardHasPhotos = uniquePhotos.length > 0;
+
+                    return (
+                      <div className="border-t border-slate-100 pt-3 mb-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="text-xs font-bold text-slate-800">
+                              หลักฐานและภาพถ่าย ({totalEvidenceCount})
+                            </span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
-                            {f.size || '1.5 MB'}
-                          </span>
+
+                          <button
+                            onClick={() => setSelectedOrderForEvidence(order)}
+                            className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>แนบรูปเพิ่ม</span>
+                          </button>
                         </div>
-                      ))}
-                    </div>
 
-                    {/* Photo Evidence Gallery */}
-                    <div>
-                      {hasPhotos ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {(order.actualPhotos || []).map((photo, pIdx) => {
-                            const photoObj = typeof photo === 'string' 
-                              ? { id: `photo-${pIdx}`, url: photo, name: `ภาพถ่ายปฏิบัติงาน_${pIdx + 1}.jpg` }
-                              : photo;
-
-                            return (
+                        {/* Official Document Files (PDFs / Circulars) */}
+                        {docFiles.length > 0 && (
+                          <div className="space-y-1.5 mb-2.5">
+                            {docFiles.map((f, fIdx) => (
                               <div
-                                key={photoObj.id || `p-${pIdx}`}
-                                onClick={() => setLightboxData({ photo: photoObj, order })}
-                                className="group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
+                                key={f.id || `f-${fIdx}`}
+                                className="flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200/80 transition-colors text-xs"
                               >
-                                <img
-                                  src={photoObj.url}
-                                  alt={photoObj.name || 'ภาพหลักฐาน'}
-                                  className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                                  onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
-                                  }}
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
-                                  <span className="text-[9px] text-white truncate max-w-[80%] font-medium">
-                                    {photoObj.name || 'ภาพหลักฐาน'}
-                                  </span>
-                                  <Maximize2 className="w-3 h-3 text-white shrink-0" />
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  <span className="truncate font-medium">{f.name || 'เอกสารคำสั่ง.pdf'}</span>
                                 </div>
+                                <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                                  {f.size || '1.5 MB'}
+                                </span>
                               </div>
-                            );
-                          })}
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Photo Evidence Gallery */}
+                        <div>
+                          {cardHasPhotos ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {uniquePhotos.map((photo, pIdx) => {
+                                const photoObj = typeof photo === 'string' 
+                                  ? { id: `photo-${pIdx}`, url: photo, name: `ภาพถ่ายปฏิบัติงาน_${pIdx + 1}.jpg` }
+                                  : photo;
+
+                                return (
+                                  <div
+                                    key={photoObj.id || `p-${pIdx}`}
+                                    onClick={() => setLightboxData({ photo: photoObj, order })}
+                                    className="group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 cursor-pointer aspect-video shadow-2xs hover:shadow-md transition-all hover:scale-[1.02]"
+                                  >
+                                    <img
+                                      src={photoObj.url}
+                                      alt={photoObj.name || 'ภาพหลักฐาน'}
+                                      className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                                      onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src = FALLBACK_EVIDENCE_IMAGE;
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 justify-between">
+                                      <span className="text-[9px] text-white truncate max-w-[80%] font-medium">
+                                        {photoObj.name || 'ภาพหลักฐาน'}
+                                      </span>
+                                      <Maximize2 className="w-3 h-3 text-white shrink-0" />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="bg-amber-50/70 border border-amber-200/80 rounded-lg p-2.5 text-center">
+                              <p className="text-xs text-amber-800 font-medium flex items-center justify-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                <span>ยังไม่ได้แนบภาพถ่ายหน้างาน</span>
+                              </p>
+                              <p className="text-[10px] text-amber-600 mt-0.5">
+                                กดปุ่ม "+ แนบรูปเพิ่ม" เพื่อบันทึกรูปภาพการปฏิบัติหน้าที่
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="bg-amber-50/70 border border-amber-200/80 rounded-lg p-2.5 text-center">
-                          <p className="text-xs text-amber-800 font-medium flex items-center justify-center gap-1.5">
-                            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span>ยังไม่ได้แนบภาพถ่ายหน้างาน</span>
-                          </p>
-                          <p className="text-[10px] text-amber-600 mt-0.5">
-                            กดปุ่ม "+ แนบรูปเพิ่ม" เพื่อบันทึกรูปภาพการปฏิบัติหน้าที่
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Card Footer */}
@@ -1137,6 +1213,19 @@ export default function PersonalDrawerModule({
           </div>
         </div>
       )}
+
+      {/* --- Modal: Edit Order Details --- */}
+      <EditOrderModal
+        isOpen={Boolean(orderToEdit)}
+        onClose={() => setOrderToEdit(null)}
+        order={orderToEdit}
+        onSave={(updatedOrder) => {
+          if (onUpdateOrder) {
+            onUpdateOrder(updatedOrder);
+          }
+          onNotify?.(`บันทึกการแก้ไขคำสั่ง [${updatedOrder.orderNumber}] เรียบร้อยแล้ว! 🎯`, 'success');
+        }}
+      />
     </div>
   );
 }

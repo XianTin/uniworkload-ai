@@ -283,6 +283,7 @@ export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', fa
 4. แปลงวันที่ พ.ศ. เป็น ค.ศ. ในฟอร์แมต ISO YYYY-MM-DD:
    - "signDate" คือ วันที่สั่งการหรือลงประกาศ
    - "eventDate" คือ วันที่จัดกิจกรรมหรือเริ่มปฏิบัติหน้าที่ (ถ้าไม่มีให้ใช้วันเดียวกับ signDate)
+   - "eventEndDate" คือ วันสิ้นสุดกิจกรรม กรณีจัดต่อเนื่องหลายวัน เช่น ระหว่างวันที่ 17 ถึง 20 กันยายน ให้ระบุวันสิ้นสุด (หากจัดวันเดียวให้ส่งวันเดียวกับ eventDate)
 5. ระบุเวลา "eventTime" (เช่น "08:30 - 16:30 น." หรือหากไม่ระบุในข้อความให้ส่ง "ไม่ระบุเวลา")
 6. ระบุสถานที่ "location" (หากไม่ระบุให้ส่ง "มหาวิทยาลัยราชภัฏนครสวรรค์ (รอระบุสถานที่)")
 7. จำแนกหมวดหมู่ กพอ. ให้ตรง 1 ใน 6 หมวด:
@@ -303,6 +304,7 @@ export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', fa
   "title": "...",
   "signDate": "YYYY-MM-DD",
   "eventDate": "YYYY-MM-DD",
+  "eventEndDate": "YYYY-MM-DD",
   "eventTime": "...",
   "location": "...",
   "category": "...",
@@ -364,6 +366,7 @@ export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', fa
     title: parsed.title || (filename && !filename.includes('ข้อความคำสั่ง') ? filename.replace(/\.[^/.]+$/, '') : 'กิจกรรมและภาระงาน (รอระบุชื่อเรื่อง)'),
     signDate: parsed.signDate || new Date().toISOString().split('T')[0],
     eventDate: parsed.eventDate || parsed.signDate || new Date().toISOString().split('T')[0],
+    eventEndDate: parsed.eventEndDate || parsed.eventDate || parsed.signDate || new Date().toISOString().split('T')[0],
     eventTime: parsed.eventTime || 'ไม่ระบุเวลา',
     location: parsed.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์ (รอระบุสถานที่)',
     category: parsed.category || 'บริการวิชาการแก่สังคม',

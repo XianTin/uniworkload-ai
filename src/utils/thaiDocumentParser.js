@@ -172,10 +172,26 @@ export function extractSmartDates(normalizedText) {
     }
   }
 
+  let eventEndDate = '';
+  // Check date range pattern: เช่น "ระหว่างวันที่ 17 ถึง 20 กันยายน 2569" หรือ "17 - 20 ก.ย. 2569"
+  const rangePattern = /(?:ระหว่างวันที่|วันที่|ในวันที่)?\s*([0-9]{1,2})\s*(?:ถึง|-|–|—)\s*([0-9]{1,2})\s*([ก-๙]+)\s*(?:พ\.ศ\.\s*)?([0-9]{2,4})?/i;
+  const rangeMatch = normalizedText.match(rangePattern);
+  if (rangeMatch && THAI_MONTH_MAP[rangeMatch[3].trim()]) {
+    const startDay = rangeMatch[1].padStart(2, '0');
+    const endDay = rangeMatch[2].padStart(2, '0');
+    const month = THAI_MONTH_MAP[rangeMatch[3].trim()];
+    let year = rangeMatch[4] ? parseInt(rangeMatch[4], 10) : 2569;
+    if (year < 100) year += 2500;
+    if (year >= 2400) year -= 543;
+    eventDate = `${year}-${month}-${startDay}`;
+    eventEndDate = `${year}-${month}-${endDay}`;
+  }
+
   const today = new Date().toISOString().split('T')[0];
   return {
     signDate: signDate || eventDate || today,
     eventDate: eventDate || signDate || today,
+    eventEndDate: eventEndDate || eventDate || signDate || today,
     hasRealDate: foundDates.length > 0 || !eventDate
   };
 }
@@ -365,8 +381,8 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
   const title = extractSmartTitle(normalizedText, filename);
   if (title && !title.includes('รอระบุ')) confidenceScore += 18;
 
-  // 3. สกัดวันที่ (Sign Date & Event Date)
-  const { signDate, eventDate, hasRealDate } = extractSmartDates(normalizedText);
+  // 3. สกัดวันที่ (Sign Date & Event Date & Event End Date)
+  const { signDate, eventDate, eventEndDate, hasRealDate } = extractSmartDates(normalizedText);
   if (hasRealDate) confidenceScore += 15;
 
   // 4. สกัดเวลา (Event Time)
@@ -518,6 +534,7 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
       title,
       signDate,
       eventDate,
+      eventEndDate: eventEndDate || eventDate,
       eventTime,
       location,
       category,

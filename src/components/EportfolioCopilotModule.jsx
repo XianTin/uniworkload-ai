@@ -20,26 +20,31 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
+import { canViewAllFaculties } from '../utils/auth';
+import EvidenceLightboxModal from './EvidenceLightboxModal';
 
 export default function EportfolioCopilotModule({ 
   orders = [], 
   activeFaculty, 
   selectedOrderId, 
+  currentUser,
   onNotify,
   onNavigateTab
 }) {
+  const allowViewAll = canViewAllFaculties(currentUser);
   const [viewAllFaculties, setViewAllFaculties] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedField, setCopiedField] = useState(null);
+  const [lightboxData, setLightboxData] = useState(null);
 
   // Compute available orders for this view
   const availableOrders = useMemo(() => {
     if (!orders || !Array.isArray(orders)) return [];
-    if (viewAllFaculties) return orders;
+    if (allowViewAll && viewAllFaculties) return orders;
     return orders.filter(o => 
       (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id
     );
-  }, [orders, activeFaculty?.id, viewAllFaculties]);
+  }, [orders, activeFaculty?.id, viewAllFaculties, allowViewAll]);
 
   // Filter by search query
   const filteredOrders = useMemo(() => {
@@ -96,8 +101,112 @@ export default function EportfolioCopilotModule({
     setTimeout(() => setCopiedField(null), 2500);
   };
 
-  const handleDownloadEvidencePackage = () => {
-    onNotify?.(`ดาวน์โหลดชุดแฟ้มหลักฐาน (คำสั่ง PDF + รูปภาพปฏิบัติงาน) ของ ${currentOrder?.orderNumber || ''} สำเร็จ`, 'success');
+  // Direct download for single evidence file (PDF or JPG)
+  const handleDownloadSingleFile = async (fileUrl, fileName) => {
+    const cleanFileName = fileName || 'evidence_attachment';
+    if (!fileUrl) {
+      const content = `เอกสารหลักฐานประกอบภาระงาน e-Portfolio มหาวิทยาลัยราชภัฏนครสวรรค์
+คำสั่งเลขที่: ${currentOrder?.orderNumber || 'ยังไม่ระบุเลขคำสั่ง'}
+เรื่อง: ${currentOrder?.title || ''}
+วันที่จัด: ${currentOrder?.eventDate || ''}
+สถานที่: ${currentOrder?.location || ''}
+หมวดหมู่: ${currentOrder?.category || ''}
+ผู้ปฏิบัติงาน: ${activeFaculty?.name || ''}`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${cleanFileName.replace(/\.[^/.]+$/, '')}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      onNotify?.(`ดาวน์โหลดเอกสารสรุป [${cleanFileName}] ตรงลงเครื่องสำเร็จ 🎯`, 'success');
+      return;
+    }
+
+    try {
+      if (fileUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = cleanFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        onNotify?.(`ดาวน์โหลดไฟล์ [${cleanFileName}] ตรงลงเครื่องสำเร็จ 🎯`, 'success');
+        return;
+      }
+
+      // Try fetching as blob to enforce download filename in browser
+      const res = await fetch(fileUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = cleanFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        onNotify?.(`ดาวน์โหลดไฟล์ [${cleanFileName}] ตรงลงเครื่องสำเร็จ 🎯`, 'success');
+        return;
+      }
+    } catch (err) {
+      console.warn('[Download] Blob fetch failed, falling back to direct link:', err);
+    }
+
+    // Direct fallback
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.download = cleanFileName;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    onNotify?.(`ดาวน์โหลดไฟล์ [${cleanFileName}] เรียบร้อยแล้ว 🎯`, 'success');
+  };
+
+  // Download all evidence files directly without forcing user to unzip
+  const handleDownloadAllEvidenceFiles = () => {
+    if (!currentOrder) return;
+    const allFiles = [];
+    (currentOrder.evidenceFiles || []).forEach((f, idx) => {
+      allFiles.push({
+        url: f.url,
+        name: f.name || `คำสั่ง_${(currentOrder.orderNumber || 'order').replace(/[^a-zA-Z0-9ก-๙]/g, '_')}_${idx + 1}.pdf`
+      });
+    });
+
+    // Deduplicate photos before queuing download
+    const uniquePhotos = (currentOrder.actualPhotos || []).filter((photo, idx, arr) => {
+      const pUrl = typeof photo === 'string' ? photo : (photo.url || photo.dataUrl);
+      if (!pUrl) return true;
+      return arr.findIndex(item => {
+        const iUrl = typeof item === 'string' ? item : (item.url || item.dataUrl);
+        return iUrl && pUrl && iUrl === pUrl;
+      }) === idx;
+    });
+
+    uniquePhotos.forEach((p, idx) => {
+      const pUrl = typeof p === 'string' ? p : p.url;
+      const pName = (typeof p === 'object' && p.name) ? p.name : `ภาพถ่ายหลักฐาน_${idx + 1}.jpg`;
+      allFiles.push({ url: pUrl, name: pName });
+    });
+
+    if (allFiles.length === 0) {
+      onNotify?.('คำสั่งนี้ยังไม่มีไฟล์เอกสารหรือภาพถ่ายให้ดาวน์โหลด', 'warning');
+      return;
+    }
+
+    allFiles.forEach((file, index) => {
+      setTimeout(() => {
+        handleDownloadSingleFile(file.url, file.name);
+      }, index * 300);
+    });
+
+    onNotify?.(`กำลังเริ่มดาวน์โหลดไฟล์ทั้งหมด ${allFiles.length} รายการ ตรงเข้าเครื่อง (ไม่ต้องแตก zip)...`, 'success');
   };
 
   const handlePrintDossier = () => {
@@ -116,39 +225,41 @@ export default function EportfolioCopilotModule({
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex flex-wrap items-center gap-2">
               <span>ผู้ช่วยจัดเตรียมข้อมูลและคัดลอกลงระบบ e-Portfolio:</span>
-              <span className="text-blue-700">{viewAllFaculties ? 'รวมทุกท่านในระบบ' : (activeFaculty?.name || 'อาจารย์')}</span>
+              <span className="text-blue-700">{allowViewAll && viewAllFaculties ? 'รวมทุกท่านในระบบ' : (activeFaculty?.name || 'อาจารย์')}</span>
             </h2>
             <p className="text-xs text-slate-500 mt-1">
               หมดปัญหาการรื้อค้นคำสั่งย้อนหลัง ระบบจัดสรรข้อมูลให้ตรงตามฟอร์มจริง 5 ช่องของ มรภ.นครสวรรค์ พร้อมปุ่ม 1-Click Copy
             </p>
 
-            {/* Scope Selector */}
-            <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs mt-3">
-              <button
-                type="button"
-                onClick={() => setViewAllFaculties(false)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                  !viewAllFaculties
-                    ? 'bg-white text-blue-700 shadow-2xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <User className="w-3.5 h-3.5 text-blue-600" />
-                <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewAllFaculties(true)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                  viewAllFaculties
-                    ? 'bg-white text-blue-700 shadow-2xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5 text-purple-600" />
-                <span>รวมทุกคน ({orders?.length || 0})</span>
-              </button>
-            </div>
+            {/* Scope Selector (Only for Admin & Staff) */}
+            {allowViewAll && (
+              <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs mt-3">
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(false)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    !viewAllFaculties
+                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5 text-blue-600" />
+                  <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    viewAllFaculties
+                      ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-purple-600" />
+                  <span>รวมทุกคน ({orders?.length || 0})</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -216,7 +327,7 @@ export default function EportfolioCopilotModule({
                 <div className="py-10 text-center text-slate-400 space-y-2">
                   <FileText className="w-8 h-8 mx-auto text-slate-300" />
                   <p className="text-xs">ไม่พบคำสั่งราชการ</p>
-                  {orders.length > 0 && !viewAllFaculties && (
+                  {allowViewAll && orders.length > 0 && !viewAllFaculties && (
                     <button
                       type="button"
                       onClick={() => setViewAllFaculties(true)}
@@ -308,11 +419,12 @@ export default function EportfolioCopilotModule({
 
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={handleDownloadEvidencePackage}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                    onClick={handleDownloadAllEvidenceFiles}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition-colors cursor-pointer shadow-2xs"
+                    title="ดาวน์โหลดเอกสาร PDF และภาพถ่ายทั้งหมดตรงลงเครื่อง สะดวกในการอัปโหลดต่อใน e-Portfolio ไม่ต้องเสียเวลาแตก zip"
                   >
-                    <FolderArchive className="w-3.5 h-3.5 text-blue-600" />
-                    <span>ดาวน์โหลดไฟล์แนบ (.ZIP)</span>
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span>ดาวน์โหลดไฟล์ทั้งหมด (ไฟล์ตรง ไม่ต้องแตก zip)</span>
                   </button>
                 </div>
               </div>
@@ -429,37 +541,140 @@ export default function EportfolioCopilotModule({
                   </button>
                 </div>
 
-                {/* Field 5: Attachment Package */}
-                <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500 block uppercase">
-                      ช่องที่ 5: แนบเอกสารหลักฐาน (Attachment)
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {(currentOrder.evidenceFiles || []).map((f, i) => (
-                        <span key={f.id || i} className="text-xs bg-white border border-slate-300 px-2.5 py-1 rounded-md text-slate-800 font-medium flex items-center gap-1">
-                          <FileText className="w-3 h-3 text-rose-500" />
-                          <span>{f.name || 'เอกสารคำสั่ง.pdf'}</span>
-                        </span>
-                      ))}
-                      {(currentOrder.actualPhotos || []).map((p, i) => {
-                        const name = typeof p === 'string' ? `ภาพถ่ายหลักฐาน_${i + 1}.jpg` : (p.name || `ภาพถ่ายหลักฐาน_${i + 1}.jpg`);
-                        return (
-                          <span key={p.id || i} className="text-xs bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md text-emerald-800 font-medium flex items-center gap-1">
-                            <Camera className="w-3 h-3 text-emerald-600" />
-                            <span>{name}</span>
-                          </span>
-                        );
-                      })}
+                {/* Field 5: Attachment Package with direct download */}
+                <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 space-y-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5">
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block uppercase tracking-wider">
+                        ช่องที่ 5: แนบเอกสารหลักฐาน (Attachment)
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        กดดาวน์โหลดไฟล์ตรง (PDF / ภาพถ่าย JPG) เพื่อนำไปแนบในแบบฟอร์ม e-Portfolio ได้ทันที
+                      </p>
                     </div>
+                    <button
+                      onClick={handleDownloadAllEvidenceFiles}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>ดาวน์โหลดทั้งหมด ({((currentOrder.evidenceFiles || []).length + (currentOrder.actualPhotos || []).length)} ไฟล์)</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={handleDownloadEvidencePackage}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>ดาวน์โหลด</span>
-                  </button>
+
+                  {/* Individual File & Photo Pills with 1-click download */}
+                  <div className="space-y-2">
+                    {((currentOrder.evidenceFiles || []).length === 0 && (currentOrder.actualPhotos || []).length === 0) ? (
+                      <p className="text-xs text-slate-400 italic py-1">
+                        ยังไม่มีเอกสารหรือภาพถ่ายแนบในคำสั่งนี้ (สามารถอัปโหลดเพิ่มเติมได้ที่โมดูลลิ้นชักภาระงาน)
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* Evidence Files (PDF/Docs) */}
+                        {(currentOrder.evidenceFiles || []).map((f, i) => {
+                          const fileName = f.name || `คำสั่งราชการ_${i + 1}.pdf`;
+                          return (
+                            <div 
+                              key={f.id || i} 
+                              className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs hover:border-blue-200 transition-all group"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 pr-2">
+                                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-slate-800 truncate" title={fileName}>
+                                    {fileName}
+                                  </p>
+                                  <span className="text-[10px] text-slate-400 block">เอกสารคำสั่ง / หนังสือราชการ</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadSingleFile(f.url, fileName)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200/80 transition-colors cursor-pointer shrink-0"
+                                title="ดาวน์โหลดไฟล์นี้ตรงลงเครื่อง"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {/* Actual Photos (Deduplicated) */}
+                        {(() => {
+                          const uniquePhotos = (currentOrder.actualPhotos || []).filter((photo, idx, arr) => {
+                            const pUrl = typeof photo === 'string' ? photo : (photo.url || photo.dataUrl);
+                            if (!pUrl) return true;
+                            return arr.findIndex(item => {
+                              const iUrl = typeof item === 'string' ? item : (item.url || item.dataUrl);
+                              return iUrl && pUrl && iUrl === pUrl;
+                            }) === idx;
+                          });
+
+                          return uniquePhotos.map((p, i) => {
+                            const photoObj = typeof p === 'string' ? { url: p, name: `ภาพถ่ายปฏิบัติงาน_${i + 1}.jpg` } : p;
+                            const photoName = photoObj.name || `ภาพถ่ายปฏิบัติงาน_${i + 1}.jpg`;
+                            return (
+                            <div 
+                              key={photoObj.id || i} 
+                              className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs hover:border-emerald-200 transition-all group"
+                            >
+                              <div 
+                                className="flex items-center gap-2 min-w-0 pr-2 cursor-pointer"
+                                onClick={() => setLightboxData({ photo: photoObj, order: currentOrder })}
+                                title="คลิกเพื่อดูภาพขยาย"
+                              >
+                                {photoObj.url ? (
+                                  <img 
+                                    src={photoObj.url} 
+                                    alt={photoName} 
+                                    className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0" 
+                                  />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                                    <Camera className="w-4 h-4" />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-slate-800 truncate" title={photoName}>
+                                    {photoName}
+                                  </p>
+                                  <span className="text-[10px] text-emerald-600 font-medium block">ภาพถ่ายหน้างาน (คลิกดูภาพ)</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setLightboxData({ photo: photoObj, order: currentOrder })}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                                  title="ดูรูปภาพขยาย"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadSingleFile(photoObj.url, photoName)}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/80 transition-colors cursor-pointer"
+                                  title="ดาวน์โหลดรูปภาพตรงลงเครื่อง"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informative Tip Box */}
+                  <div className="p-2.5 bg-blue-50/60 rounded-lg border border-blue-100 text-[11px] text-blue-800 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>ข้อแนะนำ:</strong> ระบบให้บริการดาวน์โหลดไฟล์ตรง (Direct Download) เพื่อให้อาจารย์สามารถแนบไฟล์เข้าช่องอัปโหลดของระบบ e-Portfolio มรภ.นครสวรรค์ ได้ทันทีโดยไม่ต้องแตกไฟล์ .ZIP
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -471,6 +686,14 @@ export default function EportfolioCopilotModule({
           )}
         </div>
       </div>
+
+      {/* Lightbox Modal for Photo Preview */}
+      <EvidenceLightboxModal
+        photo={lightboxData?.photo}
+        order={lightboxData?.order}
+        onClose={() => setLightboxData(null)}
+        onNotify={onNotify}
+      />
     </div>
   );
 }

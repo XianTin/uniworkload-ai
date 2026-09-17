@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   User
 } from 'lucide-react';
+import { canViewAllFaculties } from '../utils/auth';
 
 export default function Navbar({ 
   activeTab, 
@@ -52,7 +53,7 @@ export default function Navbar({
 
   const isSuperAdmin = currentUser?.isSuperAdmin || currentUser?.role === 'superadmin';
   const isCoAdmin = currentUser?.isCoAdmin || currentUser?.role === 'coadmin';
-  const canSwitchFaculty = isSuperAdmin || isCoAdmin || currentUser?.canSwitchFaculty;
+  const canSwitchFaculty = canViewAllFaculties(currentUser);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
@@ -120,7 +121,7 @@ export default function Navbar({
                   UniWorkload
                 </span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold">
-                  AI v3.7.0
+                  AI v3.7.1
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 hidden xl:block -mt-0.5">
@@ -361,16 +362,18 @@ export default function Navbar({
 
                   {/* Action Shortcuts */}
                   <div className="p-2 space-y-1">
-                    <button
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        onOpenAddFaculty();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-sky-700 hover:bg-sky-50 transition-colors cursor-pointer"
-                    >
-                      <UserPlus className="w-4 h-4 text-sky-600" />
-                      <span>+ เพิ่มอาจารย์ท่านใหม่</span>
-                    </button>
+                    {canSwitchFaculty && (
+                      <button
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          onOpenAddFaculty();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-sky-700 hover:bg-sky-50 transition-colors cursor-pointer"
+                      >
+                        <UserPlus className="w-4 h-4 text-sky-600" />
+                        <span>+ เพิ่มอาจารย์ท่านใหม่</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {

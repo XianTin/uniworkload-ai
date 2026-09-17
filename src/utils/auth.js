@@ -125,10 +125,27 @@ export const DEMO_PRESET_ACCOUNTS = [
       avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
       facultyId: "fac-1",
       isSuperAdmin: false,
-      permissions: ["upload_orders", "distribute_orders", "view_faculty_list"]
+      permissions: ["upload_orders", "distribute_orders", "view_faculty_list", "view_all_drawers"]
     }
   }
 ];
+
+/**
+ * Check if the user has permission to view all faculties / switch between faculty drawers
+ * Only Super Admin, Co-Admin, Admin, and Staff (งานธุรการ/สารบรรณ) are allowed.
+ * Regular instructors (อาจารย์) can ONLY view their own drawer.
+ */
+export function canViewAllFaculties(user) {
+  if (!user) return false;
+  if (user.isSuperAdmin || user.isCoAdmin) return true;
+  const role = (user.role || '').toLowerCase();
+  if (['superadmin', 'coadmin', 'admin', 'staff'].includes(role)) return true;
+  const label = (user.roleLabel || '').toLowerCase();
+  if (label.includes('ธุรการ') || label.includes('สารบรรณ') || label.includes('ผู้ดูแล') || label.includes('admin')) {
+    return true;
+  }
+  return false;
+}
 
 const AUTH_STORAGE_KEY = 'uniworkload_auth_session';
 

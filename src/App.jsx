@@ -448,10 +448,22 @@ export default function App() {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
+          const existingPhotos = ord.actualPhotos || [];
+          const combined = [...existingPhotos, ...itemsToAdd];
+          const uniquePhotos = combined.filter((p, idx, arr) => {
+            const pId = p.id;
+            const pUrl = typeof p === 'string' ? p : (p.url || p.dataUrl);
+            return arr.findIndex(item => {
+              const iId = item.id;
+              const iUrl = typeof item === 'string' ? item : (item.url || item.dataUrl);
+              return (pId && iId && pId === iId) || (pUrl && iUrl && pUrl === iUrl);
+            }) === idx;
+          });
+
           return {
             ...ord,
-            evidenceStatus: 'ready',
-            actualPhotos: [...(ord.actualPhotos || []), ...itemsToAdd]
+            evidenceStatus: uniquePhotos.length > 0 ? 'ready' : 'none',
+            actualPhotos: uniquePhotos
           };
         }
         return ord;
@@ -536,6 +548,15 @@ export default function App() {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
     deleteOrderFromSupabase(orderId);
     showToast('ลบคำสั่งราชการออกจากตู้ลิ้นชักเรียบร้อยแล้ว', 'info');
+  };
+
+  // Update order completely (from EditOrderModal)
+  const handleUpdateOrder = (updatedOrder) => {
+    setOrders((prev) =>
+      prev.map((ord) => (ord.id === updatedOrder.id ? { ...ord, ...updatedOrder } : ord))
+    );
+    const assignedFacId = updatedOrder.facultyAssigned?.[0]?.id || updatedOrder.facultyId || activeFaculty?.id || 'fac-1';
+    saveOrderToSupabase(updatedOrder, assignedFacId);
   };
 
   // Clear orders (faculty-specific or all)
@@ -671,6 +692,7 @@ export default function App() {
                 onSaveEvidence={handleSaveEvidence}
                 onDeleteEvidence={handleDeleteEvidence}
                 onDeleteOrder={handleDeleteOrder}
+                onUpdateOrder={handleUpdateOrder}
                 onClearDrawer={handleClearDrawer}
                 onRestoreDemoOrders={handleRestoreDemoOrders}
                 onJumpToIngestion={() => setActiveTab('ingestion')}
@@ -688,6 +710,7 @@ export default function App() {
                 orders={orders}
                 activeFaculty={activeFaculty}
                 facultyList={facultyList}
+                currentUser={currentUser}
                 onSelectFaculty={(fac) => setActiveFaculty(fac)}
                 onToggleStatus={handleToggleStatus}
                 onSaveEvidence={handleSaveEvidence}
@@ -709,7 +732,9 @@ export default function App() {
                 orders={orders}
                 activeFaculty={activeFaculty}
                 selectedOrderId={selectedOrderIdForEportfolio}
+                currentUser={currentUser}
                 onNotify={showToast}
+                onNavigateTab={(tab) => setActiveTab(tab)}
               />
             </div>
           )}
@@ -782,7 +807,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-slate-400 text-[11px]">
             <span>สาขาวิชาเทคโนโลยีสารสนเทศ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์</span>
             <span>•</span>
-            <span className="font-mono text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Release v3.7.0 • Production Ready</span>
+            <span className="font-mono text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Release v3.7.1 • Production Ready</span>
           </div>
         </div>
       </footer>

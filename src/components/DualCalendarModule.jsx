@@ -30,6 +30,7 @@ import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
+import { canViewAllFaculties } from '../utils/auth';
 
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -40,6 +41,7 @@ export default function DualCalendarModule({
   orders = [], 
   activeFaculty, 
   facultyList = [],
+  currentUser,
   onSelectFaculty,
   onToggleStatus, 
   onSaveEvidence,
@@ -49,6 +51,7 @@ export default function DualCalendarModule({
   onJumpToDrawer,
   onNotify
 }) {
+  const allowViewAll = canViewAllFaculties(currentUser);
   const [viewMode, setViewMode] = useState('month'); // 'month' | 'agenda'
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
@@ -57,11 +60,11 @@ export default function DualCalendarModule({
 
   // Filter orders relevant to active faculty or all faculties
   const facultyOrders = useMemo(() => {
-    if (viewAllFaculties) return orders || [];
+    if (allowViewAll && viewAllFaculties) return orders || [];
     return (orders || []).filter(o => 
       (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id
     );
-  }, [orders, activeFaculty?.id, viewAllFaculties]);
+  }, [orders, activeFaculty?.id, viewAllFaculties, allowViewAll]);
 
   // Find initial month: if faculty has orders, find the closest order date or default to Sep 2026 / current date
   const [currentDate, setCurrentDate] = useState(() => {
@@ -140,12 +143,17 @@ export default function DualCalendarModule({
     });
   }, [facultyOrders, statusFilter, selectedCategoryFilter, searchTerm]);
 
-  // Events on a given calendar day
+  // Events on a given calendar day (supports multi-day date range)
   const getEventsForDay = (day) => {
     const mStr = String(currentMonth + 1).padStart(2, '0');
     const dStr = String(day).padStart(2, '0');
     const targetDateStr = `${currentYear}-${mStr}-${dStr}`;
-    return filteredFacultyOrders.filter(o => o.eventDate === targetDateStr);
+    return filteredFacultyOrders.filter(o => {
+      if (!o.eventDate) return false;
+      const start = o.eventDate;
+      const end = o.eventEndDate || o.eventDate;
+      return targetDateStr >= start && targetDateStr <= end;
+    });
   };
 
   // Google Calendar 1-Click Sync
@@ -224,27 +232,29 @@ export default function DualCalendarModule({
               <span>ซิงค์เข้ามือถือ (iCal Feed)</span>
             </button>
 
-            {/* Faculty Scope Switcher */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-              <button
-                type="button"
-                onClick={() => setViewAllFaculties(false)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
-                  !viewAllFaculties ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewAllFaculties(true)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
-                  viewAllFaculties ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span>รวมทุกคน ({orders?.length || 0})</span>
-              </button>
-            </div>
+            {/* Faculty Scope Switcher (Only for Admin & Staff) */}
+            {allowViewAll && (
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(false)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                    !viewAllFaculties ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>เฉพาะ {activeFaculty?.name?.split(' ')?.[0] || 'อาจารย์'} ({(orders || []).filter(o => (o.facultyAssigned || []).some(f => f.id === activeFaculty?.id) || o.facultyId === activeFaculty?.id).length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewAllFaculties(true)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                    viewAllFaculties ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>รวมทุกคน ({orders?.length || 0})</span>
+                </button>
+              </div>
+            )}
 
             {/* View switcher */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -626,7 +636,9 @@ export default function DualCalendarModule({
               <div className="space-y-2 text-xs text-slate-600 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>วันที่จัด: <strong>{selectedOrder.eventDate}</strong></span>
+                  <span>
+                    วันที่จัด: <strong>{selectedOrder.eventDate}{selectedOrder.eventEndDate && selectedOrder.eventEndDate !== selectedOrder.eventDate ? ` ถึง ${selectedOrder.eventEndDate}` : ''}</strong>
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-blue-600 shrink-0" />

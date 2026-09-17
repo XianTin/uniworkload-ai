@@ -17,7 +17,7 @@ export function createGoogleCalendarUrl(ev, facultyId = '', baseUrl = '') {
   };
 
   const dtStart = formatDateToGCal(ev.eventDate, startTimeStr);
-  const dtEnd = formatDateToGCal(ev.eventDate, endTimeStr);
+  const dtEnd = formatDateToGCal(ev.eventEndDate || ev.eventDate, endTimeStr);
   const title = `[${ev.orderNumber || 'คำสั่ง'}] ${ev.title}`;
   const details = `ภาระงาน: ${ev.category || 'ภาระงานวิชาการ/บริหาร'}\nสถานที่: ${ev.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์'}\nเลขที่คำสั่ง: ${ev.orderNumber || '-'}\n\n📂 คลิกเปิดลิ้นชักงานและแนบหลักฐาน (UniWorkload AI):\n${directUrl}\n\nระบบ UniWorkload AI มรภ.นครสวรรค์`;
   const location = ev.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์';
@@ -58,7 +58,7 @@ export function generateICS(events, calendarName = "UniWorkload AI - ปฏิ�
     const endTimeStr = ev.eventTime && ev.eventTime.includes('-') ? ev.eventTime.split('-')[1].replace('น.', '').trim() : '16:30';
     
     const dtStart = formatDateToICS(ev.eventDate, startTimeStr);
-    const dtEnd = formatDateToICS(ev.eventDate, endTimeStr);
+    const dtEnd = formatDateToICS(ev.eventEndDate || ev.eventDate, endTimeStr);
     const directUrl = getDirectDrawerUrl(ev.id, facultyId, baseUrl);
     const summary = `[${ev.orderNumber}] ${ev.title}`;
     const description = `ภาระงาน: ${ev.category}\\nสถานที่: ${ev.location}\\nเลขที่คำสั่ง: ${ev.orderNumber}\\n\\n🔗 เปิดดูคำสั่งและแนบหลักฐานในลิ้นชักงาน:\\n${directUrl}\\n\\nระบบ UniWorkload AI มรภ.นครสวรรค์`;
