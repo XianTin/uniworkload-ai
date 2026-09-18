@@ -14,6 +14,7 @@ import {
   FolderOpen
 } from 'lucide-react';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
+import { sanitizeUrl } from '../utils/securityUtils';
 
 export default function EvidenceLightboxModal({ 
   photo, 
@@ -151,7 +152,7 @@ export default function EvidenceLightboxModal({
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   <a
-                    href={currentPhoto.url}
+                    href={sanitizeUrl(currentPhoto.url)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-all hover:scale-105"
@@ -293,7 +294,7 @@ export default function EvidenceLightboxModal({
           <div className="pt-6 border-t border-slate-800 flex items-center gap-2">
             {Boolean(currentPhoto?.isGoogleDrive || currentPhoto?.type === 'gdrive' || (currentPhoto?.url && (currentPhoto.url.includes('drive.google.com') || currentPhoto.url.includes('docs.google.com')))) ? (
               <a
-                href={currentPhoto.url}
+                href={sanitizeUrl(currentPhoto.url)}
                 target="_blank"
                 rel="noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"

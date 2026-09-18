@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, CheckCircle2, Download, FileText, Calendar, Layers, Image as ImageIcon, FolderOpen } from 'lucide-react';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
+import { sanitizeUrl } from '../utils/securityUtils';
 
 export default function DossierSummaryModal({ 
   isOpen, 
@@ -144,7 +145,7 @@ export default function DossierSummaryModal({
                                   return (
                                     <a
                                       key={photoObj?.id || `photo-${pIdx}`}
-                                      href={photoObj.url}
+                                      href={sanitizeUrl(photoObj.url)}
                                       target="_blank"
                                       rel="noreferrer"
                                       className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-500/40 text-emerald-300 flex flex-col items-center justify-center shadow-2xs hover:scale-110 transition-transform"

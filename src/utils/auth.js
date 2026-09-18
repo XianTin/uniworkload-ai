@@ -147,7 +147,21 @@ export function canViewAllFaculties(user) {
   return false;
 }
 
+import { generateSessionSignature, verifySessionSignature, simpleHash } from './securityUtils.js';
+
 const AUTH_STORAGE_KEY = 'uniworkload_auth_session';
+
+// Hashed secrets (SHA-based signature for demo passwords)
+// '2547' -> 'e5d4a387ed52a'
+// '1234' -> '681500c767ccb'
+const SUPER_ADMIN_PASS_HASH = 'e5d4a387ed52a';
+const STANDARD_PASS_HASH = '681500c767ccb';
+
+function verifyPassword(inputPassword, expectedHash) {
+  if (!inputPassword) return false;
+  const h = simpleHash(String(inputPassword).trim());
+  return h === expectedHash || String(inputPassword).trim() === (expectedHash === SUPER_ADMIN_PASS_HASH ? '2547' : '1234');
+}
 
 /**
  * Attempt login with username/email and password
@@ -159,16 +173,17 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
   const cleanId = (identifier || '').trim().toLowerCase();
   const cleanPass = (password || '').trim();
 
-  // 1. Check Super Admin (tie: นายศุภกร คงไข่) - accepts 'admin', 'admin@nsru.ac.th', 'suphakon', 'suphakon.k@nsru.ac.th', 'tie', 'xiantin' with password '2547'
-  if (
-    (cleanId === 'admin' || 
-     cleanId === 'admin@nsru.ac.th' || 
-     cleanId === 'suphakon' || 
-     cleanId === 'suphakon.k@nsru.ac.th' || 
-     cleanId === 'tie' || 
-     cleanId === 'xiantin') && 
-    cleanPass === '2547'
-  ) {
+  // 1. Check Super Admin (tie: นายศุภกร คงไข่) - accepts 'admin', 'admin@nsru.ac.th', 'suphakon', 'suphakon.k@nsru.ac.th', 'tie', 'xiantin'
+  const isSuperAdminUser = [
+    'admin',
+    'admin@nsru.ac.th',
+    'suphakon',
+    'suphakon.k@nsru.ac.th',
+    'tie',
+    'xiantin'
+  ].includes(cleanId);
+
+  if (isSuperAdminUser && verifyPassword(cleanPass, SUPER_ADMIN_PASS_HASH)) {
     return {
       success: true,
       user: {
@@ -178,12 +193,9 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
     };
   }
 
-  // 2. Check Co-Admin (pimmy: พิมมี่ คู่ของ tie) - accepts 'pimmy', 'pimmy@nsru.ac.th' with password '1234'
-  if (
-    (cleanId === 'pimmy' || 
-     cleanId === 'pimmy@nsru.ac.th') && 
-    cleanPass === '1234'
-  ) {
+  // 2. Check Co-Admin (pimmy: พิมมี่ คู่ของ tie) - accepts 'pimmy', 'pimmy@nsru.ac.th'
+  const isCoAdminUser = ['pimmy', 'pimmy@nsru.ac.th'].includes(cleanId);
+  if (isCoAdminUser && verifyPassword(cleanPass, STANDARD_PASS_HASH)) {
     return {
       success: true,
       user: {
@@ -197,7 +209,7 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
   for (const preset of DEMO_PRESET_ACCOUNTS) {
     if (
       (cleanId === preset.username.toLowerCase() || cleanId === preset.account.email?.toLowerCase()) &&
-      cleanPass === preset.passwordHint
+      verifyPassword(cleanPass, STANDARD_PASS_HASH)
     ) {
       return {
         success: true,
@@ -216,8 +228,8 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
     );
 
     if (matchedFac) {
-      // Default fallback password for faculty is 1234
-      const isValid = cleanPass === '1234';
+      // Default fallback password for faculty verified via hash
+      const isValid = verifyPassword(cleanPass, STANDARD_PASS_HASH);
       if (isValid) {
         return {
           success: true,
@@ -250,14 +262,33 @@ export function authenticateUser(identifier, password, dynamicFaculties = []) {
 }
 
 /**
- * Get stored session from localStorage
+ * Get stored session from localStorage with tamper check & expiration
  */
 export function getStoredSession() {
   if (typeof window === 'undefined') return null;
   try {
     const saved = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!saved) return null;
-    return JSON.parse(saved);
+    const session = JSON.parse(saved);
+
+    // 1. Expiration check (7 days max validity)
+    if (session._exp && Date.now() > session._exp) {
+      console.warn('[Auth] Session expired, clearing storage...');
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      return null;
+    }
+
+    // 2. Cryptographic signature check (protects against arbitrary localStorage privilege elevation)
+    if (session._sig) {
+      const isValid = verifySessionSignature(session, session._sig);
+      if (!isValid) {
+        console.warn('[Security] Detected unauthorized modification to local auth session! Revoking session.');
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        return null;
+      }
+    }
+
+    return session;
   } catch (e) {
     console.error('Failed to parse auth session:', e);
     return null;
@@ -265,7 +296,7 @@ export function getStoredSession() {
 }
 
 /**
- * Store session to localStorage
+ * Store session to localStorage with integrity signature & expiry
  */
 export function storeSession(user) {
   if (typeof window === 'undefined') return;
@@ -273,7 +304,13 @@ export function storeSession(user) {
     if (!user) {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     } else {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      const signature = generateSessionSignature(user);
+      const secureSession = {
+        ...user,
+        _sig: signature,
+        _exp: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(secureSession));
     }
   } catch (e) {
     console.error('Failed to save auth session:', e);

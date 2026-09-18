@@ -40,6 +40,7 @@ import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
 import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
 import { canViewAllFaculties } from '../utils/auth';
+import { sanitizeUrl } from '../utils/securityUtils';
 
 // Helper function to format date into Thai Buddhist Era string
 function formatThaiDate(dateStr) {
@@ -907,7 +908,7 @@ export default function PersonalDrawerModule({
                   {order.facebookUrl && (
                     <div className="mb-2.5">
                       <a
-                        href={order.facebookUrl}
+                        href={sanitizeUrl(order.facebookUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold transition-colors"
@@ -997,7 +998,7 @@ export default function PersonalDrawerModule({
                             {docFiles.map((f, fIdx) => (
                               <a
                                 key={f.id || `f-${fIdx}`}
-                                href={f.url || '#'}
+                                href={sanitizeUrl(f.url)}
                                 target={f.url ? '_blank' : undefined}
                                 rel="noreferrer"
                                 onClick={(e) => {

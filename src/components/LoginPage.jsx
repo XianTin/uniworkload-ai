@@ -132,8 +132,8 @@ export default function LoginPage({ onLoginSuccess, facultyList }) {
           {/* Left Hero / System Highlights (Visible on desktop) */}
           <div className="lg:col-span-6 space-y-6 text-left hidden lg:block">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-xs font-semibold text-sky-300">
-              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span>UniWorkload AI Portal v3.8.0</span>
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>UniWorkload AI Portal v3.9.0</span>
             </div>
 
             <div className="space-y-3">

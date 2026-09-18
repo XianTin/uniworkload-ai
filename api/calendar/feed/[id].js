@@ -5,9 +5,29 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+/**
+ * RFC 5545 Text Value Escaping
+ * Escapes backslashes, semicolons, commas, and newlines
+ */
+function escapeICalText(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
 export default async function handler(req, res) {
   const { id } = req.query;
-  const facultyId = (id || 'fac-1').replace(/\.ics$/i, '');
+
+  // Sanitize input: allow only alphanumeric characters, underscores, and dashes
+  const rawId = (id || 'fac-1').replace(/\.ics$/i, '');
+  const facultyId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
+
+  if (!facultyId) {
+    return res.status(400).send('Invalid faculty ID');
+  }
 
   try {
     // 1. Fetch faculty info
@@ -19,29 +39,29 @@ export default async function handler(req, res) {
 
     const facultyName = faculty ? faculty.name : 'คณาจารย์ มรภ.นครสวรรค์';
 
-    // 2. Fetch all orders for this faculty
+    // 2. Fetch all orders strictly for this faculty (preventing cross-faculty data leak)
     const { data: orders, error } = await supabase
       .from('orders')
       .select('*')
-      .or(`faculty_id.eq.${facultyId},faculty_id.eq.fac-1`)
+      .eq('faculty_id', facultyId)
       .order('event_date', { ascending: false });
 
     if (error) {
       console.error('[iCal API] Supabase error:', error);
     }
 
-    const calendarName = `ภาระงาน: ${facultyName} (UniWorkload AI)`;
+    const calendarName = escapeICalText(`ภาระงาน: ${facultyName} (UniWorkload AI)`);
     const nowStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
     const eventsIcal = (orders || []).map((ord) => {
       let dtStartStr = '';
       let dtEndStr = '';
-      const dateOnly = (ord.event_date || '2026-09-18').replace(/-/g, '');
+      const dateOnly = (ord.event_date || new Date().toISOString().split('T')[0]).replace(/[^0-9]/g, '');
 
       if (ord.event_time && ord.event_time.includes('-')) {
         const parts = ord.event_time.replace(/น\./g, '').trim().split('-');
-        const startH = (parts[0] || '08:30').trim().replace(':', '');
-        const endH = (parts[1] || '16:30').trim().replace(':', '');
+        const startH = (parts[0] || '08:30').trim().replace(/[^0-9]/g, '');
+        const endH = (parts[1] || '16:30').trim().replace(/[^0-9]/g, '');
         dtStartStr = `DTSTART;TZID=Asia/Bangkok:${dateOnly}T${startH.padEnd(4, '0')}00`;
         dtEndStr = `DTEND;TZID=Asia/Bangkok:${dateOnly}T${endH.padEnd(4, '0')}00`;
       } else {
@@ -49,14 +69,26 @@ export default async function handler(req, res) {
         dtEndStr = `DTEND;VALUE=DATE:${dateOnly}`;
       }
 
-      const summary = `[${ord.category || 'ภาระงาน'}] ${ord.title || ord.order_number}`;
-      const directDrawerUrl = `https://uniworkload-ai.vercel.app/?tab=drawer&orderId=${ord.id}&faculty=${facultyId}`;
-      const description = `เลขที่คำสั่ง: ${ord.order_number}\\nบทบาท: ${ord.role || 'กรรมการ'}\\nภาระงานสะสม: ${ord.workload_hours || 0} ชั่วโมง\\nสถานะ: ${ord.status === 'done' ? 'เสร็จสิ้นแล้ว' : 'รอดำเนินการ'}\\n\\n🔗 เปิดดูคำสั่งและแนบหลักฐานในลิ้นชักงาน:\\n${directDrawerUrl}\\n\\nมหาวิทยาลัยราชภัฏนครสวรรค์`;
-      const location = ord.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์';
+      const summary = escapeICalText(`[${ord.category || 'ภาระงาน'}] ${ord.title || ord.order_number || 'คำสั่งราชการ'}`);
+      const directDrawerUrl = `https://uniworkload-ai.vercel.app/?tab=drawer&orderId=${encodeURIComponent(ord.id)}&faculty=${encodeURIComponent(facultyId)}`;
+      
+      const descLines = [
+        `เลขที่คำสั่ง: ${ord.order_number || 'ไม่ระบุ'}`,
+        `บทบาท: ${ord.role || 'กรรมการ'}`,
+        `ภาระงานสะสม: ${ord.workload_hours || 0} ชั่วโมง`,
+        `สถานะ: ${ord.status === 'done' ? 'เสร็จสิ้นแล้ว' : 'รอดำเนินการ'}`,
+        '',
+        '🔗 เปิดดูคำสั่งและแนบหลักฐานในลิ้นชักงาน:',
+        directDrawerUrl,
+        '',
+        'มหาวิทยาลัยราชภัฏนครสวรรค์'
+      ].join('\n');
+      const description = escapeICalText(descLines);
+      const location = escapeICalText(ord.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์');
 
       return [
         'BEGIN:VEVENT',
-        `UID:${ord.id}@uniworkload.nsru.ac.th`,
+        `UID:${encodeURIComponent(ord.id)}@uniworkload.nsru.ac.th`,
         `DTSTAMP:${nowStamp}`,
         dtStartStr,
         dtEndStr,
@@ -84,6 +116,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', `inline; filename="calendar-${facultyId}.ics"`);
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300'); // Cache for 5 mins
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     return res.status(200).send(icalContent);
   } catch (err) {
     console.error('[iCal API] Error generating ical:', err);

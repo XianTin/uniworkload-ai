@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { compressImageFile, FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { parseGoogleDriveUrl, createGoogleDriveEvidenceItem, isGoogleDriveUrl, GDRIVE_SHARING_INSTRUCTION } from '../utils/googleDriveUtils';
+import { sanitizeUrl } from '../utils/securityUtils';
 import { 
   X, 
   UploadCloud, 
@@ -576,7 +577,7 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       <span>ตรวจพบ: {gdriveParsed.type === 'folder' ? 'โฟลเดอร์ Google Drive' : 'ไฟล์ Google Drive'} (ID: {gdriveParsed.id.slice(0, 10)}...)</span>
                       <a 
-                        href={gdriveParsed.viewUrl} 
+                        href={sanitizeUrl(gdriveParsed.viewUrl)} 
                         target="_blank" 
                         rel="noreferrer" 
                         className="inline-flex items-center gap-0.5 text-blue-600 hover:underline ml-auto text-[10px]"
@@ -770,7 +771,7 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
                     {currentPhoto.url ? (currentPhoto.url.length > 50 ? `${currentPhoto.url.slice(0, 48)}...` : currentPhoto.url) : 'Google Drive'}
                   </p>
                   <a
-                    href={currentPhoto.url}
+                    href={sanitizeUrl(currentPhoto.url)}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors"

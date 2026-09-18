@@ -56,12 +56,12 @@ export function saveAiSettings({ mode, apiKey, baseUrl, model }) {
 }
 
 /**
- * ทดสอบการเชื่อมต่อกับ Gemini Engine (Direct Google API หรือ Local Bridge)
+ * ทดสอบการเชื่อมต่อกับ Gemini Engine (Serverless Secure Proxy, Direct Google API หรือ Local Bridge)
  */
 export async function checkGeminiStatus() {
   const config = getAiSettings();
 
-  // 1. ตรวจสอบ Direct Google API Key ก่อน (AIza... หรือคีย์ยาว > 20)
+  // 1. ตรวจสอบ Direct Google API Key ก่อน หากผู้ใช้กรอกไว้เองในหน้าบ้าน
   if (config.apiKey && (config.apiKey.startsWith('AIza') || config.apiKey.length >= 25)) {
     try {
       const controller = new AbortController();
@@ -79,7 +79,7 @@ export async function checkGeminiStatus() {
           type: 'google_direct',
           endpoint: 'generativelanguage.googleapis.com',
           model: config.model || 'gemini-1.5-flash',
-          message: 'เชื่อมต่อ Google Gemini Flash API สำเร็จ',
+          message: 'เชื่อมต่อ Google Gemini Flash API ตรงสำเร็จ',
           modelsAvailable: availableModels
         };
       } else {
@@ -99,7 +99,37 @@ export async function checkGeminiStatus() {
     }
   }
 
-  // 2. หากทำงานบน Localhost ตรวจสอบ Local Bridge (Port 8080)
+  // 2. ตรวจสอบ Serverless Secure AI Proxy (/api/ai/gemini)
+  if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch('/api/ai/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'ping' }],
+          maxTokens: 5
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        return {
+          online: true,
+          type: 'serverless_proxy',
+          endpoint: '/api/ai/gemini (Cloud Secure)',
+          model: config.model || 'gemini-1.5-flash',
+          message: 'เชื่อมต่อ Google Gemini ผ่าน Serverless Secure Proxy สำเร็จ (กุญแจปลอดภัยบนคลาวด์)'
+        };
+      }
+    } catch {
+      // continue to local check
+    }
+  }
+
+  // 3. หากทำงานบน Localhost ตรวจสอบ Local Bridge (Port 8080)
   const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   if (isLocalHost && config.baseUrl) {
     try {
@@ -153,12 +183,12 @@ export async function checkGeminiStatus() {
 }
 
 /**
- * ส่งคำขอ Chat Completion เข้าสู่ Gemini ผ่าน Direct Google API หรือ Local Bridge
+ * ส่งคำขอ Chat Completion เข้าสู่ Gemini ผ่าน Serverless Secure Proxy, Direct Google API หรือ Local Bridge
  */
 async function callGeminiApi({ messages, temperature = 0.2, maxTokens = 2000, timeoutMs = 35000 }) {
   const config = getAiSettings();
 
-  // 1. Google Direct API (ใช้ได้ทุกเครื่อง ทุกเบราว์เซอร์ ทั้งมือถือและคอม)
+  // 1. Google Direct API (หากผู้ใช้ระบุคีย์ตรงในเครื่อง)
   if (config.apiKey && (config.apiKey.startsWith('AIza') || config.apiKey.length >= 25)) {
     return callGoogleDirectApi({ 
       messages, 
@@ -168,7 +198,35 @@ async function callGeminiApi({ messages, temperature = 0.2, maxTokens = 2000, ti
     });
   }
 
-  // 2. Local Antigravity Bridge (เฉพาะเครื่องที่มี port 8080 รันอยู่)
+  // 2. Serverless Secure Proxy (/api/ai/gemini)
+  if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch('/api/ai/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          temperature,
+          maxTokens,
+          model: config.model || 'gemini-1.5-flash'
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.content) return data.content;
+      }
+    } catch (err) {
+      console.warn('[GeminiClient] Serverless proxy call skipped/failed, trying local bridge...', err);
+    }
+  }
+
+  // 3. Local Antigravity Bridge (เฉพาะเครื่องที่มี port 8080 รันอยู่)
   const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   if (isLocalHost || (config.apiKey && config.apiKey.startsWith('sk-'))) {
     const endpointsToTry = Array.from(new Set([
