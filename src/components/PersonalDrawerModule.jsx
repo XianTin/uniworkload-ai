@@ -21,6 +21,7 @@ import {
   Maximize2, 
   Trash2, 
   AlertCircle,
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   X,
