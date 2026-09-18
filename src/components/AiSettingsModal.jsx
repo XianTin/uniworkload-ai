@@ -24,12 +24,14 @@ import {
 // Predefined modern Gemini models
 export const GEMINI_MODEL_PRESETS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', tag: 'แนะนำ • รวดเร็วและฉลาดลึก', badge: 'Recommended' },
-  { id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash High', tag: 'ความฉลาดขั้นสูง • รุ่นล่าสุด', badge: 'Next-Gen' },
-  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', tag: 'ความเร็วสูง • ประสิทธิภาพเด่น', badge: 'Fast' },
-  { id: 'gemini-3.0-flash', name: 'Gemini 3.0 Flash', tag: 'เจเนอเรชัน 3.0 Flash', badge: 'Gen 3' },
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', tag: 'ฉลาดสูงสุด • วิเคราะห์เอกสารซับซ้อน', badge: 'Pro' },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', tag: 'เจเนอเรชัน 2.0 • อเนกประสงค์', badge: 'Gen 2' },
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', tag: 'ประหยัดโควตา • ตอบสนองฉับไว', badge: 'Lite' },
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', tag: 'เสถียร • โควตาฟรีกว้าง', badge: 'Stable' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', tag: 'รุ่นโปรคลาสสิก', badge: 'Pro 1.5' },
+  { id: 'gemini-3.0-flash', name: 'Gemini 3.0 Flash', tag: 'เจเนอเรชัน 3.0 Flash (Preview)', badge: 'Gen 3' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', tag: 'ความเร็วสูง • ประสิทธิภาพเด่น (Preview)', badge: 'Fast 3.5' },
+  { id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash High', tag: 'ความฉลาดขั้นสูง • Antigravity Bridge', badge: 'Next-Gen' },
   { id: 'custom', name: 'กำหนดชื่อโมเดลเอง (Custom Model)', tag: 'ระบุรุ่นทดลองหรือรุ่นใหม่ล่าสุด...', badge: 'Custom' }
 ];
 
