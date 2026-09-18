@@ -94,8 +94,8 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 my-auto space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/45 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200/90 ring-1 ring-black/5 my-auto space-y-4">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -124,7 +124,7 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
           </button>
         </div>
 
-        {/* ⚡ Highlight Auto-Sync Banner */}
+        {/* Highlight Auto-Sync Banner */}
         <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-200/80 text-emerald-950 text-xs flex items-start gap-2.5">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
@@ -138,15 +138,16 @@ export default function ICalModal({ isOpen, onClose, activeFaculty, orders, onNo
           </div>
         </div>
 
-        {/* 🚀 Hero Action Section: 1-Click Subscribe Options */}
+        {/* Hero Action Section: 1-Click Subscribe Options */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           
           {/* Card 1: Google Calendar 1-Click */}
-          <div className="p-4 rounded-xl border-2 border-blue-500/30 bg-blue-50/40 hover:bg-blue-50/70 transition-all flex flex-col justify-between space-y-3">
+          <div className="p-4 rounded-2xl border-2 border-blue-500/30 bg-blue-50/40 hover:bg-blue-50/70 transition-all flex flex-col justify-between space-y-3">
             <div>
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow-2xs">
-                  ⭐️ แนะนำมากที่สุด
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow-2xs">
+                  <Sparkles className="w-3 h-3 text-white" />
+                  <span>แนะนำมากที่สุด</span>
                 </span>
                 <span className="text-[10px] font-semibold text-blue-700 font-mono">1-Click</span>
               </div>

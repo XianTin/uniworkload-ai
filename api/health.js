@@ -5,7 +5,7 @@ export default function handler(req, res) {
   res.status(200).json({
     status: 'healthy',
     service: 'uniworkload-ai',
-    version: '3.9.4',
+    version: '4.0.0',
     timestamp: new Date().toISOString()
   });
 }

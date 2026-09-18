@@ -56,7 +56,7 @@ export default function Navbar({
   const canSwitchFaculty = canViewAllFaculties(currentUser);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md shadow-xs">
       {/* Top Banner with University Identity */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white text-xs px-4 py-1.5 flex justify-between items-center">
         <div className="flex items-center gap-2 truncate">
@@ -73,14 +73,14 @@ export default function Navbar({
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Super Admin / Co-Admin Badge or Status */}
           {isSuperAdmin ? (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] sm:text-[11px] font-bold tracking-wide">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] sm:text-[11px] font-bold tracking-wide">
               <Crown className="w-3 h-3 text-amber-400 shrink-0" />
-              <span>👑 Super Admin (tie)</span>
+              <span>Super Admin (tie)</span>
             </div>
           ) : isCoAdmin ? (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] sm:text-[11px] font-bold tracking-wide">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] sm:text-[11px] font-bold tracking-wide">
               <ShieldCheck className="w-3 h-3 text-purple-300 shrink-0" />
-              <span>🛡️ Co-Admin (Pimmy)</span>
+              <span>Co-Admin (Pimmy)</span>
             </div>
           ) : (
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-300">
@@ -110,9 +110,9 @@ export default function Navbar({
           {/* Brand Logo & Title */}
           <div 
             onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
+            className="flex items-center gap-2.5 cursor-pointer select-none shrink-0 group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-sky-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-sky-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20 group-hover:scale-105 transition-transform">
               <Calendar className="w-5 h-5 text-white stroke-[2.2]" />
             </div>
             <div>
@@ -121,7 +121,7 @@ export default function Navbar({
                   UniWorkload
                 </span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold">
-                  AI v3.9.0
+                  AI v4.0
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 hidden xl:block -mt-0.5">
@@ -236,12 +236,12 @@ export default function Navbar({
                     className="w-7 h-7 rounded-lg ring-1 ring-slate-300 object-cover"
                   />
                   {isSuperAdmin ? (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px] shadow-xs">
-                      👑
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                      <Crown className="w-2.5 h-2.5 text-white" />
                     </span>
                   ) : isCoAdmin ? (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[9px] shadow-xs">
-                      🛡️
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                      <ShieldCheck className="w-2.5 h-2.5 text-white" />
                     </span>
                   ) : null}
                 </div>
@@ -251,7 +251,7 @@ export default function Navbar({
                     {currentUser?.name || activeFaculty?.name || 'อาจารย์'}
                   </span>
                   <span className="text-[10px] text-slate-500 block leading-tight truncate max-w-[120px]">
-                    {isSuperAdmin ? '👑 Super Admin' : isCoAdmin ? '🛡️ Co-Admin' : (activeFaculty?.department ? activeFaculty.department.replace('สาขาวิชา', '') : 'มรภ.นว.')}
+                    {isSuperAdmin ? 'Super Admin' : isCoAdmin ? 'Co-Admin' : (activeFaculty?.department ? activeFaculty.department.replace('สาขาวิชา', '') : 'มรภ.นว.')}
                   </span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />

@@ -25,7 +25,10 @@ import {
   Clock,
   MapPin,
   Tag,
-  Key
+  Key,
+  ShieldCheck,
+  BarChart2,
+  Briefcase
 } from 'lucide-react';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
 import { askGeminiCopilot, getAiSettings, saveAiSettings, AI_MODES } from '../utils/geminiClient';
@@ -813,7 +816,7 @@ export default function NohranChatbot({
         <div className="fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setIsOpen(true)}
-            className="group relative flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-600 text-white shadow-xl shadow-blue-600/30 hover:shadow-2xl hover:shadow-blue-600/40 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer border border-white/20"
+            className="group relative flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-600 text-white shadow-xl shadow-indigo-600/30 hover:shadow-2xl hover:shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer border border-white/25 ring-1 ring-white/20"
           >
             <div className="relative">
               <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -839,14 +842,17 @@ export default function NohranChatbot({
       {/* Main Chatbot Window */}
       {isOpen && (
         <div
-          className={`fixed z-50 transition-all duration-300 flex flex-col bg-white shadow-2xl border border-slate-200 overflow-hidden ${
+          className={`fixed z-50 transition-all duration-300 flex flex-col bg-white shadow-2xl border border-slate-200/90 ring-1 ring-black/10 overflow-hidden ${
             isExpanded
               ? 'inset-4 md:inset-10 rounded-3xl'
               : 'bottom-6 right-6 w-[92vw] sm:w-[460px] h-[640px] max-h-[88vh] rounded-3xl'
           }`}
         >
+          {/* Top subtle radiant hairline accent */}
+          <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-indigo-500 to-purple-500 shrink-0" />
+
           {/* Header */}
-          <div className="bg-gradient-to-r from-slate-950 via-blue-950 to-indigo-950 text-white p-3.5 flex items-center justify-between border-b border-blue-900/50">
+          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white p-3.5 flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/30">
                 <Sparkles className="w-5 h-5 text-white" />
@@ -854,10 +860,10 @@ export default function NohranChatbot({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                    🔮 โนห์รัน (Nohran AI Copilot)
+                    <span>โนห์รัน AI Copilot</span>
                   </h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
-                    Active Knowledge
+                    Active
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300">
@@ -899,7 +905,7 @@ export default function NohranChatbot({
           </div>
 
           {/* Context Ribbon */}
-          <div className="bg-slate-100/90 border-b border-slate-200 px-3.5 py-1.5 flex items-center justify-between text-[11px] text-slate-600">
+          <div className="bg-slate-50 border-b border-slate-200/80 px-3.5 py-1.5 flex items-center justify-between text-[11px] text-slate-600">
             <div className="flex items-center gap-2 truncate">
               <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <span className="truncate">
@@ -916,8 +922,17 @@ export default function NohranChatbot({
               }`}
               title="คลิกเพื่อตั้งค่า AI Engine หรือสลับโมเดล"
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${aiMode === AI_MODES.GEMINI ? 'bg-indigo-600 animate-pulse' : 'bg-slate-500'}`} />
-              <span>{aiMode === AI_MODES.GEMINI ? `⚡ ${aiSettings.model || 'Gemini 2.5 Flash'}` : '🛡️ Local Rule'}</span>
+              {aiMode === AI_MODES.GEMINI ? (
+                <>
+                  <Zap className="w-3 h-3 text-indigo-600" />
+                  <span>{aiSettings.model || 'Gemini 2.5 Flash'}</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-3 h-3 text-slate-600" />
+                  <span>Local Rule</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -929,7 +944,7 @@ export default function NohranChatbot({
                 className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} space-y-1`}
               >
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-1">
-                  <span>{msg.sender === 'user' ? 'ท่านอาจารย์' : '🔮 โนห์รัน'}</span>
+                  <span>{msg.sender === 'user' ? 'ท่านอาจารย์' : 'โนห์รัน AI'}</span>
                   <span>•</span>
                   <span>{msg.timestamp}</span>
                   {msg.engine && (
@@ -1045,33 +1060,38 @@ export default function NohranChatbot({
           <div className="px-3 py-2 bg-white border-t border-slate-200/80 overflow-x-auto no-scrollbar flex gap-1.5">
             <button
               onClick={() => handleSendMessage('หางานวันที่ 12 สิงหาคม')}
-              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-all cursor-pointer flex items-center gap-1"
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span>🗓️ 12 สิงหาคม</span>
+              <Calendar className="w-3 h-3 text-sky-600" />
+              <span>12 สิงหาคม</span>
             </button>
             <button
               onClick={() => handleSendMessage('สรุปภาพรวมภาระงานของฉัน')}
-              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span>📊 สรุปภาพรวม</span>
+              <BarChart2 className="w-3 h-3 text-slate-600" />
+              <span>สรุปภาพรวม</span>
             </button>
             <button
               onClick={() => handleSendMessage('มีคำสั่งไหนที่ยังขาดรูปถ่ายหลักฐาน?')}
-              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer flex items-center gap-1"
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span>⚠️ ขาดรูปหลักฐาน</span>
+              <AlertTriangle className="w-3 h-3 text-amber-600" />
+              <span>ขาดรูปหลักฐาน</span>
             </button>
             <button
               onClick={() => handleSendMessage('แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6')}
-              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all cursor-pointer flex items-center gap-1"
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span>💼 เกณฑ์ ก.พอ.</span>
+              <Briefcase className="w-3 h-3 text-indigo-600" />
+              <span>เกณฑ์ ก.พอ.</span>
             </button>
             <button
               onClick={() => handleSendMessage('ร่างบันทึกข้อความส่งหลักฐานภาระงาน')}
-              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-all cursor-pointer flex items-center gap-1"
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span>📝 ร่างหนังสือ</span>
+              <FileText className="w-3 h-3 text-emerald-600" />
+              <span>ร่างหนังสือ</span>
             </button>
           </div>
 

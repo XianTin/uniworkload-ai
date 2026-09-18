@@ -369,8 +369,8 @@ export default function EvidenceUploadModal({ isOpen, onClose, order, onSaveEvid
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 max-h-[94vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200/90 ring-1 ring-black/5 space-y-5 max-h-[94vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 pb-4">

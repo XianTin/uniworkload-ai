@@ -315,7 +315,7 @@ export default function LoginPage({ onLoginSuccess, facultyList }) {
                 >
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>⚡ เข้าใช้งานด่วนสำหรับการทดสอบ (1-Click Demo)</span>
+                    <span>เข้าใช้งานด่วนสำหรับการทดสอบ (1-Click Demo)</span>
                   </span>
                   <div className="flex items-center gap-1 text-[11px] text-slate-400 font-normal">
                     <span>{showDemoAccounts ? 'ซ่อน' : 'แสดงบัญชี'}</span>

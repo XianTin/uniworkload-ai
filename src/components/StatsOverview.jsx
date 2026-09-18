@@ -9,7 +9,9 @@ import {
   UploadCloud, 
   Smartphone, 
   CalendarDays,
-  Award
+  Award,
+  Crown,
+  Zap
 } from 'lucide-react';
 
 export default function StatsOverview({ activeFaculty, currentUser, orders = [], onOpenIngest, onNavigateTab }) {
@@ -56,11 +58,13 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
               </div>
               {isSuperAdmin ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold">
-                  <span>👑 ผู้ดูแลระบบสูงสุด (tie)</span>
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>ผู้ดูแลระบบสูงสุด (tie)</span>
                 </span>
               ) : isCoAdmin ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold">
-                  <span>🛡️ รองผู้ดูแลระบบสูงสุด (Pimmy)</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-300" />
+                  <span>รองผู้ดูแลระบบสูงสุด (Pimmy)</span>
                 </span>
               ) : null}
             </div>
@@ -70,12 +74,14 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
             </h1>
             
             {isSuperAdmin && activeFaculty ? (
-              <p className="text-xs text-amber-200/90 font-medium bg-amber-950/40 border border-amber-500/20 px-3 py-1.5 rounded-xl inline-block">
-                ⚡ สิทธิ์ Super Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้ตลอดเวลา
+              <p className="text-xs text-amber-200/90 font-medium bg-amber-950/40 border border-amber-500/20 px-3 py-1.5 rounded-xl inline-flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>สิทธิ์ Super Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้ตลอดเวลา</span>
               </p>
             ) : isCoAdmin && activeFaculty ? (
-              <p className="text-xs text-purple-200/90 font-medium bg-purple-950/40 border border-purple-500/20 px-3 py-1.5 rounded-xl inline-block">
-                ⚡ สิทธิ์ Co-Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้
+              <p className="text-xs text-purple-200/90 font-medium bg-purple-950/40 border border-purple-500/20 px-3 py-1.5 rounded-xl inline-flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-purple-300 shrink-0" />
+                <span>สิทธิ์ Co-Admin: กำลังตรวจสอบตู้ลิ้นชักของ <strong className="text-white">{activeFaculty.name}</strong> ({activeFaculty.department || 'มรภ.นว.'}) — สามารถสลับดูอาจารย์ท่านอื่นได้</span>
               </p>
             ) : null}
 

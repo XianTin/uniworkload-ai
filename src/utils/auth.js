@@ -7,7 +7,7 @@ export const SUPER_ADMIN_ACCOUNT = {
   email: "admin@nsru.ac.th",
   name: "นายศุภกร คงไข่ (tie)",
   role: "superadmin", // 'superadmin' | 'coadmin' | 'admin' | 'faculty' | 'head'
-  roleLabel: "👑 ผู้ดูแลระบบสูงสุด (Super Admin)",
+  roleLabel: "ผู้ดูแลระบบสูงสุด (Super Admin)",
   department: "ผู้พัฒนาระบบ UniWorkload AI",
   faculty: "คณะวิทยาการจัดการ",
   avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
@@ -24,7 +24,7 @@ export const CO_ADMIN_PIMMY_ACCOUNT = {
   email: "pimmy@nsru.ac.th",
   name: "พิมมี่ (Pimmy)",
   role: "coadmin", // รองผู้ดูแลระบบสูงสุด (คู่พัฒนาของ tie)
-  roleLabel: "🛡️ รองผู้ดูแลระบบสูงสุด (Co-Admin)",
+  roleLabel: "รองผู้ดูแลระบบสูงสุด (Co-Admin)",
   department: "ผู้พัฒนาระบบร่วม UniWorkload AI",
   faculty: "คณะวิทยาการจัดการ",
   avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
@@ -44,7 +44,7 @@ export const CO_ADMIN_PIMMY_ACCOUNT = {
 
 export const DEMO_PRESET_ACCOUNTS = [
   {
-    label: "👑 ผู้ดูแลระบบสูงสุด (tie)",
+    label: "ผู้ดูแลระบบสูงสุด (tie)",
     sublabel: "สิทธิ์สูงสุด Full Access ทุกคณะ",
     username: "admin",
     passwordHint: "2547",
@@ -53,7 +53,7 @@ export const DEMO_PRESET_ACCOUNTS = [
     account: SUPER_ADMIN_ACCOUNT
   },
   {
-    label: "🛡️ รองผู้ดูแลระบบสูงสุด (Pimmy)",
+    label: "รองผู้ดูแลระบบสูงสุด (Pimmy)",
     sublabel: "สิทธิ์ระดับบริหาร คู่ของ tie (สลับดูอาจารย์ทุกคนได้)",
     username: "pimmy",
     passwordHint: "1234",
@@ -62,7 +62,7 @@ export const DEMO_PRESET_ACCOUNTS = [
     account: CO_ADMIN_PIMMY_ACCOUNT
   },
   {
-    label: "👩‍🏫 อ.พิมรา ทองแสง",
+    label: "อ.พิมรา ทองแสง",
     sublabel: "อาจารย์ / รองผู้อำนวยการ (สาธารณสุข)",
     username: "pimra.t@nsru.ac.th",
     passwordHint: "1234",
@@ -85,7 +85,7 @@ export const DEMO_PRESET_ACCOUNTS = [
     }
   },
   {
-    label: "👨‍🏫 ผศ.ดร.สมชาย ใจดี",
+    label: "ผศ.ดร.สมชาย ใจดี",
     sublabel: "หัวหน้าสาขาวิชาเทคโนโลยีสารสนเทศ",
     username: "somchai.j@nsru.ac.th",
     passwordHint: "1234",
@@ -107,7 +107,7 @@ export const DEMO_PRESET_ACCOUNTS = [
     }
   },
   {
-    label: "🏢 ธุรการคณะ (งานสารบรรณ)",
+    label: "ธุรการคณะ (งานสารบรรณ)",
     sublabel: "สแกน & สกัดคำสั่ง AI กระจายงาน",
     username: "staff@nsru.ac.th",
     passwordHint: "1234",

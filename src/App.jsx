@@ -647,7 +647,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col ambient-bg text-slate-800 font-sans selection:bg-blue-600 selection:text-white relative">
       {/* Navigation Bar */}
       <Navbar
         activeTab={activeTab}
@@ -832,7 +832,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-slate-400 text-[11px]">
             <span>สาขาวิชาเทคโนโลยีสารสนเทศ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์</span>
             <span>•</span>
-            <span className="font-mono text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Release v3.9.0 • Security Hardened</span>
+            <span className="font-mono text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">Release v4.0.0 • Modern Ambient UI & Smart Assistant</span>
           </div>
         </div>
       </footer>

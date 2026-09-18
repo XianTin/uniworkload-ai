@@ -115,8 +115,8 @@ export default function AiSettingsModal({ isOpen, onClose, onNotify, onSaved }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200/90 ring-1 ring-black/5 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-white">
           <div className="flex items-center gap-3">
@@ -129,7 +129,7 @@ export default function AiSettingsModal({ isOpen, onClose, onNotify, onSaved }) 
                   ตั้งค่า AI Engine & โมเดลอัจฉริยะ
                 </h3>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                  v3.9.1
+                  v4.0
                 </span>
               </div>
               <p className="text-[11px] text-slate-500">
@@ -267,7 +267,7 @@ export default function AiSettingsModal({ isOpen, onClose, onNotify, onSaved }) 
 
                   {/* Discovered models from API */}
                   {discoveredModels.length > 0 && (
-                    <optgroup label="✨ โมเดลที่ตรวจพบบนบัญชีของคุณ">
+                    <optgroup label="โมเดลที่ตรวจพบบนบัญชีของคุณ">
                       {discoveredModels
                         .filter(m => !GEMINI_MODEL_PRESETS.some(p => p.id === m))
                         .map(m => (

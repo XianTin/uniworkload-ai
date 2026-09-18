@@ -11,7 +11,10 @@ import {
   Smartphone, 
   Sparkles, 
   FileText,
-  UploadCloud
+  UploadCloud,
+  Bell,
+  AlertTriangle,
+  Camera
 } from 'lucide-react';
 
 function formatThaiDate(dateStr) {
@@ -43,6 +46,17 @@ export default function DashboardOverview({
   // Recent 3 orders
   const recentOrders = facultyOrders.slice(0, 3);
 
+  // Smart Missing Evidence Reminder (Orders where event date has passed, but lacks actual evidence photos)
+  const missingPhotoOverdueOrders = facultyOrders.filter(o => {
+    const hasPhotos = o.actualPhotos && o.actualPhotos.length > 0;
+    if (hasPhotos) return false;
+    if (!o.eventDate) return false;
+    const eventTime = new Date(o.eventDate).getTime();
+    if (isNaN(eventTime)) return false;
+    const nowTime = new Date().getTime();
+    return eventTime <= nowTime;
+  });
+
   // Upcoming events
   const upcomingEvents = facultyOrders
     .filter(o => o.eventDate)
@@ -51,6 +65,47 @@ export default function DashboardOverview({
 
   return (
     <div className="space-y-6">
+      {/* 🔔 Smart Missing-Evidence Reminder Banner */}
+      {missingPhotoOverdueOrders.length > 0 && (
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/90 via-orange-50/70 to-rose-50/60 p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-start gap-3">
+            <div className="relative shrink-0 mt-0.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                <Bell className="w-5 h-5 text-white animate-bounce" />
+              </div>
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
+            </div>
+
+            <div className="space-y-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900 font-bold text-[10px] tracking-wide">
+                  <AlertTriangle className="w-3 h-3 text-amber-800" />
+                  <span>ระบบสะกิดเตือนหลักฐานอัจฉริยะ (Smart Evidence Reminder)</span>
+                </span>
+                <span className="text-[10px] text-amber-800 font-semibold">
+                  {missingPhotoOverdueOrders.length} คำสั่งรอแนบรูป
+                </span>
+              </div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                กิจกรรมผ่านพ้นไปแล้ว แต่ยังไม่ได้แนบภาพถ่ายหน้างานจริง
+              </h4>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                อาจารย์มีกิจกรรมที่จัดเสร็จสิ้นแล้วแต่ยังขาดภาพถ่ายหลักฐานสำหรับใช้ประกอบรายงาน SAR และแบบฟอร์ม e-Portfolio
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigateTab('drawer')}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-bold shadow-md shadow-amber-600/25 transition-all cursor-pointer shrink-0"
+          >
+            <Camera className="w-4 h-4" />
+            <span>ไปที่ตู้ลิ้นชักเพื่อแนบรูป</span>
+            <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+          </button>
+        </div>
+      )}
+
       {/* 2-Column Balanced Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Recent Orders in Drawer */}

@@ -447,13 +447,14 @@ export default function PersonalDrawerModule({
                 </button>
                 <button
                   onClick={() => setFilterStatus('missing_photo')}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium ${
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium ${
                     filterStatus === 'missing_photo'
                       ? 'bg-white text-rose-700 shadow-xs font-semibold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  ⚠️ ขาดรูป
+                  <AlertTriangle className="w-3 h-3 text-rose-500" />
+                  <span>ขาดรูป</span>
                 </button>
               </div>
 
