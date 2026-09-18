@@ -11,6 +11,18 @@ export const AI_MODES = {
   LOCAL: 'local'
 };
 
+export const SUPPORTED_MODELS = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (เสถียร รวดเร็ว ฉลาดวิเคราะห์ลึก — แนะนำ)' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (วิเคราะห์เอกสารซับซ้อน คิดเหตุผลระดับสูง)' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (เวอร์ชัน 2.0 ความเร็วสูง)' },
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite (ประหยัดโควตา ตอบสนองฉับไว)' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (เวอร์ชันคลาสสิก โควตากว้าง)' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (เวอร์ชันโปร 1.5)' },
+  { id: 'gemini-3.0-flash', name: 'Gemini 3.0 Flash (Next-Gen Flash Preview)' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (ความเร็วสูง ประสิทธิภาพเด่น Preview)' },
+  { id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash High (ความฉลาดขั้นสูง Antigravity Bridge)' }
+];
+
 const STORAGE_KEYS = {
   MODE: 'uniworkload_ai_engine_mode',
   API_KEY: 'uniworkload_gemini_api_key',
@@ -23,7 +35,7 @@ const DEFAULT_CONFIG = {
   mode: AI_MODES.GEMINI,
   baseUrl: typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '/ai-proxy/v1' : '',
   fallbackBaseUrl: 'http://127.0.0.1:8080/v1',
-  model: 'gemini-1.5-flash',
+  model: 'gemini-2.5-flash',
   apiKey: ''
 };
 
@@ -294,6 +306,8 @@ async function callGoogleDirectApi({ messages, apiKey, temperature = 0.2, model 
   // ลำดับโมเดลสำรองถ้าโมเดลแรกไม่พบ
   const modelsToTry = Array.from(new Set([
     model,
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
     'gemini-2.0-flash',
     'gemini-1.5-flash'
   ])).filter(Boolean);
@@ -441,40 +455,135 @@ export async function parseOfficialOrderWithGemini(rawOcrText, filename = '', fa
 }
 
 /**
- * ระบบ Nohran AI Copilot ขับเคลื่อนด้วย Gemini Flash
+ * ระบบ Nohran AI Copilot ขับเคลื่อนด้วย Gemini Flash & Pro (Next-Gen Reasoning)
  */
-export async function askGeminiCopilot({ prompt, activeFaculty, orders = [], chatHistory = [] }) {
+export async function askGeminiCopilot({ prompt, activeFaculty, orders = [], facultyList = [], chatHistory = [] }) {
+  // กรองคำสั่งของอาจารย์ที่กำลังเลือก (ทั้งที่ได้รับมอบหมายตรง หรือเป็นเจ้าของหลัก)
   const facultyOrders = orders.filter(o =>
-    !activeFaculty || (o.facultyAssigned || []).some(f => f.id === activeFaculty.id)
+    !activeFaculty || 
+    (o.facultyAssigned || []).some(f => f.id === activeFaculty.id) || 
+    o.facultyId === activeFaculty.id
   );
 
   const missingEvidence = facultyOrders.filter(o => !o.actualPhotos || o.actualPhotos.length === 0);
-  const totalHours = facultyOrders.reduce((sum, o) => sum + (o.workloadHours || 3), 0);
+  const completedOrders = facultyOrders.filter(o => o.status === 'done');
+  const upcomingOrders = facultyOrders.filter(o => o.status !== 'done');
+  const totalHours = facultyOrders.reduce((sum, o) => sum + (Number(o.workloadHours || o.score || 3)), 0);
 
-  const ordersContext = facultyOrders.map((o, i) => 
-    `${i + 1}. [${o.orderNumber}] "${o.title}" | วันที่: ${o.signDate || o.eventDate} | หมวด: ${o.category} (${o.workloadHours || 3} ชม.) | หลักฐานรูปถ่าย: ${o.actualPhotos?.length > 0 ? `แนบแล้ว (${o.actualPhotos.length} รูป)` : 'ยังไม่มีรูป'}`
-  ).join('\n');
+  // คำนวณชั่วโมงแยก 6 หมวด ก.พอ. ของ activeFaculty
+  const categorySummary = {};
+  facultyOrders.forEach(o => {
+    const cat = o.category || 'ภาระงานทั่วไป';
+    const hrs = Number(o.workloadHours || o.score || 3);
+    categorySummary[cat] = (categorySummary[cat] || 0) + hrs;
+  });
 
-  const systemInstruction = `คุณคือ "ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)" ประจำระบบ UniWorkload AI มหาวิทยาลัยราชภัฏนครสวรรค์
-คุณกำลังสนทนาและให้คำปรึกษากับ:
-- อาจารย์: ${activeFaculty?.name || 'อาจารย์'} (${activeFaculty?.role || 'อาจารย์ประจำหลักสูตร'})
-- สังกัด: คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏนครสวรรค์
-- สถิติภาระงานปัจจุบัน: รวม ${facultyOrders.length} คำสั่ง (${totalHours} ชั่วโมง กพอ.)
-- คำสั่งที่ยังขาดรูปภาพหลักฐาน: ${missingEvidence.length} รายการ
+  const categoryBreakdownText = Object.entries(categorySummary)
+    .map(([cat, hrs]) => `  - ${cat}: ${hrs} ชม.`)
+    .join('\n');
 
-รายการคำสั่งและภาระงานจริงของอาจารย์ในระบบ:
-${ordersContext || 'ยังไม่มีข้อมูลคำสั่งในระบบ'}
+  // สรุปข้อมูลคำสั่งของอาจารย์ active แบบละเอียด
+  const ordersContext = facultyOrders.map((o, i) => {
+    const hasPhotos = o.actualPhotos && o.actualPhotos.length > 0;
+    const photoCount = o.actualPhotos ? o.actualPhotos.length : 0;
+    const assigned = o.facultyAssigned || [];
+    const myRoleObj = assigned.find(f => f.id === activeFaculty?.id);
+    const myRole = myRoleObj ? (myRoleObj.roleInOrder || 'ผู้รับผิดชอบ') : 'ผู้รับผิดชอบ';
+    const allColleagues = assigned.map(f => `${f.name} (${f.roleInOrder || 'กรรมการ'})`).join(', ');
+    const files = (o.evidenceFiles || []).map(f => f.name).join(', ');
 
-หน้าที่ของคุณ:
-1. ตอบคำถามอย่างสุภาพ มืออาชีพ และกระชับ (ใช้น้ำเสียงเป็นกันเอง แบบผู้ช่วย AI อัจฉริยะ มีอีโมจิ 🔮 นำหน้าตามเอกลักษณ์ Nohran)
-2. เมื่ออาจารย์ถามเรื่อง "หลักฐานที่ขาด" ให้สรุปเฉพาะคำสั่งที่ยังไม่มีรูปถ่าย และแนะนำให้ไปแนบในตู้ลิ้นชัก
-3. เมื่ออาจารย์ถามเรื่อง "สรุปภาระงาน" ให้แจกแจงตามหมวด กพอ. 1-6 และคำนวณชั่วโมงให้ครบถ้วน
-4. เมื่ออาจารย์ขอให้ "ร่างบันทึกข้อความ" หรือ "ร่างเอกสาร" ให้ร่างข้อความแบบฟอร์มหนังสือราชการไทย (บันทึกข้อความ) ที่สมบูรณ์แบบ มีส่วนหัว ข้อความเรียน ความเป็นมา และข้อความสั่งการ
-5. จัดรูปแบบคำตอบด้วย Markdown อย่างสวยงาม (ตัวหนา รายการข้อย่อย ตาราง หรือกล่องข้อความ)`;
+    return `[คำสั่งของ ${activeFaculty?.name || 'อาจารย์'} รายการที่ ${i + 1}]
+- เลขที่คำสั่ง: ${o.orderNumber || 'รอระบุเลขที่คำสั่ง'}
+- เรื่อง: ${o.title}
+- หมวด ก.พอ.: ${o.category} [รหัส: ${o.categoryCode || 'admin'}] | ภาระงาน: ${o.workloadHours || o.score || 3} ชม.
+- วันที่สั่งการ: ${o.signDate || '-'} | วันที่จัดกิจกรรม: ${o.eventDate || o.signDate || '-'} ${o.eventEndDate ? `ถึง ${o.eventEndDate}` : ''}
+- เวลา/สถานที่: ${o.eventTime || 'ไม่ระบุเวลา'} ณ ${o.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์'}
+- บทบาท: ${myRole}
+- คณะกรรมการทั้งหมดในคำสั่ง: ${allColleagues || 'ปฏิบัติหน้าที่เดี่ยว'}
+- สถานะ: ${o.status === 'done' ? '✅ เสร็จสิ้นแล้ว' : '⏳ รอดำเนินการ/รอจัดกิจกรรม'}
+- รูปถ่ายหลักฐาน: ${hasPhotos ? `📸 แนบแล้ว (${photoCount} รูป)` : '⚠️ ❌ ยังไม่แนบภาพถ่ายหน้างานจริง'}
+- เอกสารแนบ: ${files || 'เอกสารคำสั่ง.pdf'}
+- รายละเอียด: ${o.fullDescription || o.summary || o.title}`;
+  }).join('\n\n');
+
+  // สรุปภาพรวมอาจารย์ทุกท่านในหลักสูตร/คณะ (Faculty Directory)
+  const facultyDirectory = (facultyList || []).map(fac => {
+    const cleanName = fac.name.replace(/^(ผศ\.ดร\.|รศ\.ดร\.|ดร\.|อ\.|อาจารย์)/, '').trim();
+    const facOrders = orders.filter(o => 
+      (o.facultyAssigned || []).some(f => f.id === fac.id || (f.name && f.name.includes(cleanName))) ||
+      o.facultyId === fac.id
+    );
+    const hrs = facOrders.reduce((sum, o) => sum + (Number(o.workloadHours || o.score || 3)), 0);
+    const withPhotos = facOrders.filter(o => o.actualPhotos && o.actualPhotos.length > 0).length;
+    return `• ${fac.name} (${fac.role || 'อาจารย์'} - ${fac.department || ''}): มี ${facOrders.length} คำสั่ง (รวม ${hrs} ชม. กพอ., รูปครบ ${withPhotos}/${facOrders.length})`;
+  }).join('\n');
+
+  // ฐานข้อมูลคำสั่งทั้งหมดในระบบ (รวมทุกท่านในคณะ)
+  const allOrdersCatalog = orders.map((o, i) => {
+    const committee = (o.facultyAssigned || []).map(f => `${f.name} [${f.roleInOrder || 'กรรมการ'}]`).join(', ');
+    const photoCount = o.actualPhotos ? o.actualPhotos.length : 0;
+    return `[คำสั่ง #${i + 1}]
+- เลขที่: ${o.orderNumber || '-'} | เรื่อง: ${o.title}
+- วันที่: ${o.eventDate || o.signDate || '-'} ${o.eventEndDate ? `ถึง ${o.eventEndDate}` : ''} | เวลา: ${o.eventTime || '-'}
+- สถานที่: ${o.location || 'มรภ.นครสวรรค์'}
+- หมวด กพอ.: ${o.category} (${o.workloadHours || o.score || 3} ชม.) | สถานะ: ${o.status === 'done' ? 'เสร็จสิ้น' : 'รอดำเนินการ'}
+- กรรมการ/ผู้รับผิดชอบ: ${committee || 'ไม่ระบุ'}
+- หลักฐานรูปภาพ: ${photoCount > 0 ? `มีรูป (${photoCount} รูป)` : 'ยังไม่มีรูป'}
+- รายละเอียด: ${(o.fullDescription || o.summary || o.title || '').slice(0, 200)}`;
+  }).join('\n\n');
+
+  const nowThai = new Date().toLocaleDateString('th-TH', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
+  const systemInstruction = `คุณคือ "ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)" สหายปัญญาประดิษฐ์อัจฉริยะประจำระบบ UniWorkload AI มหาวิทยาลัยราชภัฏนครสวรรค์ (NSRU)
+คุณมีความรู้รอบตัวขั้นสูงและเข้าใจบริบทมหาวิทยาลัยอย่างลึกซึ้ง:
+1. บริหารปฏิทินภาระงาน 2 ทาง (Dual Calendar): วันลงนามคำสั่งราชการ (Sign Date) vs วันจัดกิจกรรมจริง (Event Date) ซิงค์กับ Google Calendar / iCal
+2. ภาระงานอาจารย์ตามเกณฑ์ ก.พอ. 6 ด้าน:
+   1) การจัดการเรียนการสอน (teaching)
+   2) งานวิจัยและงานสร้างสรรค์ (research)
+   3) บริการวิชาการแก่สังคม (service)
+   4) ทำนุบำรุงศิลปวัฒนธรรม (arts)
+   5) บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย (admin)
+   6) ประกันคุณภาพการศึกษา (qa)
+3. การตรวจเช็คแฟ้มหลักฐาน (Dossier Summary) และการเตรียมข้อมูล 5 ช่องเข้าสู่ระบบ e-Portfolio ของ มรภ.นครสวรรค์
+
+ข้อมูลระบบและสถานการณ์ปัจจุบัน:
+- วันที่ปัจจุบัน: ${nowThai} (ค.ศ. ${new Date().toISOString().split('T')[0]})
+- อาจารย์ผู้กำลังใช้งาน (Active User): ท่าน${activeFaculty?.name || 'อาจารย์'} (${activeFaculty?.role || 'อาจารย์ประจำหลักสูตร'})
+- สังกัด: ${activeFaculty?.department || 'สาขาวิชาเทคโนโลยีสารสนเทศ'} ${activeFaculty?.faculty || 'คณะวิทยาการจัดการ'} มรภ.นครสวรรค์
+- สถิติของ ${activeFaculty?.name || 'อาจารย์'}: รวม ${facultyOrders.length} คำสั่ง (${totalHours} ชม. กพอ.), เสร็จสิ้น ${completedOrders.length}, รอดำเนินการ ${upcomingOrders.length}, ขาดรูปถ่าย ${missingEvidence.length} รายการ
+- สรุปชั่วโมงแยกหมวดของอาจารย์:
+${categoryBreakdownText || '  (ยังไม่มีข้อมูลหมวดงาน)'}
+
+รายชื่อและภาระงานของอาจารย์ทุกท่านในคณะ (Faculty Directory):
+${facultyDirectory || '  (ไม่มีข้อมูลรายชื่อ)'}
+
+ฐานข้อมูลคำสั่งภาระงานจริงทั้งหมดในระบบ (${orders.length} รายการ):
+${allOrdersCatalog || 'ขณะนี้ยังไม่มีคำสั่งในระบบ'}
+
+กฎเหล็กในการตอบคำถามของโนห์รัน:
+1. **ตอบตรงคำถามอย่างชาญฉลาดและเฉียบคม (Direct & Factual)**:
+   - อย่ายกเทมเพลตซ้ำซากมาตอบ ให้อ่านจากฐานข้อมูลจริงข้างบนแล้วตอบตรงประเด็นทันที
+   - หากถามถึงอาจารย์ท่านอื่นในคณะ (เช่น อ.กฤษณะ, ผศ.ดร.สมชาย, อ.วรัญญา, อ.พิมรา ฯลฯ) ให้ดึงข้อมูลจาก Faculty Directory และคำสั่งทั้งหมดมาตอบว่ามีงานอะไรบ้าง ทำหน้าที่อะไร และมีกี่ชั่วโมง
+   - หากถามถึงคำสั่งใด (เช่น "คำสั่ง 1001", "งานปากน้ำโพ", "งาน AI", "งานวันที่ 5 สิงหา") ให้ดึงเลขที่คำสั่ง, เรื่อง, วันที่จัด, สถานที่, กรรมการผู้รับผิดชอบ และสถานะรูปภาพมาตอบให้ครบถ้วน
+   - หากถามว่า "ใครเป็นประธาน" หรือ "ใครมีหน้าที่อะไร" ให้ดูจากรายชื่อกรรมการในคำสั่งนั้นแล้วตอบอย่างแม่นยำ
+2. **การตรวจจับหลักฐานที่ขาด (Missing Evidence)**:
+   - หากถามเรื่อง "ขาดรูป" หรือ "หลักฐาน" ให้สรุปเฉพาะคำสั่งที่ "ยังไม่มีรูป" ชัดเจน พร้อมระบุเลขคำสั่งและชื่อเรื่อง แล้วแนะนำให้กดเข้าไปที่แท็บ "ตู้ลิ้นชักหลักฐาน" เพื่ออัปโหลด
+3. **การจัดกิจกรรมและปฏิทิน (Upcoming & Calendar)**:
+   - เปรียบเทียบกับวันที่ปัจจุบัน (${nowThai}) เพื่อระบุว่ากิจกรรมใดกำลังจะมาถึงในสัปดาห์นี้หรือเดือนนี้ และกิจกรรมใดผ่านพ้นไปแล้ว
+4. **การร่างหนังสือราชการ (Official Memo Drafting)**:
+   - หากขอให้ร่างบันทึกข้อความ ให้เขียนฟอร์มบันทึกข้อความมาตรฐานราชการไทยของ มรภ.นครสวรรค์ โดยนำชื่อคำสั่งจริงและข้อมูลจริงมาเติมใส่ฟอร์มให้สมบูรณ์พร้อมคัดลอกไปใช้
+5. **น้ำเสียงและบุคลิกภาพ**:
+   - สุภาพ นอบน้อม มั่นใจ เฉลียวฉลาด สะท้อนความเป็น AI Companion ผู้พิทักษ์อาจารย์ มีอีโมจิ 🔮 นำหน้าตามเอกลักษณ์ Nohran
+   - ใช้ Markdown เช่น หัวข้อตัวหนา, ลิสต์รายการ, ตาราง หรือ Quote Block ให้อ่านง่าย สบายตา`;
 
   const messages = [
     { role: 'system', content: systemInstruction },
-    ...chatHistory.slice(-6).map(m => ({
+    ...chatHistory.slice(-8).map(m => ({
       role: m.sender === 'user' ? 'user' : 'assistant',
       content: m.text
     })),
@@ -483,7 +592,7 @@ ${ordersContext || 'ยังไม่มีข้อมูลคำสั่ง
 
   return await callGeminiApi({
     messages,
-    temperature: 0.3,
-    maxTokens: 1500
+    temperature: 0.25,
+    maxTokens: 2000
   });
 }

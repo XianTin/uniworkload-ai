@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const { messages, temperature = 0.2, maxTokens = 2000, model = 'gemini-1.5-flash' } = req.body || {};
+    const { messages, temperature = 0.2, maxTokens = 2000, model = 'gemini-2.5-flash' } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Invalid or missing "messages" array.' });
@@ -50,9 +50,10 @@ export default async function handler(req, res) {
       requestBody.systemInstruction = { parts: [{ text: systemMsg }] };
     }
 
-    // Try primary and fallback models
+    // Try primary and fallback models (Cascading gracefully from newest to stable)
     const modelsToTry = Array.from(new Set([
       model,
+      'gemini-2.5-flash',
       'gemini-2.0-flash',
       'gemini-1.5-flash'
     ])).filter(Boolean);

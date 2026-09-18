@@ -778,6 +778,8 @@ export default function App() {
         setIsOpen={setIsChatbotOpen}
         orders={orders}
         activeFaculty={activeFaculty}
+        facultyList={facultyList}
+        currentUser={currentUser}
         onNavigateTab={(tab) => setActiveTab(tab)}
         onJumpToEportfolio={handleJumpToEportfolio}
         onNotify={showToast}

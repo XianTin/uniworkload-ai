@@ -20,14 +20,38 @@ import {
   Copy,
   Check,
   Cpu,
-  Zap
+  Zap,
+  Settings,
+  Clock,
+  MapPin,
+  Tag,
+  Key
 } from 'lucide-react';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
 import { askGeminiCopilot, getAiSettings, saveAiSettings, AI_MODES } from '../utils/geminiClient';
+import AiSettingsModal from './AiSettingsModal';
+
+// Thai month dictionary for natural language query parsing
+const THAI_MONTHS = [
+  { idx: 1, full: 'มกราคม', short: 'ม.ค.', alt: 'มกรา', iso: '01' },
+  { idx: 2, full: 'กุมภาพันธ์', short: 'ก.พ.', alt: 'กุมภา', iso: '02' },
+  { idx: 3, full: 'มีนาคม', short: 'มี.ค.', alt: 'มีนา', iso: '03' },
+  { idx: 4, full: 'เมษายน', short: 'เม.ย.', alt: 'เมษา', iso: '04' },
+  { idx: 5, full: 'พฤษภาคม', short: 'พ.ค.', alt: 'พฤษภา', iso: '05' },
+  { idx: 6, full: 'มิถุนายน', short: 'มิ.ย.', alt: 'มิถุนา', iso: '06' },
+  { idx: 7, full: 'กรกฎาคม', short: 'ก.ค.', alt: 'กรกฎา', iso: '07' },
+  { idx: 8, full: 'สิงหาคม', short: 'ส.ค.', alt: 'สิงหา', iso: '08' },
+  { idx: 9, full: 'กันยายน', short: 'ก.ย.', alt: 'กันยา', iso: '09' },
+  { idx: 10, full: 'ตุลาคม', short: 'ต.ค.', alt: 'ตุลา', iso: '10' },
+  { idx: 11, full: 'พฤศจิกายน', short: 'พ.ย.', alt: 'พฤศจิกา', iso: '11' },
+  { idx: 12, full: 'ธันวาคม', short: 'ธ.ค.', alt: 'ธันวา', iso: '12' }
+];
 
 export default function NohranChatbot({ 
   orders = [], 
   activeFaculty, 
+  facultyList = [],
+  currentUser,
   onNavigateTab, 
   onJumpToEportfolio,
   onNotify,
@@ -38,28 +62,37 @@ export default function NohranChatbot({
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalSetIsOpen !== undefined ? externalSetIsOpen : setInternalIsOpen;
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  
+  const [aiSettings, setAiSettings] = useState(() => getAiSettings());
   const [aiMode, setAiMode] = useState(() => getAiSettings().mode || AI_MODES.GEMINI);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Filter orders for active faculty
+  // Filter orders for active faculty with robust multi-field matching
   const facultyOrders = orders.filter(o => 
-    !activeFaculty || (o.facultyAssigned || []).some(f => f.id === activeFaculty.id) || o.facultyId === activeFaculty.id
+    !activeFaculty || 
+    (o.facultyAssigned || []).some(f => f.id === activeFaculty.id || f.name === activeFaculty.name) || 
+    o.facultyId === activeFaculty.id ||
+    o.faculty_id === activeFaculty.id
   );
+
+  // Fallback to all orders if activeFaculty has none (for demo or admin convenience)
+  const targetOrders = facultyOrders.length > 0 ? facultyOrders : orders;
 
   const initialGreeting = {
     id: 'msg-init',
     sender: 'bot',
-    text: `สวัสดีครับ **${activeFaculty?.name || 'อาจารย์'}** 🔮\n\nผมคือ **ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)** พร้อมช่วยสืบค้นภาระงาน, ตรวจสอบแฟ้มหลักฐานที่ขาดหาย, สรุปสถิติชั่วโมง ก.พอ., และร่างข้อความสำหรับ e-Portfolio มรภ.นครสวรรค์ ครับ\n\nอาจารย์สามารถพิมพ์คำถาม หรือกดหัวข้อลัดด้านล่างเพื่อเริ่มได้เลยครับ!`,
+    text: `สวัสดีครับ **${activeFaculty?.name || 'อาจารย์'}** 🔮\n\nผมคือ **ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)** พร้อมช่วยสืบค้นภาระงานตามวัน/เดือน, ตรวจสอบแฟ้มหลักฐานที่ยังขาดรูปถ่าย, สรุปสถิติชั่วโมง ก.พอ., และร่างข้อความสำหรับ e-Portfolio มรภ.นครสวรรค์ ครับ\n\nอาจารย์สามารถพิมพ์คำถาม เช่น *"หางานวันที่ 12 สิงหาคม"*, *"งานไหนยังขาดรูป"*, หรือกดหัวข้อลัดด้านล่างเพื่อเริ่มได้เลยครับ!`,
     timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
     suggestions: [
-      'สรุปภาพรวมภาระงานของฉัน',
+      'หางานวันที่ 12 สิงหาคม',
       'มีคำสั่งไหนที่ยังขาดรูปถ่ายหลักฐาน?',
+      'สรุปภาพรวมภาระงานของฉัน',
       'ค้นหางานช่วง 1 ม.ค. 67 – 25 มิ.ย. 67',
-      'แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6',
-      'ร่างบันทึกข้อความส่งหลักฐานภาระงาน'
+      'แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6'
     ]
   };
 
@@ -71,7 +104,6 @@ export default function NohranChatbot({
     }
   }, [messages, isOpen, isTyping]);
 
-  // Handle Copy text
   const handleCopy = (text, idx) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(idx);
@@ -79,17 +111,22 @@ export default function NohranChatbot({
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  // AI Knowledge & Reasoning Engine
+  /**
+   * ระบบ Local Intelligence & Thai NLP Engine สำหรับการตอบคำถามภาระงานอย่างชาญฉลาด
+   */
   const generateBotResponse = (query) => {
-    const q = query.trim().toLowerCase();
+    const rawQ = query.trim();
+    const q = rawQ.toLowerCase();
 
-    // 1. Missing Photo Evidence Query
+    // -------------------------------------------------------------
+    // 1. Missing Photo Evidence Query (ตรวจแฟ้มที่ยังขาดรูปถ่าย)
+    // -------------------------------------------------------------
     if (q.includes('ขาดรูป') || q.includes('ไม่มีรูป') || (q.includes('หลักฐาน') && (q.includes('ขาด') || q.includes('ยังไม่')))) {
-      const missingEvidenceOrders = facultyOrders.filter(o => !o.actualPhotos || o.actualPhotos.length === 0);
+      const missingEvidenceOrders = targetOrders.filter(o => !o.actualPhotos || o.actualPhotos.length === 0);
       
       if (missingEvidenceOrders.length === 0) {
         return {
-          text: `🎉 **ยอดเยี่ยมมากครับอาจารย์!** ขณะนี้คำสั่งทุกรายการของอาจารย์ (${facultyOrders.length} รายการ) **แนบภาพถ่ายหลักฐานครบถ้วน 100%** แล้วครับ พร้อมส่งประเมิน e-Portfolio ได้ทันที`,
+          text: `🎉 **ยอดเยี่ยมมากครับอาจารย์!** ขณะนี้คำสั่งทุกรายการของอาจารย์ (${targetOrders.length} รายการ) **แนบภาพถ่ายหลักฐานครบถ้วน 100%** แล้วครับ พร้อมส่งประเมิน e-Portfolio ได้ทันที`,
           actions: [
             { label: 'เปิดดูตู้ลิ้นชักทั้งหมด', tab: 'drawer', icon: 'Layers' }
           ]
@@ -98,12 +135,12 @@ export default function NohranChatbot({
 
       let responseText = `⚠️ **พบ ${missingEvidenceOrders.length} คำสั่งที่ยังไม่ได้แนบรูปถ่ายหน้างานจริงครับ:**\n\n`;
       missingEvidenceOrders.forEach((ord, index) => {
-        const thaiSignDate = ord.signDate ? new Date(ord.signDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '-';
+        const thaiDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
         responseText += `**${index + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
-        responseText += `• วันที่: ${thaiSignDate} | หมวด: ${ord.category}\n`;
-        responseText += `• ลิ้นชัก: *รอแนบภาพถ่ายหน้างาน*\n\n`;
+        responseText += `• วันที่: ${thaiDate} | หมวด: ${ord.category}\n`;
+        responseText += `• สถานะ: ⚠️ *รอแนบภาพถ่ายหน้างานจริง*\n\n`;
       });
-      responseText += `💡 *คำแนะนำ*: อาจารย์สามารถไปที่แท็บ **"ตู้ลิ้นชักหลักฐาน"** แล้วคลิกปุ่ม **"แนบรูปถ่าย"** หรือใช้รูปตัวอย่างกิจกรรม 1-Click เพื่อเตรียมเอกสารได้ทันทีครับ`;
+      responseText += `💡 *คำแนะนำ*: อาจารย์สามารถไปที่แท็บ **"ตู้ลิ้นชักหลักฐาน"** แล้วคลิกปุ่ม **"แนบรูปถ่าย"** เพื่อแนบภาพกิจกรรมได้ทันทีครับ`;
 
       return {
         text: responseText,
@@ -114,11 +151,154 @@ export default function NohranChatbot({
       };
     }
 
-    // 2. Date Range Query (e.g. 1 ม.ค. 67 – 25 มิ.ย. 67, หรือ ปี 2567)
+    // -------------------------------------------------------------
+    // 2. Intelligent Thai Date & Calendar Lookup (เช่น "12 สิงหาคม", "12 ส.ค.", "วันแม่")
+    // -------------------------------------------------------------
+    let detectedMonth = null;
+    let detectedDay = null;
+
+    // ตรวจหาวันสำคัญพิเศษ
+    if (q.includes('วันแม่') || q.includes('เฉลิมพระชนมพรรษา 12 สิงหา') || q.includes('12 สิงหา')) {
+      detectedDay = 12;
+      detectedMonth = THAI_MONTHS.find(m => m.idx === 8);
+    } else if (q.includes('วันพ่อ')) {
+      detectedDay = 5;
+      detectedMonth = THAI_MONTHS.find(m => m.idx === 12);
+    } else {
+      // ตรวจหาเดือนภาษาไทย
+      for (const m of THAI_MONTHS) {
+        if (q.includes(m.full) || q.includes(m.short) || q.includes(m.alt)) {
+          detectedMonth = m;
+          break;
+        }
+      }
+
+      // ตรวจหาวันที่ (ตัวเลข 1-31)
+      const dayMatch = q.match(/(?:วันที่\s*|วัน\s*|^|\s)([0-9]{1,2})(?:\s|[\/.-]|$)/);
+      if (dayMatch) {
+        const d = parseInt(dayMatch[1], 10);
+        if (d >= 1 && d <= 31) {
+          detectedDay = d;
+        }
+      }
+    }
+
+    // หากพบวันที่หรือเดือนในการค้นหา
+    if (detectedMonth || detectedDay) {
+      const matches = targetOrders.filter(o => {
+        const textToSearch = [
+          o.fullDescription || '',
+          o.location || '',
+          o.eventDateDisplay || '',
+          o.eventDate || '',
+          o.signDate || '',
+          o.title || ''
+        ].join(' ').toLowerCase();
+
+        // ตรวจสอบความสอดคล้องของวันและเดือนด้วย Regular Expression ที่แม่นยำ
+        if (detectedDay && detectedMonth) {
+          const dayStr = String(detectedDay);
+          const dayPad = dayStr.padStart(2, '0');
+          const mNames = `${detectedMonth.full}|${detectedMonth.short}|${detectedMonth.alt}`;
+          const regexExact = new RegExp(`(วันที่\\s*0?${dayStr}\\b|\\b0?${dayStr}\\s*(${mNames})|-${detectedMonth.iso}-${dayPad})`, 'i');
+          return regexExact.test(textToSearch);
+        }
+
+        if (detectedDay) {
+          const dayStr = String(detectedDay);
+          const dayPad = dayStr.padStart(2, '0');
+          const regexDay = new RegExp(`(วันที่\\s*0?${dayStr}\\b|-(?:[0-9]{2})-${dayPad}\\b)`, 'i');
+          return regexDay.test(textToSearch);
+        }
+
+        if (detectedMonth) {
+          const mNames = `${detectedMonth.full}|${detectedMonth.short}|${detectedMonth.alt}`;
+          const regexMonth = new RegExp(`(${mNames}|-${detectedMonth.iso}-)`, 'i');
+          return regexMonth.test(textToSearch);
+        }
+
+        return false;
+      });
+
+      if (matches.length > 0) {
+        const dateDesc = detectedDay && detectedMonth 
+          ? `วันที่ ${detectedDay} ${detectedMonth.full}` 
+          : (detectedMonth ? `เดือน${detectedMonth.full}` : `วันที่ ${detectedDay}`);
+
+        let responseText = `📅 **โนห์รันสืบค้นพบคำสั่งภาระงานที่ตรงกับ "${dateDesc}" ทั้งหมด ${matches.length} รายการครับ:**\n\n`;
+        
+        matches.forEach((ord, idx) => {
+          const hasPhotos = ord.actualPhotos && ord.actualPhotos.length > 0;
+          const photoStatus = hasPhotos ? `🟢 มีรูปหลักฐานแล้ว (${ord.actualPhotos.length} รูป)` : `⚠️ ❌ ยังไม่มีรูปถ่ายหน้างาน`;
+          const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
+          
+          responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
+          if (ord.fullDescription && ord.fullDescription !== ord.title) {
+            responseText += `• *รายละเอียด*: ${ord.fullDescription.slice(0, 150)}...\n`;
+          }
+          responseText += `• 🗓️ **กำหนดการ**: ${displayDate} (${ord.eventTime || '08:30 - 16:30 น.'})\n`;
+          if (ord.location) {
+            responseText += `• 📍 **สถานที่**: ${ord.location.slice(0, 100)}\n`;
+          }
+          responseText += `• 💼 **หมวดภาระงาน**: ${ord.category} | ${photoStatus}\n\n`;
+        });
+
+        return {
+          text: responseText,
+          actions: [
+            { label: 'ดูรายละเอียดในตู้ลิ้นชัก', tab: 'drawer', icon: 'Layers' },
+            { label: 'เปิดปฏิทินภาระงาน', tab: 'calendar', icon: 'Calendar' }
+          ]
+        };
+      } else if (detectedMonth) {
+        // หากหาวันเจาะจงไม่พบ แต่ระบุเดือน ให้แสดงงานทั้งหมดในเดือนนั้นเพื่อช่วยอาจารย์
+        const monthOnlyMatches = targetOrders.filter(o => {
+          const textToSearch = [
+            o.fullDescription || '',
+            o.location || '',
+            o.eventDateDisplay || '',
+            o.eventDate || '',
+            o.signDate || '',
+            o.title || ''
+          ].join(' ').toLowerCase();
+
+          return textToSearch.includes(detectedMonth.full) || 
+                 textToSearch.includes(detectedMonth.short) || 
+                 textToSearch.includes(detectedMonth.alt) ||
+                 (o.eventDate && o.eventDate.includes(`-${detectedMonth.iso}-`));
+        });
+
+        if (monthOnlyMatches.length > 0) {
+          let responseText = `📅 **ในวันที่ ${detectedDay || ''} ${detectedMonth.full} ไม่พบคำสั่งภาระงานที่ระบุกำหนดจัดในวันดังกล่าวโดยตรงครับ**\n\n`;
+          responseText += `อย่างไรก็ตาม ในช่วง**เดือน${detectedMonth.full}** ท่านอาจารย์มีภาระงานที่เกี่ยวข้องทั้งหมด **${monthOnlyMatches.length} รายการ** ดังนี้ครับ:\n\n`;
+          
+          monthOnlyMatches.slice(0, 5).forEach((ord, idx) => {
+            const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
+            responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
+            responseText += `• วันที่: ${displayDate} | หมวด: ${ord.category}\n\n`;
+          });
+
+          if (monthOnlyMatches.length > 5) {
+            responseText += `*(และยังมีคำสั่งอื่นในเดือน${detectedMonth.full}อีก ${monthOnlyMatches.length - 5} รายการในตู้ลิ้นชัก)*\n`;
+          }
+
+          return {
+            text: responseText,
+            actions: [
+              { label: `เปิดดูงานเดือน${detectedMonth.short}ในตู้ลิ้นชัก`, tab: 'drawer', icon: 'Layers' }
+            ]
+          };
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 3. Date Range 2567 / Testing Period
+    // -------------------------------------------------------------
     if (q.includes('67') || q.includes('2567') || (q.includes('ช่วง') && (q.includes('ม.ค') || q.includes('มิ.ย')))) {
-      const orders2567 = facultyOrders.filter(o => {
-        const d = o.eventDate || o.signDate;
-        return d && d.startsWith('2024');
+      const orders2567 = targetOrders.filter(o => {
+        const d = o.eventDate || o.signDate || '';
+        return d.startsWith('2024') || (o.eventDateDisplay && o.eventDateDisplay.includes('2567'));
       });
 
       let responseText = `📅 **รายงานคำสั่งและภาระงานในช่วงปี 2567 (1 ม.ค. 67 – 25 มิ.ย. 67)**\n\n`;
@@ -126,13 +306,11 @@ export default function NohranChatbot({
 
       orders2567.forEach((ord, i) => {
         const hasPhotos = ord.actualPhotos && ord.actualPhotos.length > 0;
-        const photoStatus = hasPhotos ? `🟢 มีรูปหลักฐาน (${ord.actualPhotos.length} รูป)` : `🟠 ยังไม่มีรูป`;
-        responseText += `**${i + 1}. ${ord.orderNumber}**: ${ord.title}\n`;
-        responseText += `• วันที่ปฏิบัติงาน: ${ord.eventDate || ord.signDate} | ${photoStatus}\n`;
-        responseText += `• ภาระงาน: ${ord.category}\n\n`;
+        const photoStatus = hasPhotos ? `🟢 มีรูปหลักฐาน (${ord.actualPhotos.length} รูป)` : `⚠️ ยังไม่มีรูป`;
+        responseText += `**${i + 1}. [${ord.orderNumber}]**: ${ord.title}\n`;
+        responseText += `• วันที่: ${ord.eventDate || ord.signDate} | ${photoStatus}\n`;
+        responseText += `• หมวด: ${ord.category}\n\n`;
       });
-
-      responseText += `📊 *อาจารย์สามารถกดปุ่มลัด **"ช่วงทดสอบ (1 ม.ค. 67 – 25 มิ.ย. 67)"** ในตู้ลิ้นชัก หรือกดพิมพ์ **"ใบสรุปแฟ้มหลักฐาน (Dossier)"** ออกมาเป็นแบบรายงานทางการได้ทันทีครับ*`;
 
       return {
         text: responseText,
@@ -142,29 +320,36 @@ export default function NohranChatbot({
       };
     }
 
-    // 3. Workload Categories Breakdown (ก.พอ. 1-6)
-    if (q.includes('กพอ') || q.includes('ก.พอ') || q.includes('หมวดหมู่') || q.includes('เกณฑ์')) {
+    // -------------------------------------------------------------
+    // 4. Workload Categories Breakdown (ก.พอ. 1-6)
+    // -------------------------------------------------------------
+    if (q.includes('กพอ') || q.includes('ก.พอ') || q.includes('หมวดหมู่') || q.includes('เกณฑ์') || q.includes('ชั่วโมง')) {
       let responseText = `📊 **สรุปการจำแนกภาระงานตามเกณฑ์ ก.พอ. ของ มรภ.นครสวรรค์:**\n\n`;
       
       const catCount = {};
+      let totalHours = 0;
       WORKLOAD_CATEGORIES.forEach(c => {
-        if (c.id !== 'all') catCount[c.name] = 0;
+        if (c.id !== 'all') catCount[c.name] = { count: 0, hours: 0 };
       });
 
-      facultyOrders.forEach(o => {
-        if (catCount[o.category] !== undefined) {
-          catCount[o.category]++;
-        } else {
-          catCount[o.category] = 1;
+      targetOrders.forEach(o => {
+        const cat = o.category || 'อื่นๆ';
+        const hrs = Number(o.workloadHours || o.score || 3);
+        totalHours += hrs;
+        if (!catCount[cat]) catCount[cat] = { count: 0, hours: 0 };
+        catCount[cat].count++;
+        catCount[cat].hours += hrs;
+      });
+
+      Object.entries(catCount).forEach(([catName, data]) => {
+        if (data.count > 0) {
+          const bar = '█'.repeat(Math.min(8, Math.max(1, data.count))) + '░'.repeat(Math.max(0, 8 - data.count));
+          responseText += `• **${catName}**: **${data.count}** คำสั่ง (${data.hours} ชม.) \`${bar}\`\n`;
         }
       });
 
-      Object.entries(catCount).forEach(([catName, count]) => {
-        const bar = '█'.repeat(Math.max(1, count * 2)) + '░'.repeat(Math.max(0, 8 - count * 2));
-        responseText += `• **${catName}**: **${count}** คำสั่ง \`${bar}\`\n`;
-      });
-
-      responseText += `\n✨ **ข้อสังเกตจากโนห์รัน**: งานด้าน *บริการวิชาการแก่สังคม (กพอ.3)* และ *บริหาร/กรรมการ (กพอ.5)* มีสัดส่วนสูงสุดในรอบนี้ เหมาะสมที่จะนำไปจัดกลุ่มเป็นไฮไลต์ผลงานเด่นประจำปีครับ`;
+      responseText += `\n🎯 **ภาระงานรวมทั้งสิ้น**: **${totalHours} ชั่วโมง ก.พอ.** จาก ${targetOrders.length} คำสั่ง\n`;
+      responseText += `✨ *โนห์รันแนะนำให้อาจารย์ตรวจสอบสัดส่วนชั่วโมงให้ครบตามเกณฑ์ขั้นต่ำ 18 ชั่วโมง/สัปดาห์ สำหรับรอบการประเมินนี้ครับ*`;
 
       return {
         text: responseText,
@@ -175,23 +360,15 @@ export default function NohranChatbot({
       };
     }
 
-    // 4. Overall Summary (สรุปภาพรวม)
+    // -------------------------------------------------------------
+    // 5. Overall Summary (สรุปภาพรวม)
+    // -------------------------------------------------------------
     if (q.includes('สรุป') || q.includes('ภาพรวม') || q.includes('สถานะ') || q.includes('กี่งาน')) {
-      const total = facultyOrders.length;
-      const completed = facultyOrders.filter(o => o.status === 'done').length;
-      const upcoming = facultyOrders.filter(o => o.status === 'upcoming').length;
-      const withPhotos = facultyOrders.filter(o => o.actualPhotos && o.actualPhotos.length > 0).length;
+      const total = targetOrders.length;
+      const completed = targetOrders.filter(o => o.status === 'done').length;
+      const upcoming = targetOrders.filter(o => o.status !== 'done').length;
+      const withPhotos = targetOrders.filter(o => o.actualPhotos && o.actualPhotos.length > 0).length;
       const pctPhotos = total > 0 ? Math.round((withPhotos / total) * 100) : 0;
-
-      if (total === 0) {
-        return {
-          text: `📋 **รายงานตู้ลิ้นชักของ ${activeFaculty?.name || 'อาจารย์'}:**\n\nขณะนี้ในตู้ลิ้นชักของอาจารย์ยังไม่มีคำสั่งที่ได้รับมอบหมายโดยตรงครับ ${orders && orders.length > 0 ? `แต่ตรวจพบคำสั่งรวมในระบบคลาวด์ทั้งหมด **${orders.length} ฉบับ** จากอาจารย์ท่านอื่นในคณะครับ` : ''}\n\nอาจารย์สามารถ:\n1. กดเปิดตู้ลิ้นชักเพื่อสลับดูคำสั่งรวมทุกท่าน\n2. นำเข้าคำสั่งใหม่ผ่านระบบ AI Ingestion\n3. จำลองส่งคำสั่งเข้าตู้ 1 รายการเพื่อเริ่มทดสอบ`,
-          actions: [
-            { label: 'เปิดตู้ลิ้นชักหลักฐาน', tab: 'drawer', icon: 'Layers' },
-            { label: 'นำเข้าคำสั่งใหม่ (AI OCR)', tab: 'ingestion', icon: 'Sparkles' }
-          ]
-        };
-      }
 
       let responseText = `📋 **สรุปภาพรวมภาระงานของ ${activeFaculty?.name || 'อาจารย์'}:**\n\n`;
       responseText += `• 📂 **จำนวนคำสั่งทั้งหมดในระบบ**: **${total}** รายการ\n`;
@@ -214,9 +391,11 @@ export default function NohranChatbot({
       };
     }
 
-    // 5. Memo Drafting (ร่างบันทึกข้อความ)
+    // -------------------------------------------------------------
+    // 6. Memo Drafting (ร่างบันทึกข้อความราชการ)
+    // -------------------------------------------------------------
     if (q.includes('ร่าง') || q.includes('บันทึกข้อความ') || q.includes('ส่งงาน') || q.includes('หนังสือ')) {
-      const firstOrder = facultyOrders[0] || (orders && orders[0]);
+      const firstOrder = targetOrders[0] || (orders && orders[0]);
       const memoText = `บันทึกข้อความ
 ส่วนราชการ: สาขาวิชาเทคโนโลยีสารสนเทศ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏนครสวรรค์
 ที่: อว 0625.05/พิเศษ
@@ -225,7 +404,7 @@ export default function NohranChatbot({
 
 เรียน: คณบดีคณะวิทยาการจัดการ
 
-ตามที่ มหาวิทยาลัยราชภัฏนครสวรรค์ ได้มีคำสั่งที่ ${firstOrder?.orderNumber || 'มรภ.นว. 0895/2569'} เรื่อง "${firstOrder?.title || 'แต่งตั้งคณะกรรมการจัดกิจกรรมโครงการบริการวิชาการ'}" นั้น
+ตามที่ มหาวิทยาลัยราชภัฏนครสวรรค์ ได้มีคำสั่งที่ ${firstOrder?.orderNumber || 'มรภ.นว. 1001/2569'} เรื่อง "${firstOrder?.title || 'ปฏิบัติหน้าที่ราชการตามภาระงาน'}" นั้น
 
 ในการนี้ ข้าพเจ้า (${activeFaculty?.name || 'อาจารย์ผู้รับผิดชอบ'}) ได้ปฏิบัติหน้าที่ดังกล่าวเสร็จสิ้นเรียบร้อยแล้ว จึงขอส่งแบบรายงานผลการปฏิบัติงาน พร้อมแนบรูปถ่ายหลักฐานหน้างานและแบบสรุปภาระงาน (Dossier Summary) ดังเอกสารที่แนบมาพร้อมนี้
 
@@ -240,34 +419,71 @@ export default function NohranChatbot({
       };
     }
 
-    // 6. Keyword Search across Orders (เช่น AI, ชุมชน, สัมมนา)
-    const searchTarget = facultyOrders.length > 0 ? facultyOrders : orders;
-    const matchedOrders = searchTarget.filter(o => 
-      (o.title || '').toLowerCase().includes(q) ||
-      (o.orderNumber || '').toLowerCase().includes(q) ||
-      (o.category || '').toLowerCase().includes(q) ||
-      (o.location && o.location.toLowerCase().includes(q))
-    );
+    // -------------------------------------------------------------
+    // 7. Smart Keyword Token Match (สืบค้นด้วยคีย์เวิร์ด ตัด Stopwords ภาษาไทย)
+    // -------------------------------------------------------------
+    const thaiStopwords = ['หางาน', 'ช่วยหา', 'ค้นหา', 'ค้น', 'หา', 'มีงานอะไรบ้าง', 'มีอะไรบ้าง', 'ให้หน่อย', 'ช่วยดู', 'หน่อย', 'งาน', 'วันที่', 'วัน', 'ของ', 'ใน', 'ที่', 'ครับ', 'ค่ะ', 'คะ', 'นะ', 'อยากได้'];
+    let cleanQuery = q;
+    thaiStopwords.forEach(sw => {
+      cleanQuery = cleanQuery.replaceAll(sw, ' ');
+    });
+    const queryTokens = cleanQuery.split(/\s+/).map(t => t.trim()).filter(t => t.length >= 2);
 
-    if (matchedOrders.length > 0) {
-      let responseText = `🔍 **พบข้อมูลที่ตรงกับคำค้นหา "${query}" ทั้งหมด ${matchedOrders.length} รายการครับ:**\n\n`;
-      matchedOrders.slice(0, 5).forEach((ord, idx) => {
-        responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
-        responseText += `• หมวด: ${ord.category} | วันที่: ${ord.eventDate || ord.signDate}\n\n`;
-      });
+    if (queryTokens.length > 0) {
+      const scoredOrders = targetOrders.map(ord => {
+        let score = 0;
+        const fullText = [
+          ord.orderNumber || '',
+          ord.title || '',
+          ord.fullDescription || '',
+          ord.location || '',
+          ord.category || '',
+          ord.eventDateDisplay || '',
+          (ord.facultyAssigned || []).map(f => `${f.name} ${f.roleInOrder}`).join(' ')
+        ].join(' ').toLowerCase();
 
-      return {
-        text: responseText,
-        actions: [
-          { label: 'ดูในตู้ลิ้นชัก', tab: 'drawer', icon: 'Layers' }
-        ]
-      };
+        queryTokens.forEach(token => {
+          if (fullText.includes(token)) {
+            score += token.length >= 4 ? 3 : 1;
+            if ((ord.title || '').toLowerCase().includes(token)) score += 2;
+            if ((ord.orderNumber || '').toLowerCase().includes(token)) score += 3;
+          }
+        });
+
+        return { order: ord, score };
+      }).filter(item => item.score > 0);
+
+      scoredOrders.sort((a, b) => b.score - a.score);
+
+      if (scoredOrders.length > 0) {
+        let responseText = `🔍 **โนห์รันพบข้อมูลที่เกี่ยวข้องกับ "${rawQ}" ทั้งหมด ${scoredOrders.length} รายการครับ:**\n\n`;
+        scoredOrders.slice(0, 5).forEach((item, idx) => {
+          const ord = item.order;
+          const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
+          responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
+          responseText += `• 🗓️ วันที่: ${displayDate} | 💼 หมวด: ${ord.category}\n`;
+          if (ord.location) {
+            responseText += `• 📍 สถานที่: ${ord.location.slice(0, 90)}\n`;
+          }
+          responseText += `\n`;
+        });
+
+        return {
+          text: responseText,
+          actions: [
+            { label: 'ดูในตู้ลิ้นชักหลักฐาน', tab: 'drawer', icon: 'Layers' }
+          ]
+        };
+      }
     }
 
+    // -------------------------------------------------------------
     // Fallback response with helpful guide
+    // -------------------------------------------------------------
     return {
-      text: `🔮 **โนห์รันตรวจสอบข้อมูลในระบบ UniWorkload AI ให้แล้วครับ:**\n\nคำถาม: *"${query}"*\n\nในระบบขณะนี้มีข้อมูลคำสั่งภาระงานของอาจารย์จำนวน **${facultyOrders.length} รายการ** อาจารย์สามารถสั่งให้ผมทำสิ่งเหล่านี้ได้ครับ:\n\n1. **"มีคำสั่งไหนยังขาดรูปหลักฐาน?"** — ตรวจหาแฟ้มงานที่ยังไม่ได้แนบรูปถ่าย\n2. **"สรุปภาพรวมภาระงาน"** — แจกแจงจำนวนงาน เสร็จสิ้น และรอดำเนินการ\n3. **"ค้นหางานช่วง 1 ม.ค. 67 – 25 มิ.ย. 67"** — กรองเฉพาะช่วงเวลาที่ต้องการ\n4. **"แจกแจงเกณฑ์ ก.พอ. 1-6"** — ดูสถิติการสอน วิจัย บริการวิชาการ และศิลปวัฒนธรรม\n5. **"ร่างบันทึกข้อความ"** — สร้างร่างหนังสือส่งงานทางการ มรภ.นว.`,
+      text: `🔮 **โนห์รันตรวจสอบข้อมูลในระบบ UniWorkload AI ให้แล้วครับ:**\n\nคำถาม: *"${rawQ}"*\n\nไม่พบข้อมูลคำสั่งที่ตรงกับเงื่อนไขข้างต้นโดยตรงครับ ในตู้ลิ้นชักของอาจารย์ขณะนี้มีข้อมูลคำสั่งภาระงาน **${targetOrders.length} รายการ** อาจารย์สามารถสั่งให้ผมทำสิ่งเหล่านี้ได้ครับ:\n\n1. **"หางานวันที่ 12 สิงหาคม"** — ค้นหาภาระงานตามวันและเดือนจัดกิจกรรมจริง\n2. **"มีคำสั่งไหนยังขาดรูปหลักฐาน?"** — ตรวจหาแฟ้มงานที่ยังไม่ได้แนบรูปถ่าย\n3. **"สรุปภาพรวมภาระงาน"** — แจกแจงจำนวนงาน เสร็จสิ้น และรอดำเนินการ\n4. **"แจกแจงเกณฑ์ ก.พอ. 1-6"** — ดูสถิติการสอน วิจัย บริการวิชาการ และศิลปวัฒนธรรม\n5. **"ร่างบันทึกข้อความ"** — สร้างร่างหนังสือส่งงานทางการ มรภ.นว.`,
       suggestions: [
+        'หางานวันที่ 12 สิงหาคม',
         'มีคำสั่งไหนยังขาดรูปถ่ายหลักฐาน?',
         'สรุปภาพรวมภาระงานของฉัน',
         'แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6'
@@ -298,32 +514,44 @@ export default function NohranChatbot({
         const geminiReply = await askGeminiCopilot({
           prompt: text,
           activeFaculty,
+          facultyList,
+          currentUser,
           orders,
           chatHistory: messages
         });
 
-        const botMsg = {
-          id: `msg-${Date.now() + 1}`,
-          sender: 'bot',
-          text: geminiReply,
-          engine: 'gemini',
-          timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botMsg]);
-        setIsTyping(false);
-        return;
+        if (geminiReply && geminiReply.trim()) {
+          const botMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'bot',
+            text: geminiReply,
+            engine: 'gemini',
+            model: currentSettings.model || 'gemini-2.5-flash',
+            timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, botMsg]);
+          setIsTyping(false);
+          return;
+        }
       } catch (err) {
         console.warn('Gemini copilot unavailable, falling back to local engine:', err);
       }
     }
 
-    // Local heuristic fallback
+    // Local heuristic fallback with intelligent responses
     setTimeout(() => {
       const botResponse = generateBotResponse(text);
+      const isFallback = activeEngine === AI_MODES.GEMINI;
+
+      let finalText = botResponse.text;
+      if (isFallback) {
+        finalText += `\n\n*(💡 กำลังตอบด้วย Local Intelligence Engine: สามารถกดไอคอน ⚙️ ด้านบนเพื่อตั้งค่า Gemini API Key สำหรับการวิเคราะห์ภาษาขั้นสูง)*`;
+      }
+
       const botMsg = {
         id: `msg-${Date.now() + 1}`,
         sender: 'bot',
-        text: botResponse.text,
+        text: finalText,
         actions: botResponse.actions,
         suggestions: botResponse.suggestions,
         copyable: botResponse.copyable,
@@ -332,7 +560,7 @@ export default function NohranChatbot({
       };
       setMessages(prev => [...prev, botMsg]);
       setIsTyping(false);
-    }, 450);
+    }, 350);
   };
 
   const handleResetChat = () => {
@@ -373,10 +601,10 @@ export default function NohranChatbot({
       {/* Main Chatbot Window */}
       {isOpen && (
         <div
-          className={`fixed z-50 transition-all duration-300 ease-in-out flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden font-sans ${
+          className={`fixed z-50 transition-all duration-300 flex flex-col bg-white shadow-2xl border border-slate-200 overflow-hidden ${
             isExpanded
-              ? 'inset-4 md:inset-10'
-              : 'bottom-4 right-4 w-[92vw] sm:w-[420px] h-[580px] max-h-[88vh]'
+              ? 'inset-4 md:inset-10 rounded-3xl'
+              : 'bottom-6 right-6 w-[92vw] sm:w-[460px] h-[640px] max-h-[88vh] rounded-3xl'
           }`}
         >
           {/* Header */}
@@ -401,6 +629,13 @@ export default function NohranChatbot({
             </div>
 
             <div className="flex items-center gap-1 text-slate-400">
+              <button
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="p-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                title="ตั้งค่า AI Engine & โมเดล Gemini"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
               <button
                 onClick={handleResetChat}
                 className="p-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
@@ -430,26 +665,21 @@ export default function NohranChatbot({
             <div className="flex items-center gap-2 truncate">
               <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
               <span className="truncate">
-                ข้อมูล: <strong>{activeFaculty?.name}</strong> ({facultyOrders.length} คำสั่ง)
+                ข้อมูล: <strong>{activeFaculty?.name}</strong> ({targetOrders.length} คำสั่ง)
               </span>
             </div>
             
             <button
-              onClick={() => {
-                const nextMode = aiMode === AI_MODES.GEMINI ? AI_MODES.LOCAL : AI_MODES.GEMINI;
-                setAiMode(nextMode);
-                saveAiSettings({ mode: nextMode });
-                if (onNotify) onNotify(`สลับโหมด AI เป็น: ${nextMode === AI_MODES.GEMINI ? '⚡ Gemini 3.6 Flash' : '🛡️ Local Rule'}`, 'info');
-              }}
-              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono cursor-pointer transition-all border shrink-0 ${
+              onClick={() => setIsSettingsModalOpen(true)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono cursor-pointer transition-all border shrink-0 ${
                 aiMode === AI_MODES.GEMINI 
                   ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' 
                   : 'bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300'
               }`}
-              title="คลิกเพื่อสลับระหว่างโหมด Gemini Flash และ Local Heuristic"
+              title="คลิกเพื่อตั้งค่า AI Engine หรือสลับโมเดล"
             >
               <span className={`w-1.5 h-1.5 rounded-full ${aiMode === AI_MODES.GEMINI ? 'bg-indigo-600 animate-pulse' : 'bg-slate-500'}`} />
-              <span>{aiMode === AI_MODES.GEMINI ? '⚡ Gemini Flash' : '🛡️ Local Rule'}</span>
+              <span>{aiMode === AI_MODES.GEMINI ? `⚡ ${aiSettings.model || 'Gemini 2.5 Flash'}` : '🛡️ Local Rule'}</span>
             </button>
           </div>
 
@@ -464,10 +694,19 @@ export default function NohranChatbot({
                   <span>{msg.sender === 'user' ? 'ท่านอาจารย์' : '🔮 โนห์รัน'}</span>
                   <span>•</span>
                   <span>{msg.timestamp}</span>
+                  {msg.engine && (
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                      msg.engine === 'gemini' 
+                        ? 'bg-indigo-100 text-indigo-700' 
+                        : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {msg.engine === 'gemini' ? (msg.model || 'Gemini 2.5') : 'Local'}
+                    </span>
+                  )}
                 </div>
 
                 <div
-                  className={`max-w-[90%] sm:max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed shadow-xs ${
+                  className={`max-w-[92%] sm:max-w-[88%] rounded-2xl p-3.5 text-xs leading-relaxed shadow-xs ${
                     msg.sender === 'user'
                       ? 'bg-blue-600 text-white rounded-tr-xs'
                       : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-slate-200/50'
@@ -567,6 +806,12 @@ export default function NohranChatbot({
           {/* Quick Prompts Carousel */}
           <div className="px-3 py-2 bg-white border-t border-slate-200/80 overflow-x-auto no-scrollbar flex gap-1.5">
             <button
+              onClick={() => handleSendMessage('หางานวันที่ 12 สิงหาคม')}
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-all cursor-pointer flex items-center gap-1"
+            >
+              <span>🗓️ 12 สิงหาคม</span>
+            </button>
+            <button
               onClick={() => handleSendMessage('สรุปภาพรวมภาระงานของฉัน')}
               className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
             >
@@ -577,12 +822,6 @@ export default function NohranChatbot({
               className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer flex items-center gap-1"
             >
               <span>⚠️ ขาดรูปหลักฐาน</span>
-            </button>
-            <button
-              onClick={() => handleSendMessage('ค้นหางานช่วง 1 ม.ค. 67 – 25 มิ.ย. 67')}
-              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all cursor-pointer flex items-center gap-1"
-            >
-              <span>🗓️ ช่วงปี 2567</span>
             </button>
             <button
               onClick={() => handleSendMessage('แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6')}
@@ -610,7 +849,7 @@ export default function NohranChatbot({
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="พิมพ์คำถาม หรือค้นหาคำสั่งภาระงาน..."
+              placeholder="พิมพ์คำถาม เช่น หางานวันที่ 12 สิงหาคม, ขาดรูปงานไหน..."
               className="flex-1 bg-slate-100 text-slate-800 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400"
             />
             <button
@@ -623,6 +862,17 @@ export default function NohranChatbot({
           </form>
         </div>
       )}
+
+      {/* Reusable AI Settings Modal */}
+      <AiSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        onNotify={onNotify}
+        onSaved={(newCfg) => {
+          setAiSettings(newCfg);
+          setAiMode(newCfg.mode);
+        }}
+      />
     </>
   );
 }

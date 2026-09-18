@@ -39,10 +39,12 @@ import {
   saveAiSettings, 
   checkGeminiStatus, 
   parseOfficialOrderWithGemini, 
-  AI_MODES 
+  AI_MODES,
+  SUPPORTED_MODELS
 } from '../utils/geminiClient';
 import { DEMO_RAW_ORDERS, WORKLOAD_CATEGORIES, FACULTY_MEMBERS, REAL_OFFICIAL_DOCUMENTS } from '../data/mockData';
 import { parseGoogleDriveUrl, createGoogleDriveEvidenceItem, isGoogleDriveUrl, GDRIVE_SHARING_INSTRUCTION } from '../utils/googleDriveUtils';
+import AiSettingsModal from './AiSettingsModal';
 
 export default function IngestionModule({ 
   onAddNewOrder, 
@@ -1782,178 +1784,16 @@ export default function IngestionModule({
       )}
 
       {/* AI Configuration Modal */}
-      {isSettingsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    ตั้งค่า AI Engine (Gemini & Local)
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    กำหนดการทำงานของ AI สกัดคำสั่งและภาระงาน กพอ. บนเครื่องนี้
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSettingsModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 space-y-4 overflow-y-auto text-xs">
-              {/* Engine Mode Selection */}
-              <div className="space-y-2">
-                <label className="font-semibold text-slate-700 block text-xs">
-                  เลือกโหมดการทำงาน:
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAiSettings(prev => ({ ...prev, mode: AI_MODES.GEMINI }));
-                      handleSwitchAiMode(AI_MODES.GEMINI);
-                    }}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      aiSettings.mode === AI_MODES.GEMINI
-                        ? 'border-blue-500 bg-blue-50/60 text-blue-900 ring-2 ring-blue-100 font-semibold'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Zap className="w-4 h-4 text-blue-600" />
-                      <span className="text-xs font-bold">Google Gemini Flash</span>
-                    </div>
-                    <p className="text-[10.5px] text-slate-500 font-normal leading-relaxed">
-                      สกัดคำสั่งภาษาไทย แก้คำผิด และจัดหมวด กพอ. แม่นยำสูงสุด
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAiSettings(prev => ({ ...prev, mode: AI_MODES.LOCAL }));
-                      handleSwitchAiMode(AI_MODES.LOCAL);
-                    }}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      aiSettings.mode === AI_MODES.LOCAL
-                        ? 'border-blue-500 bg-blue-50/60 text-blue-900 ring-2 ring-blue-100 font-semibold'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Server className="w-4 h-4 text-slate-600" />
-                      <span className="text-xs font-bold">Local Engine</span>
-                    </div>
-                    <p className="text-[10.5px] text-slate-500 font-normal leading-relaxed">
-                      ทำงานในเครื่อง 100% ไม่ต้องต่อเน็ต และไม่จำเป็นต้องมี API Key
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {/* Google Gemini API Key Section */}
-              {aiSettings.mode === AI_MODES.GEMINI && (
-                <div className="space-y-3 pt-2 border-t border-slate-100">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="font-semibold text-slate-700 flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Google Gemini API Key</span>
-                      </label>
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 underline"
-                      >
-                        <span>รับฟรีที่ Google AI Studio</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                    <input
-                      type="password"
-                      value={aiSettings.apiKey || ''}
-                      onChange={(e) => setAiSettings(prev => ({ ...prev, apiKey: e.target.value.trim() }))}
-                      placeholder="วาง API Key เช่น AIzaSy..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden"
-                    />
-                    <p className="text-[10.5px] text-slate-500 leading-relaxed">
-                      💡 คีย์จะถูกจัดเก็บใน LocalStorage บนเครื่องนี้อย่างปลอดภัย ไม่ถูกส่งไปยังบุคคลที่สาม สามารถใช้งานได้ฟรี 15 คำขอ/นาที
-                    </p>
-                  </div>
-
-                  {/* Model Selector */}
-                  <div className="space-y-1.5">
-                    <label className="font-semibold text-slate-700 block text-xs">
-                      เวอร์ชันโมเดล Gemini Flash:
-                    </label>
-                    <select
-                      value={aiSettings.model || 'gemini-1.5-flash'}
-                      onChange={(e) => setAiSettings(prev => ({ ...prev, model: e.target.value }))}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-blue-500 outline-hidden"
-                    >
-                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (เสถียร รวดเร็ว — แนะนำ)</option>
-                      <option value="gemini-2.0-flash">Gemini 2.0 Flash (โมเดลเวอร์ชันใหม่)</option>
-                      <option value="gemini-2.5-flash">Gemini 2.5 Flash (ฉลาดวิเคราะห์ลึก)</option>
-                    </select>
-                  </div>
-
-                  {/* Connection Test Box */}
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-700">สถานะการเชื่อมต่อ:</span>
-                      <button
-                        type="button"
-                        onClick={checkConnection}
-                        disabled={isTestingConn}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-[11px] transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-3 h-3 ${isTestingConn ? 'animate-spin' : ''}`} />
-                        <span>{isTestingConn ? 'กำลังทดสอบ...' : 'ทดสอบการเชื่อมต่อ'}</span>
-                      </button>
-                    </div>
-                    <div className="text-[11px] flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${connectionStatus.online ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                      <span className={connectionStatus.online ? 'text-emerald-700 font-medium' : 'text-slate-600'}>
-                        {connectionStatus.message || (connectionStatus.online ? 'เชื่อมต่อ Gemini สำเร็จ พร้อมใช้งาน' : 'ยังไม่ได้ระบุ API Key')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setIsSettingsModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                ปิด
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSettings}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer active:scale-95"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>บันทึกการตั้งค่า</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AiSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        onNotify={onNotify}
+        onSaved={(cfg) => {
+          setAiSettings(cfg);
+          setAiMode(cfg.mode);
+          checkConnection();
+        }}
+      />
     </div>
   );
 }
