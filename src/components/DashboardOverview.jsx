@@ -260,22 +260,22 @@ export default function DashboardOverview({
           <div className="mt-4 p-3.5 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200/70 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
-                <Smartphone className="w-4 h-4" />
+                <Calendar className="w-4 h-4" />
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-900">
-                  ซิงค์ปฏิทินงานเข้ามือถือ (iCal Feed)
+                  ซิงค์ Google Calendar (1-Click)
                 </h4>
                 <p className="text-[10px] text-slate-500">
-                  อัปเดตแจ้งเตือนลง Google Calendar / Apple Calendar อัตโนมัติ
+                  เพิ่มครั้งเดียว อัปเดตงานใหม่อัตโนมัติ (RFC 5545 Live Feed)
                 </p>
               </div>
             </div>
             <button
               onClick={onOpenIcal}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shrink-0 transition-colors shadow-xs cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shrink-0 transition-colors shadow-xs cursor-pointer"
             >
-              รับลิงก์ซิงค์
+              ซิงค์ 1-Click
             </button>
           </div>
         </div>

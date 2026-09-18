@@ -722,6 +722,7 @@ export default function App() {
                 onNotify={showToast}
                 onAddSampleOrder={handleAddSampleOrderForActiveFaculty}
                 onOpenAddFaculty={() => setIsAddFacultyOpen(true)}
+                onOpenIcal={() => setIsIcalOpen(true)}
               />
             </div>
           )}

@@ -5,6 +5,23 @@ export function getDirectDrawerUrl(orderId, facultyId = '', baseUrl = '') {
   return `${origin}/?tab=drawer&orderId=${orderId}${facultyId ? `&faculty=${facultyId}` : ''}`;
 }
 
+export function getWebcalUrl(facultyId = 'fac-1', baseUrl = '') {
+  const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://uniworkload-ai.vercel.app');
+  const cleanHost = origin.replace(/^https?:\/\//, '');
+  return `webcal://${cleanHost}/api/calendar/feed/${facultyId}.ics`;
+}
+
+export function getIcalHttpUrl(facultyId = 'fac-1', baseUrl = '') {
+  const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://uniworkload-ai.vercel.app');
+  return `${origin}/api/calendar/feed/${facultyId}.ics`;
+}
+
+export function getGoogleCalendarSubscribeUrl(facultyId = 'fac-1', baseUrl = '') {
+  const webcal = getWebcalUrl(facultyId, baseUrl);
+  return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`;
+}
+
+
 export function createGoogleCalendarUrl(ev, facultyId = '', baseUrl = '') {
   const directUrl = getDirectDrawerUrl(ev.id, facultyId, baseUrl);
   const startTimeStr = ev.eventTime ? ev.eventTime.split('-')[0].replace('น.', '').trim() : '09:00';

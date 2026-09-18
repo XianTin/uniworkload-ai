@@ -226,10 +226,11 @@ export default function DualCalendarModule({
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={onOpenIcal}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold text-xs shadow-md shadow-sky-500/20 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition-all cursor-pointer"
+              title="ซิงค์ปฏิทินเข้า Google Calendar / มือถือ (Auto-Sync 1-Click)"
             >
-              <Smartphone className="w-4 h-4" />
-              <span>ซิงค์เข้ามือถือ (iCal Feed)</span>
+              <CalendarIcon className="w-4 h-4 text-sky-200" />
+              <span>ซิงค์ Google Calendar (1-Click)</span>
             </button>
 
             {/* Faculty Scope Switcher (Only for Admin & Staff) */}

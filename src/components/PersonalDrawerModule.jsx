@@ -95,7 +95,8 @@ export default function PersonalDrawerModule({
   onJumpToEportfolio,
   onNotify,
   onAddSampleOrder,
-  onOpenAddFaculty
+  onOpenAddFaculty,
+  onOpenIcal
 }) {
   const allowViewAll = canViewAllFaculties(currentUser);
   const [searchTerm, setSearchTerm] = useState('');
@@ -351,6 +352,17 @@ export default function PersonalDrawerModule({
               >
                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                 <span className="hidden sm:inline">ล้างตู้ลิ้นชัก</span>
+              </button>
+            )}
+
+            {onOpenIcal && (
+              <button
+                onClick={onOpenIcal}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 text-blue-700 border border-blue-200/80 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                title="ซิงค์ปฏิทินภาระงานเข้า Google Calendar / มือถือ (Auto-Sync)"
+              >
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                <span>ซิงค์ Google Calendar (1-Click)</span>
               </button>
             )}
 
