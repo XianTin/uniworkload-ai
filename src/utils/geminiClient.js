@@ -496,14 +496,15 @@ export async function askGeminiCopilot({ prompt, activeFaculty, orders = [], fac
 - เลขที่คำสั่ง: ${o.orderNumber || 'รอระบุเลขที่คำสั่ง'}
 - เรื่อง: ${o.title}
 - หมวด ก.พอ.: ${o.category} [รหัส: ${o.categoryCode || 'admin'}] | ภาระงาน: ${o.workloadHours || o.score || 3} ชม.
-- วันที่สั่งการ: ${o.signDate || '-'} | วันที่จัดกิจกรรม: ${o.eventDate || o.signDate || '-'} ${o.eventEndDate ? `ถึง ${o.eventEndDate}` : ''}
+- กำหนดการจัดงาน: ${o.eventDateDisplay || o.eventDate || o.signDate || '-'} (ISO: ${o.eventDate || '-'}) ${o.eventEndDate ? `ถึง ${o.eventEndDate}` : ''}
+- วันที่สั่งการ (Sign Date): ${o.signDate || '-'}
 - เวลา/สถานที่: ${o.eventTime || 'ไม่ระบุเวลา'} ณ ${o.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์'}
 - บทบาท: ${myRole}
 - คณะกรรมการทั้งหมดในคำสั่ง: ${allColleagues || 'ปฏิบัติหน้าที่เดี่ยว'}
 - สถานะ: ${o.status === 'done' ? '✅ เสร็จสิ้นแล้ว' : '⏳ รอดำเนินการ/รอจัดกิจกรรม'}
 - รูปถ่ายหลักฐาน: ${hasPhotos ? `📸 แนบแล้ว (${photoCount} รูป)` : '⚠️ ❌ ยังไม่แนบภาพถ่ายหน้างานจริง'}
 - เอกสารแนบ: ${files || 'เอกสารคำสั่ง.pdf'}
-- รายละเอียด: ${o.fullDescription || o.summary || o.title}`;
+- สาระสำคัญ/OCR: ${(o.rawOcrText || o.fullDescription || o.summary || o.title || '').slice(0, 350)}`;
   }).join('\n\n');
 
   // สรุปภาพรวมอาจารย์ทุกท่านในหลักสูตร/คณะ (Faculty Directory)
@@ -524,12 +525,12 @@ export async function askGeminiCopilot({ prompt, activeFaculty, orders = [], fac
     const photoCount = o.actualPhotos ? o.actualPhotos.length : 0;
     return `[คำสั่ง #${i + 1}]
 - เลขที่: ${o.orderNumber || '-'} | เรื่อง: ${o.title}
-- วันที่: ${o.eventDate || o.signDate || '-'} ${o.eventEndDate ? `ถึง ${o.eventEndDate}` : ''} | เวลา: ${o.eventTime || '-'}
+- กำหนดการจัดงาน: ${o.eventDateDisplay || o.eventDate || o.signDate || '-'} (ISO: ${o.eventDate || '-'}) ${o.eventEndDate ? `ถึง ${o.eventEndDate}` : ''} | เวลา: ${o.eventTime || '-'}
 - สถานที่: ${o.location || 'มรภ.นครสวรรค์'}
 - หมวด กพอ.: ${o.category} (${o.workloadHours || o.score || 3} ชม.) | สถานะ: ${o.status === 'done' ? 'เสร็จสิ้น' : 'รอดำเนินการ'}
 - กรรมการ/ผู้รับผิดชอบ: ${committee || 'ไม่ระบุ'}
 - หลักฐานรูปภาพ: ${photoCount > 0 ? `มีรูป (${photoCount} รูป)` : 'ยังไม่มีรูป'}
-- รายละเอียด: ${(o.fullDescription || o.summary || o.title || '').slice(0, 200)}`;
+- สาระสำคัญ/OCR: ${(o.rawOcrText || o.fullDescription || o.summary || o.title || '').slice(0, 300)}`;
   }).join('\n\n');
 
   const nowThai = new Date().toLocaleDateString('th-TH', { 

@@ -97,6 +97,7 @@ export async function fetchOrdersFromSupabase(fallback = []) {
         title: ord.title || '',
         signDate: ord.sign_date || '',
         eventDate: ord.event_date || '',
+        eventDateDisplay: formatThaiDateDisplay(ord.event_date),
         eventTime: ord.event_time || '08:30 - 16:30 น.',
         location: ord.location || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
         category: ord.category || 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
@@ -108,6 +109,8 @@ export async function fetchOrdersFromSupabase(fallback = []) {
         evidenceStatus: photos.length > 0 ? 'ready' : (ord.evidence_status || 'none'),
         documentFileName: docFile,
         rawOcrText: ord.raw_ocr_text || null,
+        fullDescription: ord.raw_ocr_text || ord.title || '',
+        summary: ord.raw_ocr_text ? ord.raw_ocr_text.slice(0, 250) : ord.title,
         facultyAssigned: [
           {
             id: assignedFacId,
@@ -464,3 +467,26 @@ function getCategoryColor(category) {
   if (category.includes('ประกัน')) return 'teal';
   return 'purple';
 }
+
+const THAI_MONTH_NAMES_LIST = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+function formatThaiDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const cleanDate = String(dateStr).split('T')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10) + 543;
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      if (monthIdx >= 0 && monthIdx < 12) {
+        return `${day} ${THAI_MONTH_NAMES_LIST[monthIdx]} ${year}`;
+      }
+    }
+  } catch (e) {}
+  return dateStr;
+}
+

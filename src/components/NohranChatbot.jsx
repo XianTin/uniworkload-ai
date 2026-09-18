@@ -239,10 +239,10 @@ export default function NohranChatbot({
     let detectedMonth = null;
     let detectedDay = null;
 
-    if (q.includes('วันแม่') || q.includes('เฉลิมพระชนมพรรษา 12 สิงหา') || q.includes('12 สิงหา')) {
+    if (q.includes('วันแม่') || q.includes('เฉลิมพระชนมพรรษา 12 สิงหา') || q.includes('12 สิงหา') || q.includes('12 ส.ค.')) {
       detectedDay = 12;
       detectedMonth = THAI_MONTHS.find(m => m.idx === 8);
-    } else if (q.includes('วันพ่อ')) {
+    } else if (q.includes('วันพ่อ') || q.includes('5 ธันวา') || q.includes('5 ธ.ค.')) {
       detectedDay = 5;
       detectedMonth = THAI_MONTHS.find(m => m.idx === 12);
     } else {
@@ -253,11 +253,24 @@ export default function NohranChatbot({
         }
       }
 
-      const dayMatch = q.match(/(?:วันที่\s*|วัน\s*|^|\s)([0-9]{1,2})(?:\s|[\/.-]|$)/);
-      if (dayMatch) {
-        const d = parseInt(dayMatch[1], 10);
-        if (d >= 1 && d <= 31) {
+      // Check numeric slash format e.g. 12/8 or 12/08
+      const slashMatch = q.match(/\b([0-9]{1,2})[\/\.-]([0-9]{1,2})\b/);
+      if (slashMatch) {
+        const d = parseInt(slashMatch[1], 10);
+        const m = parseInt(slashMatch[2], 10);
+        if (d >= 1 && d <= 31 && m >= 1 && m <= 12) {
           detectedDay = d;
+          detectedMonth = THAI_MONTHS.find(item => item.idx === m);
+        }
+      }
+
+      if (!detectedDay) {
+        const dayMatch = q.match(/(?:วันที่\s*|วัน\s*|^|\s)([0-9]{1,2})(?:\s|[\/.-]|$)/);
+        if (dayMatch) {
+          const d = parseInt(dayMatch[1], 10);
+          if (d >= 1 && d <= 31) {
+            detectedDay = d;
+          }
         }
       }
     }
@@ -265,13 +278,19 @@ export default function NohranChatbot({
     if (detectedMonth || detectedDay) {
       const matches = targetOrders.filter(o => {
         const textToSearch = [
+          o.title || '',
           o.fullDescription || '',
+          o.rawOcrText || '',
+          o.summary || '',
           o.location || '',
           o.eventDateDisplay || '',
           o.eventDate || '',
           o.signDate || '',
-          o.title || ''
+          o.ePortfolio?.topic || '',
+          o.ePortfolio?.round || ''
         ].join(' ').toLowerCase();
+
+        const dateIso = (o.eventDate || o.signDate || '').split('T')[0];
 
         let dayMatches = true;
         let monthMatches = true;
@@ -279,22 +298,25 @@ export default function NohranChatbot({
         if (detectedDay) {
           const dayStr = String(detectedDay);
           const dayPad = dayStr.padStart(2, '0');
+          const hasDayInIso = dateIso.endsWith(`-${dayPad}`) || dateIso.includes(`-${dayPad}-`);
           const hasDayInText = textToSearch.includes(` ${dayStr} `) || 
                               textToSearch.includes(`วันที่ ${dayStr}`) || 
+                              textToSearch.includes(`วันที่${dayStr}`) || 
                               textToSearch.includes(`${dayStr} ${detectedMonth ? detectedMonth.full : ''}`) ||
                               textToSearch.includes(`${dayStr} ${detectedMonth ? detectedMonth.short : ''}`) ||
                               textToSearch.includes(`${dayStr} ${detectedMonth ? detectedMonth.alt : ''}`) ||
-                              (o.eventDate && (o.eventDate.endsWith(`-${dayPad}`) || o.eventDate.includes(`-${dayPad} `)));
+                              textToSearch.includes(`${dayStr}${detectedMonth ? detectedMonth.short : ''}`) ||
+                              hasDayInIso;
           
           dayMatches = Boolean(hasDayInText);
         }
 
         if (detectedMonth) {
+          const hasMonthInIso = dateIso.includes(`-${detectedMonth.iso}-`) || dateIso.endsWith(`-${detectedMonth.iso}`);
           const hasMonth = textToSearch.includes(detectedMonth.full) || 
                            textToSearch.includes(detectedMonth.short) || 
                            textToSearch.includes(detectedMonth.alt) ||
-                           (o.eventDate && o.eventDate.includes(`-${detectedMonth.iso}-`)) ||
-                           (o.signDate && o.signDate.includes(`-${detectedMonth.iso}-`));
+                           hasMonthInIso;
           monthMatches = Boolean(hasMonth);
         }
 
@@ -313,13 +335,13 @@ export default function NohranChatbot({
           const photoStatus = hasPhotos ? `🟢 มีรูปหลักฐานแล้ว (${ord.actualPhotos.length} รูป)` : `⚠️ ❌ ยังไม่มีรูปถ่ายหน้างาน`;
           const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
           
-          responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
+          responseText += `**${idx + 1}. [${ord.orderNumber || 'รอระบุเลขคำสั่ง'}]** ${ord.title}\n`;
           if (ord.fullDescription && ord.fullDescription !== ord.title) {
-            responseText += `• *รายละเอียด*: ${ord.fullDescription.slice(0, 150)}...\n`;
+            responseText += `• 📝 *รายละเอียด*: ${ord.fullDescription.slice(0, 160)}...\n`;
           }
           responseText += `• 🗓️ **กำหนดการ**: ${displayDate} (${ord.eventTime || '08:30 - 16:30 น.'})\n`;
           if (ord.location) {
-            responseText += `• 📍 **สถานที่**: ${ord.location.slice(0, 100)}\n`;
+            responseText += `• 📍 **สถานที่**: ${ord.location}\n`;
           }
           responseText += `• 💼 **หมวดภาระงาน**: ${ord.category} | ${photoStatus}\n\n`;
         });
@@ -334,18 +356,23 @@ export default function NohranChatbot({
       } else if (detectedMonth) {
         const monthOnlyMatches = targetOrders.filter(o => {
           const textToSearch = [
+            o.title || '',
             o.fullDescription || '',
+            o.rawOcrText || '',
+            o.summary || '',
             o.location || '',
             o.eventDateDisplay || '',
             o.eventDate || '',
-            o.signDate || '',
-            o.title || ''
+            o.signDate || ''
           ].join(' ').toLowerCase();
+
+          const dateIso = (o.eventDate || o.signDate || '').split('T')[0];
 
           return textToSearch.includes(detectedMonth.full) || 
                  textToSearch.includes(detectedMonth.short) || 
                  textToSearch.includes(detectedMonth.alt) ||
-                 (o.eventDate && o.eventDate.includes(`-${detectedMonth.iso}-`));
+                 dateIso.includes(`-${detectedMonth.iso}-`) ||
+                 dateIso.endsWith(`-${detectedMonth.iso}`);
         });
 
         if (monthOnlyMatches.length > 0) {
@@ -354,7 +381,7 @@ export default function NohranChatbot({
           
           monthOnlyMatches.slice(0, 5).forEach((ord, idx) => {
             const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
-            responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
+            responseText += `**${idx + 1}. [${ord.orderNumber || 'คำสั่ง'}]** ${ord.title}\n`;
             responseText += `• วันที่: ${displayDate} | หมวด: ${ord.category}\n\n`;
           });
 
@@ -601,9 +628,12 @@ export default function NohranChatbot({
           ord.orderNumber || '',
           ord.title || '',
           ord.fullDescription || '',
+          ord.rawOcrText || '',
+          ord.summary || '',
           ord.location || '',
           ord.category || '',
           ord.eventDateDisplay || '',
+          ord.eventDate || '',
           (ord.facultyAssigned || []).map(f => `${f.name} ${f.roleInOrder}`).join(' ')
         ].join(' ').toLowerCase();
 
@@ -612,6 +642,7 @@ export default function NohranChatbot({
             score += token.length >= 4 ? 3 : 1;
             if ((ord.title || '').toLowerCase().includes(token)) score += 2;
             if ((ord.orderNumber || '').toLowerCase().includes(token)) score += 3;
+            if ((ord.location || '').toLowerCase().includes(token)) score += 2;
           }
         });
 
@@ -625,10 +656,10 @@ export default function NohranChatbot({
         scoredOrders.slice(0, 5).forEach((item, idx) => {
           const ord = item.order;
           const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
-          responseText += `**${idx + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
+          responseText += `**${idx + 1}. [${ord.orderNumber || 'รอระบุเลขคำสั่ง'}]** ${ord.title}\n`;
           responseText += `• 🗓️ วันที่: ${displayDate} | 💼 หมวด: ${ord.category}\n`;
           if (ord.location) {
-            responseText += `• 📍 สถานที่: ${ord.location.slice(0, 90)}\n`;
+            responseText += `• 📍 สถานที่: ${ord.location}\n`;
           }
           responseText += `\n`;
         });
@@ -643,15 +674,34 @@ export default function NohranChatbot({
     }
 
     // -------------------------------------------------------------
-    // Fallback response with helpful guide
+    // Fallback response with helpful guide and live preview of recent orders
     // -------------------------------------------------------------
+    const sampleOrders = targetOrders.slice(0, 3);
+    let fallbackText = `🔮 **โนห์รันตรวจสอบข้อมูลในระบบ UniWorkload AI ให้แล้วครับ:**\n\nคำถาม: *"${rawQ}"*\n\nไม่พบข้อมูลคำสั่งที่ระบุเจาะจงกับคำถามข้างต้นโดยตรงครับ (ในตู้ลิ้นชักของอาจารย์ขณะนี้มีข้อมูลคำสั่งภาระงานทั้งหมด **${targetOrders.length} รายการ**)\n\n`;
+    
+    if (sampleOrders.length > 0) {
+      fallbackText += `📂 **ตัวอย่างคำสั่งล่าสุดในแฟ้มงานของท่าน:**\n`;
+      sampleOrders.forEach((o, idx) => {
+        const displayDate = o.eventDateDisplay || o.eventDate || o.signDate || '-';
+        fallbackText += `• **[${o.orderNumber || 'คำสั่ง'}]** ${o.title.slice(0, 60)} (${displayDate})\n`;
+      });
+      fallbackText += `\n`;
+    }
+
+    fallbackText += `💡 **คำสั่งที่อาจารย์สามารถสั่งให้โนห์รันทำได้ทันที:**\n`;
+    fallbackText += `1. 🗓️ **"หางานวันที่ 12 สิงหาคม"** หรือ **"งานส้มตำจัดที่ไหน"**\n`;
+    fallbackText += `2. ⚠️ **"มีคำสั่งไหนยังขาดรูปถ่ายหลักฐาน?"**\n`;
+    fallbackText += `3. 📊 **"สรุปภาพรวมภาระงานของฉัน"**\n`;
+    fallbackText += `4. 💼 **"แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6"**\n`;
+    fallbackText += `5. 📝 **"ร่างบันทึกข้อความส่งงาน"**`;
+
     return {
-      text: `🔮 **โนห์รันตรวจสอบข้อมูลในระบบ UniWorkload AI ให้แล้วครับ:**\n\nคำถาม: *"${rawQ}"*\n\nไม่พบข้อมูลคำสั่งที่ตรงกับเงื่อนไขข้างต้นโดยตรงครับ ในตู้ลิ้นชักของอาจารย์ขณะนี้มีข้อมูลคำสั่งภาระงาน **${targetOrders.length} รายการ** อาจารย์สามารถสั่งให้ผมทำสิ่งเหล่านี้ได้ครับ:\n\n1. **"หางานวันที่ 12 สิงหาคม"** — ค้นหาภาระงานตามวันและเดือนจัดกิจกรรมจริง\n2. **"มีคำสั่งไหนยังขาดรูปหลักฐาน?"** — ตรวจหาแฟ้มงานที่ยังไม่ได้แนบรูปถ่าย\n3. **"สรุปภาพรวมภาระงาน"** — แจกแจงจำนวนงาน เสร็จสิ้น และรอดำเนินการ\n4. **"แจกแจงเกณฑ์ ก.พอ. 1-6"** — ดูสถิติการสอน วิจัย บริการวิชาการ และศิลปวัฒนธรรม\n5. **"ร่างบันทึกข้อความ"** — สร้างร่างหนังสือส่งงานทางการ มรภ.นว.`,
+      text: fallbackText,
       suggestions: [
         'หางานวันที่ 12 สิงหาคม',
+        'งานส้มตำจัดที่ไหน',
         'มีคำสั่งไหนที่ยังขาดรูปถ่ายหลักฐาน?',
-        'สรุปภาพรวมภาระงานของฉัน',
-        'แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6'
+        'สรุปภาพรวมภาระงานของฉัน'
       ]
     };
   };
