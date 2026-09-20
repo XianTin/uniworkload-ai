@@ -28,9 +28,19 @@ import {
   Key,
   ShieldCheck,
   BarChart2,
-  Briefcase
+  Briefcase,
+  Award
 } from 'lucide-react';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
+import { 
+  WORKLOAD_SCORING_CRITERIA, 
+  calculateTotalScore, 
+  calculateScoreBreakdown, 
+  formatScore, 
+  getOrderScore, 
+  getOrderWorkloadType,
+  getWorkloadCriteriaByName 
+} from '../utils/workloadScoring';
 import { askGeminiCopilot, getAiSettings, saveAiSettings, AI_MODES } from '../utils/geminiClient';
 import AiSettingsModal from './AiSettingsModal';
 
@@ -91,10 +101,10 @@ export default function NohranChatbot({
     text: `สวัสดีครับ **${activeFaculty?.name || 'อาจารย์'}** 🔮\n\nผมคือ **ผู้ช่วยอัจฉริยะ โนห์รัน (Nohran AI Copilot)** พร้อมช่วยสืบค้นภาระงานตามวัน/เดือน, ตรวจสอบแฟ้มหลักฐานที่ยังขาดรูปถ่าย, สรุปสถิติชั่วโมง ก.พอ., และร่างข้อความสำหรับ e-Portfolio มรภ.นครสวรรค์ ครับ\n\nอาจารย์สามารถพิมพ์คำถาม เช่น *"หางานวันที่ 12 สิงหาคม"*, *"งานไหนยังขาดรูป"*, หรือกดหัวข้อลัดด้านล่างเพื่อเริ่มได้เลยครับ!`,
     timestamp: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
     suggestions: [
+      'เกณฑ์คะแนนภาระงาน 15 ข้อ',
       'หางานวันที่ 12 สิงหาคม',
       'มีคำสั่งไหนที่ยังขาดรูปถ่ายหลักฐาน?',
       'สรุปภาพรวมภาระงานของฉัน',
-      'ค้นหางานช่วง 1 ม.ค. 67 – 25 มิ.ย. 67',
       'แจกแจงภาระงานตามเกณฑ์ ก.พอ. 1-6'
     ]
   };
@@ -515,9 +525,82 @@ export default function NohranChatbot({
     }
 
     // -------------------------------------------------------------
+    // 7.5. Workload Scoring System (15 เกณฑ์การให้คะแนนภาระงาน มรภ.นครสวรรค์)
+    // -------------------------------------------------------------
+    const isScoringQuery = 
+      q.includes('คะแนน') || 
+      q.includes('แต้ม') || 
+      q.includes('เกณฑ์คะแนน') || 
+      q.includes('เกณฑ์ 15') || 
+      q.includes('15 เกณฑ์') || 
+      q.includes('คิดคะแนน') || 
+      q.includes('คำนวณคะแนน') ||
+      WORKLOAD_SCORING_CRITERIA.some(c => q.includes(c.name.replace(/\s+/g, '')) || q.includes(c.name));
+
+    if (isScoringQuery) {
+      const totalScore = calculateTotalScore(targetOrders);
+      const completedScore = calculateTotalScore(targetOrders.filter(o => o.status === 'done'));
+      const breakdown = calculateScoreBreakdown(targetOrders);
+
+      // Check if user asked about a specific criteria
+      const specificCriteria = WORKLOAD_SCORING_CRITERIA.find(c => 
+        q.includes(c.name.replace(/\s+/g, '')) || q.includes(c.name)
+      );
+
+      let text = `🎯 **เกณฑ์การให้คะแนนภาระงาน (15 เกณฑ์มาตรฐาน NSRU):**\n\n`;
+
+      if (specificCriteria) {
+        text += `📌 **เกณฑ์เฉพาะที่สอบถาม:**\n`;
+        text += `• **${specificCriteria.name}**: **${formatScore(specificCriteria.score)} คะแนน** (${specificCriteria.group})\n`;
+        text += `  _${specificCriteria.description}_\n\n`;
+      }
+
+      text += `🏆 **สรุปคะแนนภาระงานสะสมของ ${activeFaculty?.name || 'อาจารย์'}:**\n`;
+      text += `• คะแนนรวมทั้งหมด: **${formatScore(totalScore)} คะแนน** (จากคำสั่งทั้งหมด ${targetOrders.length} รายการ)\n`;
+      text += `• ดำเนินการเสร็จสิ้นแล้ว: **${formatScore(completedScore)} คะแนน**\n\n`;
+
+      text += `📋 **ตารางมาตรฐาน 15 เกณฑ์การประเมิน:**\n`;
+      text += `1. **งานสอน**: 2.0 คะแนน\n`;
+      text += `2. **งานสาขา**: 0.25 คะแนน\n`;
+      text += `3. **งานคณะ**: 0.5 คะแนน\n`;
+      text += `4. **งานมหาลัย**: 1.0 คะแนน\n`;
+      text += `5. **งานอำเภอ**: 2.0 คะแนน\n`;
+      text += `6. **งานจังหวัด**: 3.0 คะแนน\n`;
+      text += `7. **งานประเทศ**: 4.0 คะแนน\n`;
+      text += `8. **วิทยากร ภายใน**: 1.0 คะแนน\n`;
+      text += `9. **วิทยากร ภายนอก**: 2.0 คะแนน\n`;
+      text += `10. **กรรมการภายใน**: 1.0 คะแนน\n`;
+      text += `11. **กรรมการภายนอก**: 2.0 คะแนน\n`;
+      text += `12. **ไปอบรมพัฒนาตนเอง**: 1.0 คะแนน\n`;
+      text += `13. **ไปเข้าร่วมงาน**: 0.5 คะแนน\n`;
+      text += `14. **เขียนตำรา/หนังสือ**: 2.0 คะแนน\n`;
+      text += `15. **ตีพิมพ์วิจัย**: 3.0 คะแนน\n\n`;
+
+      if (breakdown.items.length > 0) {
+        const topEarners = [...breakdown.items].sort((a, b) => b.totalScore - a.totalScore).slice(0, 3);
+        text += `🌟 **เกณฑ์ที่ได้คะแนนสูงสุดในระบบปัจจุบัน:**\n`;
+        topEarners.forEach(item => {
+          text += `• ${item.criteria.name}: **+${formatScore(item.totalScore)} คะแนน** (${item.count} คำสั่ง)\n`;
+        });
+        text += `\n`;
+      }
+
+      text += `💡 *อาจารย์สามารถกดดูรายละเอียดตารางสรุปเกณฑ์คะแนนแบบเต็มได้ที่แท็บ "สรุปภาพรวม" หรือแก้ไขคะแนนรายคำสั่งได้ในตู้ลิ้นชักครับ*`;
+
+      return {
+        text,
+        actions: [
+          { label: 'ดูตารางสรุปคะแนน (ภาพรวม)', tab: 'overview', icon: 'BarChart2' },
+          { label: 'ไปที่ตู้ลิ้นชักภาระงาน', tab: 'drawer', icon: 'Layers' },
+          { label: 'ไปที่ e-Portfolio Copilot', tab: 'eportfolio', icon: 'FileText' }
+        ]
+      };
+    }
+
+    // -------------------------------------------------------------
     // 8. Workload Categories Breakdown (ก.พอ. 1-6)
     // -------------------------------------------------------------
-    if (q.includes('กพอ') || q.includes('ก.พอ') || q.includes('หมวดหมู่') || q.includes('เกณฑ์') || q.includes('ชั่วโมง')) {
+    if ((q.includes('กพอ') || q.includes('ก.พอ') || q.includes('หมวดหมู่') || q.includes('ชั่วโมง')) && !q.includes('คะแนน') && !q.includes('แต้ม')) {
       let responseText = `📊 **สรุปการจำแนกภาระงานตามเกณฑ์ ก.พอ. ของ มรภ.นครสวรรค์:**\n\n`;
       
       const catCount = {};
@@ -1058,6 +1141,13 @@ export default function NohranChatbot({
 
           {/* Quick Prompts Carousel */}
           <div className="px-3 py-2 bg-white border-t border-slate-200/80 overflow-x-auto no-scrollbar flex gap-1.5">
+            <button
+              onClick={() => handleSendMessage('เกณฑ์คะแนนภาระงาน 15 ข้อ')}
+              className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            >
+              <Award className="w-3 h-3 text-amber-600" />
+              <span>เกณฑ์ 15 ข้อ</span>
+            </button>
             <button
               onClick={() => handleSendMessage('หางานวันที่ 12 สิงหาคม')}
               className="shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-all cursor-pointer flex items-center gap-1.5"

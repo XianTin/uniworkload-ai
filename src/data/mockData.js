@@ -1,5 +1,8 @@
 import seedPimraOrders from './seedPimra.json';
 
+// Export official 15-criteria Workload Scoring System
+export * from '../utils/workloadScoring';
+
 // Realistic Mock Data for UniWorkload AI (NSRU - Faculty of Management Science & Faculty of Science and Technology)
 
 export const WORKLOAD_CATEGORIES = [

@@ -14,6 +14,12 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
+import { 
+  WORKLOAD_SCORING_CRITERIA, 
+  getWorkloadCriteriaByName, 
+  determineWorkloadCriteria,
+  formatScore 
+} from '../utils/workloadScoring';
 
 // Helper to format date range for preview
 function formatRangeSummary(startStr, endStr) {
@@ -41,10 +47,32 @@ export default function EditOrderModal({
 }) {
   if (!isOpen || !order) return null;
 
+  const getScoringFromOrder = (ord) => {
+    if (!ord) return { type: 'งานมหาลัย', score: 1.0 };
+    if (ord.workloadType && (ord.workloadScore !== undefined || ord.score !== undefined)) {
+      return {
+        type: ord.workloadType,
+        score: ord.workloadScore !== undefined ? Number(ord.workloadScore) : Number(ord.score)
+      };
+    }
+    const detected = determineWorkloadCriteria({
+      title: ord.title || '',
+      text: ord.fullDescription || ord.rawOcrText || '',
+      location: ord.location || '',
+      category: ord.category || '',
+      role: ord.role || ord.facultyAssigned?.[0]?.roleInOrder || ''
+    });
+    return { type: detected.name, score: detected.score };
+  };
+
+  const initialScoring = getScoringFromOrder(order);
+
   const [formData, setFormData] = useState({
     orderNumber: order.orderNumber || '',
     title: order.title || '',
     category: order.category || 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
+    workloadType: initialScoring.type,
+    workloadScore: initialScoring.score,
     signDate: order.signDate || '',
     eventDate: order.eventDate || '',
     eventEndDate: order.eventEndDate || order.eventDate || '',
@@ -62,10 +90,13 @@ export default function EditOrderModal({
   // Sync state if order changes
   useEffect(() => {
     if (order) {
+      const scoring = getScoringFromOrder(order);
       setFormData({
         orderNumber: order.orderNumber || '',
         title: order.title || '',
         category: order.category || 'บริหาร/กรรมการ/ภารกิจมหาวิทยาลัย',
+        workloadType: scoring.type,
+        workloadScore: scoring.score,
         signDate: order.signDate || '',
         eventDate: order.eventDate || '',
         eventEndDate: order.eventEndDate || order.eventDate || '',
@@ -77,7 +108,7 @@ export default function EditOrderModal({
         topic: order.ePortfolio?.topic || order.title || '',
         round: order.ePortfolio?.round || 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)',
         year: order.ePortfolio?.year || '2569',
-        workloadRef: order.ePortfolio?.workloadRef || `ภาระงานด้าน${order.category || 'มหาวิทยาลัย'} มหาวิทยาลัยราชภัฏนครสวรรค์`
+        workloadRef: order.ePortfolio?.workloadRef || `ภาระงานด้าน${order.category || 'มหาวิทยาลัย'} (${scoring.type} ${scoring.score} คะแนน) มหาวิทยาลัยราชภัฏนครสวรรค์`
       });
     }
   }, [order]);
@@ -93,6 +124,9 @@ export default function EditOrderModal({
     const finalOrderNumber = (formData.orderNumber || '').trim();
     const isPendingOrder = !finalOrderNumber || finalOrderNumber.includes('รอระบุ');
 
+    const scoreVal = Number(formData.workloadScore) || 0;
+    const typeVal = formData.workloadType || 'งานมหาลัย';
+
     const updatedOrder = {
       ...order,
       orderNumber: isPendingOrder ? 'รอระบุเลขที่คำสั่ง' : finalOrderNumber,
@@ -100,6 +134,9 @@ export default function EditOrderModal({
       category: formData.category,
       categoryCode: selectedCategoryObj.code,
       categoryColor: selectedCategoryObj.color,
+      workloadType: typeVal,
+      workloadScore: scoreVal,
+      score: scoreVal,
       signDate: formData.signDate,
       eventDate: formData.eventDate,
       eventEndDate: formData.eventEndDate || formData.eventDate,
@@ -118,7 +155,10 @@ export default function EditOrderModal({
         topic: formData.topic || formData.title,
         role: formData.role,
         hours: Number(formData.workloadHours) || 3,
-        workloadRef: formData.workloadRef || `ภาระงานด้าน${formData.category} มหาวิทยาลัยราชภัฏนครสวรรค์`,
+        workloadType: typeVal,
+        workloadScore: scoreVal,
+        score: scoreVal,
+        workloadRef: formData.workloadRef || `ภาระงานด้าน${formData.category} (${typeVal} ${scoreVal} คะแนน) มหาวิทยาลัยราชภัฏนครสวรรค์`,
         status: formData.status === 'done' ? 'completed' : (order.ePortfolio?.status || 'ready_to_export')
       }
     };
@@ -309,6 +349,64 @@ export default function EditOrderModal({
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 outline-hidden"
               />
+            </div>
+          </div>
+
+          {/* Workload Scoring Criteria Section (15 Criteria) */}
+          <div className="p-3.5 bg-gradient-to-r from-amber-50/70 via-blue-50/50 to-indigo-50/60 rounded-2xl border border-amber-200/90 space-y-2.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-amber-600" />
+                <span>เกณฑ์การให้คะแนนภาระงาน (15 เกณฑ์มาตรฐาน NSRU)</span>
+              </label>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-[11px] font-bold shadow-2xs">
+                <span>🎯</span>
+                <span>+{formatScore(formData.workloadScore)} คะแนน</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  ประเภทเกณฑ์การประเมิน
+                </label>
+                <select
+                  value={formData.workloadType}
+                  onChange={(e) => {
+                    const found = WORKLOAD_SCORING_CRITERIA.find(c => c.name === e.target.value);
+                    if (found) {
+                      setFormData({
+                        ...formData,
+                        workloadType: found.name,
+                        workloadScore: found.score,
+                        workloadRef: `ภาระงานด้าน${formData.category} (${found.name} ${found.score} คะแนน) มหาวิทยาลัยราชภัฏนครสวรรค์`
+                      });
+                    }
+                  }}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-hidden cursor-pointer"
+                >
+                  {WORKLOAD_SCORING_CRITERIA.map(c => (
+                    <option key={c.id} value={c.name}>
+                      {c.name} — {formatScore(c.score)} คะแนน ({c.group})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  คะแนนที่ได้รับ (แก้ไขได้)
+                </label>
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  max="10"
+                  value={formData.workloadScore}
+                  onChange={(e) => setFormData({ ...formData, workloadScore: Number(e.target.value) || 0 })}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 font-mono focus:ring-2 focus:ring-blue-500 outline-hidden"
+                />
+              </div>
             </div>
           </div>
 

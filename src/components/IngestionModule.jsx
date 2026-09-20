@@ -29,20 +29,25 @@ import {
   Key,
   Server,
   ShieldCheck,
-  Zap
+  Zap,
+  Award
 } from 'lucide-react';
 import { extractTextFromDocument } from '../utils/ocrEngine';
 import { compressImageFile, FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
-import { parseThaiOfficialOrder } from '../utils/thaiDocumentParser';
+import { parseThaiOfficialOrder, cleanOcrArtifacts } from '../utils/thaiDocumentParser';
 import { 
-  getAiSettings, 
-  saveAiSettings, 
   checkGeminiStatus, 
   parseOfficialOrderWithGemini, 
   AI_MODES,
   SUPPORTED_MODELS
 } from '../utils/geminiClient';
 import { DEMO_RAW_ORDERS, WORKLOAD_CATEGORIES, FACULTY_MEMBERS, REAL_OFFICIAL_DOCUMENTS } from '../data/mockData';
+import { 
+  WORKLOAD_SCORING_CRITERIA, 
+  determineWorkloadCriteria, 
+  formatScore, 
+  getWorkloadCriteriaByName 
+} from '../utils/workloadScoring';
 import { parseGoogleDriveUrl, createGoogleDriveEvidenceItem, isGoogleDriveUrl, GDRIVE_SHARING_INSTRUCTION } from '../utils/googleDriveUtils';
 import AiSettingsModal from './AiSettingsModal';
 
@@ -122,10 +127,33 @@ export default function IngestionModule({
     category: 'บริการวิชาการแก่สังคม',
     categoryCode: 'service',
     categoryColor: 'emerald',
+    workloadType: 'งานมหาลัย',
+    workloadScore: 1.0,
     workloadHours: 3,
     status: 'upcoming',
     facultyAssigned: []
   });
+
+  // Helper to determine workload scoring for formData
+  const getScoringForFormData = (parsed, rawText = '') => {
+    if (parsed?.workloadType && parsed?.workloadScore !== undefined) {
+      return {
+        workloadType: parsed.workloadType,
+        workloadScore: Number(parsed.workloadScore)
+      };
+    }
+    const detected = determineWorkloadCriteria({
+      title: parsed?.title || '',
+      text: rawText || parsed?.detectedText || '',
+      location: parsed?.location || '',
+      category: parsed?.category || '',
+      role: parsed?.facultyAssigned?.[0]?.roleInOrder || ''
+    });
+    return {
+      workloadType: detected.name,
+      workloadScore: detected.score
+    };
+  };
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -243,7 +271,7 @@ export default function IngestionModule({
         engine: engineUsed
       });
       // Ensure activeFaculty is always included in assigned faculty list so the order immediately displays in their drawer
-      const finalFacultyAssigned = ensureActiveFacultyAssigned(parsedData.facultyAssigned);
+      const scoring = getScoringForFormData(parsedData, result.text || '');
 
       setFormData({
         orderNumber: parsedData.orderNumber,
@@ -256,6 +284,8 @@ export default function IngestionModule({
         category: parsedData.category,
         categoryCode: parsedData.categoryCode,
         categoryColor: parsedData.categoryColor,
+        workloadType: scoring.workloadType,
+        workloadScore: scoring.workloadScore,
         workloadHours: parsedData.estimatedHours || 3,
         status: 'upcoming',
         facultyAssigned: finalFacultyAssigned
@@ -418,6 +448,8 @@ export default function IngestionModule({
         engine: engineUsed
       });
 
+      const scoring = getScoringForFormData(parsedData, textToProcess);
+
       setFormData({
         orderNumber: parsedData.orderNumber || `FB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
         title: parsedData.title,
@@ -429,6 +461,8 @@ export default function IngestionModule({
         category: parsedData.category || 'การจัดการเรียนการสอน',
         categoryCode: parsedData.categoryCode || 'teaching',
         categoryColor: parsedData.categoryColor || 'amber',
+        workloadType: scoring.workloadType,
+        workloadScore: scoring.workloadScore,
         workloadHours: parsedData.estimatedHours || 3,
         status: 'upcoming',
         facultyAssigned: ensureActiveFacultyAssigned(parsedData.facultyAssigned)
@@ -491,6 +525,8 @@ export default function IngestionModule({
         parsedData,
         engine: engineUsed
       });
+      const scoring = getScoringForFormData(parsedData, pastedText);
+
       setFormData({
         orderNumber: parsedData.orderNumber,
         title: parsedData.title,
@@ -502,6 +538,8 @@ export default function IngestionModule({
         category: parsedData.category,
         categoryCode: parsedData.categoryCode,
         categoryColor: parsedData.categoryColor,
+        workloadType: scoring.workloadType,
+        workloadScore: scoring.workloadScore,
         workloadHours: parsedData.estimatedHours || 3,
         status: 'upcoming',
         facultyAssigned: ensureActiveFacultyAssigned(parsedData.facultyAssigned)
@@ -537,6 +575,7 @@ export default function IngestionModule({
         setIsScanning(false);
         setScanProgress(100);
         setScanResult(sample);
+        const scoring = getScoringForFormData(sample.parsedData, sample.detectedText || '');
         setFormData({
           orderNumber: sample.parsedData.orderNumber,
           title: sample.parsedData.title,
@@ -548,6 +587,8 @@ export default function IngestionModule({
           category: sample.parsedData.category,
           categoryCode: sample.parsedData.categoryCode,
           categoryColor: sample.parsedData.categoryColor || 'emerald',
+          workloadType: scoring.workloadType,
+          workloadScore: scoring.workloadScore,
           workloadHours: 3,
           facultyAssigned: sample.parsedData.facultyAssigned
         });
@@ -649,6 +690,8 @@ export default function IngestionModule({
       category: defaultCategory,
       categoryCode: categoryInfo.code,
       categoryColor: categoryInfo.color,
+      workloadType: 'งานมหาลัย',
+      workloadScore: 1.0,
       workloadHours: 3,
       status: 'upcoming',
       facultyAssigned: initialFacAssigned
@@ -748,6 +791,9 @@ export default function IngestionModule({
       categoryCode: categoryInfo.code,
       categoryColor: categoryInfo.color,
       workloadHours: Number(formData.workloadHours) || 3,
+      workloadType: formData.workloadType || 'งานมหาลัย',
+      workloadScore: Number(formData.workloadScore) || 1.0,
+      score: Number(formData.workloadScore) || 1.0,
       role: finalFacultyAssigned[0]?.roleInOrder || 'กรรมการ',
       facultyAssigned: finalFacultyAssigned,
       status: formData.status || 'upcoming',
@@ -764,7 +810,10 @@ export default function IngestionModule({
         topic: formData.title,
         role: finalFacultyAssigned[0]?.roleInOrder || 'กรรมการดำเนินงาน',
         hours: Number(formData.workloadHours) || 3,
-        workloadRef: `ภาระงานด้าน${formData.category} มหาวิทยาลัยราชภัฏนครสวรรค์`,
+        workloadType: formData.workloadType || 'งานมหาลัย',
+        workloadScore: Number(formData.workloadScore) || 1.0,
+        score: Number(formData.workloadScore) || 1.0,
+        workloadRef: `ภาระงานด้าน${formData.category} (${formData.workloadType || 'งานมหาลัย'} ${formData.workloadScore || 1.0} คะแนน) มหาวิทยาลัยราชภัฏนครสวรรค์`,
         resultSummary: (formData.status === 'done')
           ? `ปฏิบัติหน้าที่ตามคำสั่ง ${formData.orderNumber} เรียบร้อยแล้ว`
           : `อยู่ระหว่างรอดำเนินการตามกำหนดการคำสั่งราชการ`,
@@ -1416,6 +1465,56 @@ export default function IngestionModule({
                             <option key={cat.id} value={cat.name}>{cat.name}</option>
                           ))}
                         </select>
+                      </div>
+
+                      {/* Workload Scoring Criteria (15 Criteria) */}
+                      <div className="sm:col-span-2 p-3 bg-gradient-to-r from-amber-50/70 via-blue-50/50 to-indigo-50/60 rounded-xl border border-amber-200/90 shadow-2xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                            <Award className="w-3.5 h-3.5 text-amber-600" />
+                            <span>เกณฑ์การให้คะแนนภาระงาน (15 เกณฑ์มาตรฐาน NSRU)</span>
+                          </label>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-500 text-white text-[10px] font-bold shadow-2xs">
+                            <span>🎯</span>
+                            <span>+{formatScore(formData.workloadScore)} คะแนน</span>
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="sm:col-span-2">
+                            <select
+                              value={formData.workloadType}
+                              onChange={(e) => {
+                                const found = WORKLOAD_SCORING_CRITERIA.find(c => c.name === e.target.value);
+                                if (found) {
+                                  setFormData({
+                                    ...formData,
+                                    workloadType: found.name,
+                                    workloadScore: found.score
+                                  });
+                                }
+                              }}
+                              className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden cursor-pointer"
+                            >
+                              {WORKLOAD_SCORING_CRITERIA.map(c => (
+                                <option key={c.id} value={c.name}>
+                                  {c.name} — {formatScore(c.score)} คะแนน ({c.group})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <input
+                              type="number"
+                              step="0.25"
+                              min="0"
+                              max="10"
+                              value={formData.workloadScore}
+                              onChange={(e) => setFormData({ ...formData, workloadScore: Number(e.target.value) || 0 })}
+                              className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-mono font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-hidden"
+                              placeholder="คะแนนภาระงาน"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="sm:col-span-2">

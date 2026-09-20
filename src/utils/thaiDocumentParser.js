@@ -5,6 +5,8 @@
  * รองรับทั้งเอกสารราชการทางการ โพสต์ Facebook แคปชัน และข้อความแชตประกาศ
  */
 
+import { determineWorkloadCriteria } from './workloadScoring';
+
 // ตารางแปลงเลขไทยเป็นเลขอารบิก
 export function convertThaiNumerals(str = '') {
   if (typeof str !== 'string') return '';
@@ -523,6 +525,15 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
     estimatedHours = 4;
   }
 
+  // คำนวณเกณฑ์การให้คะแนนภาระงาน (15 เกณฑ์)
+  const criteria = determineWorkloadCriteria({
+    title,
+    text: normalizedText,
+    location,
+    category,
+    role: primaryRole
+  });
+
   const finalConfidence = Math.min(Math.max(confidenceScore, 85), 98);
 
   return {
@@ -541,7 +552,10 @@ export function parseThaiOfficialOrder(rawText = '', filename = 'เอกสา
       categoryCode,
       categoryColor,
       facultyAssigned: detectedFaculty,
-      estimatedHours
+      estimatedHours,
+      workloadType: criteria.name,
+      workloadScore: criteria.score,
+      score: criteria.score
     }
   };
 }

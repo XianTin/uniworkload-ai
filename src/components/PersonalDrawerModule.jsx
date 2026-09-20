@@ -31,7 +31,8 @@ import {
   UploadCloud,
   Share2,
   Copy,
-  FileEdit
+  FileEdit,
+  Award
 } from 'lucide-react';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
@@ -39,6 +40,13 @@ import DossierSummaryModal from './DossierSummaryModal';
 import EditOrderModal from './EditOrderModal';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { WORKLOAD_CATEGORIES } from '../data/mockData';
+import { 
+  WORKLOAD_SCORING_CRITERIA, 
+  getOrderScore, 
+  getOrderWorkloadType, 
+  calculateTotalScore, 
+  formatScore 
+} from '../utils/workloadScoring';
 import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
 import { canViewAllFaculties } from '../utils/auth';
 import { sanitizeUrl } from '../utils/securityUtils';
@@ -231,7 +239,9 @@ export default function PersonalDrawerModule({
     const withPhotos = filteredOrders.filter(o => o.actualPhotos && o.actualPhotos.length > 0).length;
     const photoCount = filteredOrders.reduce((sum, o) => sum + (o.actualPhotos?.length || 0), 0);
     const readyRate = total > 0 ? Math.round((withPhotos / total) * 100) : 0;
-    return { total, completed, withPhotos, photoCount, readyRate };
+    const totalScore = calculateTotalScore(filteredOrders);
+    const completedScore = calculateTotalScore(filteredOrders.filter(o => o.status === 'done'));
+    return { total, completed, withPhotos, photoCount, readyRate, totalScore, completedScore };
   }, [filteredOrders]);
 
   const hasDateFilter = Boolean(startDate || endDate);
@@ -457,6 +467,15 @@ export default function PersonalDrawerModule({
                   <AlertTriangle className="w-3 h-3 text-rose-500" />
                   <span>ขาดรูป</span>
                 </button>
+              </div>
+
+              {/* Workload Score Summary Pill */}
+              <div 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold shadow-xs cursor-default"
+                title="ผลรวมคะแนนภาระงานสะสมตาม 15 เกณฑ์มาตรฐาน NSRU"
+              >
+                <Award className="w-3.5 h-3.5 text-amber-100" />
+                <span>คะแนนสะสม: {formatScore(metrics.totalScore)} คะแนน</span>
               </div>
 
               {/* Toggle Category Drawer */}
@@ -870,6 +889,15 @@ export default function PersonalDrawerModule({
                       )}
                       <span className="text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                         {order.category}
+                      </span>
+                      {/* Workload Score Badge (15 Criteria) */}
+                      <span 
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300 shadow-2xs"
+                        title={`เกณฑ์คะแนนภาระงาน: ${getOrderWorkloadType(order)} (+${formatScore(getOrderScore(order))} คะแนน)`}
+                      >
+                        <Award className="w-3 h-3 text-amber-600" />
+                        <span>+{formatScore(getOrderScore(order))} คะแนน</span>
+                        <span className="text-amber-800 font-medium">({getOrderWorkloadType(order)})</span>
                       </span>
                       {allowViewAll && viewAllFaculties && (
                         <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 flex items-center gap-1">
