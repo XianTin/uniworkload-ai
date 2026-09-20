@@ -21,7 +21,9 @@ import {
   WORKLOAD_SCORING_CRITERIA, 
   calculateTotalScore, 
   calculateScoreBreakdown, 
-  formatScore 
+  formatScore,
+  getOrderScore,
+  getOrderWorkloadType
 } from '../utils/workloadScoring';
 
 export default function StatsOverview({ activeFaculty, currentUser, orders = [], onOpenIngest, onNavigateTab }) {
@@ -29,6 +31,7 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
   const isCoAdmin = currentUser?.isCoAdmin || currentUser?.role === 'coadmin';
 
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
+  const [criteriaModalTab, setCriteriaModalTab] = useState('summary'); // 'summary' | 'orders'
 
   // Compute live stats for active faculty directly from current orders
   const facultyOrders = React.useMemo(() => {
@@ -46,14 +49,12 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
     const totalOrders = facultyOrders.length;
     const completedOrders = facultyOrders.filter((o) => o.status === 'done').length;
     const pendingOrders = facultyOrders.filter((o) => o.status !== 'done').length;
-    const totalHours = facultyOrders.reduce((sum, o) => sum + (Number(o.workloadHours) || 0), 0);
     const withPhotos = facultyOrders.filter((o) => o.actualPhotos && o.actualPhotos.length > 0).length;
     const evidenceReadyPct = totalOrders > 0 ? Math.round((withPhotos / totalOrders) * 100) : 0;
     return {
       totalOrders,
       completedOrders,
       pendingOrders,
-      totalHours: Number(totalHours.toFixed(1)),
       totalScore: scoringBreakdown.totalScore,
       evidenceReadyPct
     };
@@ -127,9 +128,9 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
         </div>
       </div>
 
-      {/* 5 Quick Stat Cards including Workload Points */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Card 1 */}
+      {/* 4 Clean Executive Stat Cards (Unified 15 Criteria NSRU) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: คำสั่งราชการที่เกี่ยวข้อง */}
         <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">คำสั่งราชการที่เกี่ยวข้อง</span>
@@ -142,11 +143,11 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
             <span className="text-xs text-slate-500">ฉบับ (ในรอบนี้)</span>
           </div>
           <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">
-            <span>แบ่งตามคณะและมหาวิทยาลัย</span>
+            <span>คำสั่งคณะและมหาวิทยาลัย</span>
           </div>
         </div>
 
-        {/* Card 2 */}
+        {/* Card 2: ปฏิบัติงานแล้วเสร็จ */}
         <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">ปฏิบัติงานแล้วเสร็จ</span>
@@ -163,27 +164,10 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
           </div>
         </div>
 
-        {/* Card 3: ภาระงานสะสม (ชั่วโมง กพอ.) */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">ชั่วโมงภาระงานสะสม</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 font-mono">{stats.totalHours}</span>
-            <span className="text-xs text-slate-500">ชม. กพอ.</span>
-          </div>
-          <div className="mt-2 text-xs text-emerald-600 font-medium">
-            ✓ ผ่านเกณฑ์ขั้นต่ำ 35 ชม./สัปดาห์
-          </div>
-        </div>
-
-        {/* Card 4: คะแนนภาระงานสะสม (15 เกณฑ์ NSRU) */}
+        {/* Card 3: คะแนนภาระงานสะสม (15 เกณฑ์มาตรฐาน NSRU - ไม่ใช้หน่วยนับ ชม.) */}
         <div className="bg-gradient-to-br from-amber-500/10 via-amber-50/40 to-white rounded-xl p-5 border border-amber-300/90 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-950 flex items-center gap-1">
+            <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
               <span>คะแนนภาระงานสะสม</span>
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
             </span>
@@ -193,21 +177,24 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-black text-amber-700 font-mono tracking-tight">{formatScore(stats.totalScore)}</span>
-            <span className="text-xs text-slate-500 font-medium">คะแนน</span>
+            <span className="text-xs text-slate-600 font-bold">คะแนน</span>
           </div>
           <div className="mt-2 flex items-center justify-between">
             <button
               type="button"
-              onClick={() => setShowCriteriaModal(true)}
+              onClick={() => {
+                setCriteriaModalTab('summary');
+                setShowCriteriaModal(true);
+              }}
               className="text-[11px] font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 cursor-pointer hover:underline"
             >
-              <span>15 เกณฑ์ประเมิน NSRU</span>
+              <span>15 เกณฑ์ประเมิน NSRU (คลิกดูจำแนก)</span>
               <ChevronRight className="w-3 h-3 text-amber-600" />
             </button>
           </div>
         </div>
 
-        {/* Card 5: ความพร้อมหลักฐาน e-Portfolio */}
+        {/* Card 4: ความพร้อมหลักฐาน e-Portfolio */}
         <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">ความพร้อมหลักฐาน</span>
@@ -331,54 +318,138 @@ export default function StatsOverview({ activeFaculty, currentUser, orders = [],
               </div>
             </div>
 
-            {/* 15 Criteria Table / Grid */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <BarChart3 className="w-4 h-4 text-blue-600" />
-                <span>จำแนกคะแนนตาม 15 เกณฑ์การประเมิน (Official Criteria Breakdown)</span>
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {WORKLOAD_SCORING_CRITERIA.map((c) => {
-                  const breakdownItem = scoringBreakdown.items.find(it => it.criteria.name === c.name);
-                  const orderCount = breakdownItem?.count || 0;
-                  const earnedScore = breakdownItem?.totalScore || 0;
-
-                  return (
-                    <div 
-                      key={c.id}
-                      className={`p-3 rounded-xl border transition-all ${
-                        orderCount > 0 
-                          ? 'bg-amber-50/40 border-amber-300/80 shadow-2xs' 
-                          : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-900">{c.name}</span>
-                            <span className="text-[10px] text-slate-400">({c.group})</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{c.description}</p>
-                        </div>
-                        <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-mono font-bold text-xs shrink-0 border border-amber-200">
-                          {formatScore(c.score)} คะแนน
-                        </span>
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500">
-                          ปฏิบัติงาน: <strong className={orderCount > 0 ? "text-slate-900" : "text-slate-400"}>{orderCount} คำสั่ง</strong>
-                        </span>
-                        <span className={orderCount > 0 ? "font-bold text-amber-800 font-mono" : "text-slate-400 font-mono"}>
-                          +{formatScore(earnedScore)} คะแนน
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            {/* Modal Tab Switcher */}
+            <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+              <button
+                type="button"
+                onClick={() => setCriteriaModalTab('summary')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  criteriaModalTab === 'summary'
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                1. สรุปคะแนนตาม 15 เกณฑ์ประเมิน
+              </button>
+              <button
+                type="button"
+                onClick={() => setCriteriaModalTab('orders')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  criteriaModalTab === 'orders'
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                2. แสดงคะแนนจำแนกรายคำสั่ง ({facultyOrders.length} รายการ)
+              </button>
             </div>
+
+            {/* Tab 1: 15 Criteria Table / Grid */}
+            {criteriaModalTab === 'summary' && (
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
+                  <span>จำแนกคะแนนตาม 15 เกณฑ์การประเมิน (Official Criteria Breakdown)</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {WORKLOAD_SCORING_CRITERIA.map((c) => {
+                    const breakdownItem = scoringBreakdown.items.find(it => it.criteria.name === c.name);
+                    const orderCount = breakdownItem?.count || 0;
+                    const earnedScore = breakdownItem?.totalScore || 0;
+
+                    return (
+                      <div 
+                        key={c.id}
+                        className={`p-3 rounded-xl border transition-all ${
+                          orderCount > 0 
+                            ? 'bg-amber-50/40 border-amber-300/80 shadow-2xs' 
+                            : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-slate-900">{c.name}</span>
+                              <span className="text-[10px] text-slate-400">({c.group})</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{c.description}</p>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-mono font-bold text-xs shrink-0 border border-amber-200">
+                            {formatScore(c.score)} คะแนน
+                          </span>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500">
+                            ปฏิบัติงาน: <strong className={orderCount > 0 ? "text-slate-900" : "text-slate-400"}>{orderCount} คำสั่ง</strong>
+                          </span>
+                          <span className={orderCount > 0 ? "font-bold text-amber-800 font-mono" : "text-slate-400 font-mono"}>
+                            +{formatScore(earnedScore)} คะแนน
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Individual Order Workload Scores */}
+            {criteriaModalTab === 'orders' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-amber-600" />
+                    <span>รายการคำสั่งและคะแนนที่ได้รับแต่ละงาน ({facultyOrders.length} รายการ)</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-500">
+                    รวมทั้งสิ้น <strong className="text-amber-800 font-mono font-bold">{formatScore(stats.totalScore)} คะแนน</strong>
+                  </span>
+                </div>
+
+                <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
+                  {facultyOrders.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400 text-xs">
+                      ยังไม่มีคำสั่งในรอบการประเมินนี้
+                    </div>
+                  ) : (
+                    facultyOrders.map((ord, idx) => {
+                      const type = getOrderWorkloadType(ord);
+                      const score = getOrderScore(ord);
+                      return (
+                        <div 
+                          key={ord.id || idx}
+                          className="p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between gap-3"
+                        >
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                                {ord.orderNumber || 'คำสั่งราชการ'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {ord.eventDateDisplay || ord.eventDate || ord.signDate || '-'}
+                              </span>
+                            </div>
+                            <h5 className="text-xs font-semibold text-slate-800 truncate" title={ord.title}>
+                              {ord.title}
+                            </h5>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-950 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-300">
+                              <Award className="w-3.5 h-3.5 text-amber-600" />
+                              <span className="font-mono">+{formatScore(score)} คะแนน</span>
+                              <span className="text-amber-800/80 font-medium text-[10px]">({type})</span>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Footer Action */}
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">

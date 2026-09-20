@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { compressImageFile } from './imageUtils';
+import seedPimraOrders from '../data/seedPimra.json';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ufkenphuidmujarfpeoz.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVma2VucGh1aWRtdWphcmZwZW96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDU3MjgsImV4cCI6MjEwNDg4MTcyOH0.TO-SzgBcRabRjdO4dbzpahdVdpj56rFnfYmz39UJuWU';
@@ -24,9 +25,9 @@ export async function fetchFacultiesFromSupabase(fallback = []) {
     return data.map((f) => ({
       id: f.id,
       name: f.name,
-      role: f.role || '',
-      department: f.department || '',
-      faculty: f.faculty || '',
+      role: f.role || 'อาจารย์',
+      department: f.department || 'สาขาวิชา',
+      faculty: f.faculty || 'มหาวิทยาลัยราชภัฏนครสวรรค์',
       email: f.email || '',
       avatar: f.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(f.name)}&background=0D8ABC&color=fff`
     }));
@@ -88,6 +89,15 @@ export async function fetchOrdersFromSupabase(fallback = []) {
         };
       });
 
+      // Protect against missing photos by checking seed fallback
+      const seedMatch = seedPimraOrders.find(s => s.id === ord.id || (s.orderNumber && ord.order_number && s.orderNumber === ord.order_number));
+      const finalPhotos = photos.length > 0 ? photos : (seedMatch?.actualPhotos || []);
+
+      const criteriaScore = ord.workload_score !== undefined && ord.workload_score !== null 
+        ? Number(ord.workload_score) 
+        : (seedMatch?.workloadScore !== undefined ? seedMatch.workloadScore : undefined);
+      const criteriaType = ord.workload_type || seedMatch?.workloadType || undefined;
+
       const docFile = ord.doc_file_name || `${ord.order_number ? ord.order_number.replace(/[^a-zA-Z0-9ก-๙]/g, '_') : 'order'}.pdf`;
 
       return {
@@ -106,7 +116,9 @@ export async function fetchOrdersFromSupabase(fallback = []) {
         status: ord.status || 'upcoming',
         role: ord.role || 'กรรมการดำเนินงาน',
         workloadHours: Number(ord.workload_hours) || 3,
-        evidenceStatus: photos.length > 0 ? 'ready' : (ord.evidence_status || 'none'),
+        workloadScore: criteriaScore,
+        workloadType: criteriaType,
+        evidenceStatus: finalPhotos.length > 0 ? 'ready' : (ord.evidence_status || 'none'),
         documentFileName: docFile,
         rawOcrText: ord.raw_ocr_text || null,
         fullDescription: ord.raw_ocr_text || ord.title || '',
@@ -127,14 +139,14 @@ export async function fetchOrdersFromSupabase(fallback = []) {
             uploadedAt: ord.sign_date || new Date().toISOString().split('T')[0]
           }
         ],
-        actualPhotos: photos,
+        actualPhotos: finalPhotos,
         ePortfolio: {
           year: ord.sign_date ? String(new Date(ord.sign_date).getFullYear() + 543) : '2569',
           round: 'รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)',
           topic: ord.title || '',
           role: ord.role || 'กรรมการดำเนินงาน',
-          hours: Number(ord.workload_hours) || 3,
-          workloadRef: `ภาระงานด้าน${ord.category || 'มหาวิทยาลัย'} มหาวิทยาลัยราชภัฏนครสวรรค์`,
+          score: criteriaScore,
+          workloadRef: `ภาระงานด้าน${ord.category || 'มหาวิทยาลัย'} | เกณฑ์: ${criteriaType || 'งานมหาลัย'} (${criteriaScore !== undefined ? criteriaScore : 1.0} คะแนน) — มหาวิทยาลัยราชภัฏนครสวรรค์`,
           resultSummary: ord.status === 'done' 
             ? `ปฏิบัติหน้าที่ตามคำสั่ง ${ord.order_number} เรียบร้อยแล้ว`
             : `อยู่ระหว่างรอดำเนินการตามกำหนดการคำสั่งราชการ`,

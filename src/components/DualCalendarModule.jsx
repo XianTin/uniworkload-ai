@@ -24,13 +24,15 @@ import {
   FolderOpen,
   ArrowUpRight,
   Share2,
-  Tag
+  Tag,
+  Award
 } from 'lucide-react';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceLightboxModal from './EvidenceLightboxModal';
 import { FALLBACK_EVIDENCE_IMAGE } from '../utils/imageUtils';
 import { createGoogleCalendarUrl, getDirectDrawerUrl } from '../utils/icalGenerator';
 import { canViewAllFaculties } from '../utils/auth';
+import { getOrderScore, getOrderWorkloadType, formatScore } from '../utils/workloadScoring';
 
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -550,6 +552,13 @@ export default function DualCalendarModule({
                             <span className={`text-[10px] px-2 py-0.5 rounded-md border ${getCategoryColor(ev.category)}`}>
                               {ev.category}
                             </span>
+                            <span 
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300 shadow-2xs"
+                              title={`เกณฑ์คะแนนภาระงาน: ${getOrderWorkloadType(ev)} (+${formatScore(getOrderScore(ev))} คะแนน)`}
+                            >
+                              <Award className="w-3 h-3 text-amber-600" />
+                              <span>+{formatScore(getOrderScore(ev))} คะแนน</span>
+                            </span>
                           </div>
                           <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
                             <span>เวลา: {ev.eventTime}</span>
@@ -600,12 +609,22 @@ export default function DualCalendarModule({
             <div className="space-y-4">
               {/* Header */}
               <div className="border-b border-slate-100 pb-3">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span className="text-[11px] font-mono text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
-                    {selectedOrder.orderNumber}
-                  </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md border ${getCategoryColor(selectedOrder.category)}`}>
-                    {selectedOrder.category}
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-mono text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                      {selectedOrder.orderNumber}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md border ${getCategoryColor(selectedOrder.category)}`}>
+                      {selectedOrder.category}
+                    </span>
+                  </div>
+                  <span 
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-300 shadow-2xs"
+                    title={`เกณฑ์คะแนนภาระงาน: ${getOrderWorkloadType(selectedOrder)} (+${formatScore(getOrderScore(selectedOrder))} คะแนน)`}
+                  >
+                    <Award className="w-3.5 h-3.5 text-amber-600" />
+                    <span>+{formatScore(getOrderScore(selectedOrder))} คะแนน</span>
+                    <span className="text-amber-800 font-medium">({getOrderWorkloadType(selectedOrder)})</span>
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 leading-snug">

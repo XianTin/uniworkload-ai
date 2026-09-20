@@ -83,14 +83,20 @@ export async function loadOrdersFromIndexedDb() {
 export function sanitizeOrdersForLocalStorage(orders) {
   if (!orders || !Array.isArray(orders)) return [];
 
+  const SVG_PLACEHOLDER = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260"><rect fill="%231e293b" width="400" height="260"/><text fill="%2394a3b8" font-size="14" x="200" y="130" text-anchor="middle">ภาพถ่ายหลักฐาน (จัดเก็บใน IndexedDB / คลาวด์)</text></svg>';
+
   return orders.map((ord) => {
     const safeActualPhotos = (ord.actualPhotos || []).map((p) => {
-      const url = p.url || '';
-      // If photo has a massive base64 string (> 150KB), trim it for LocalStorage cache
-      if (url.startsWith('data:image/') && url.length > 150000) {
+      const url = p.url || p.dataUrl || '';
+      // If photo has a massive base64 string (> 50KB), don't store raw base64 in LocalStorage
+      if (url.startsWith('data:image/') && url.length > 50000) {
+        const safeThumb = (p.thumbnailUrl && !p.thumbnailUrl.startsWith('data:image/') && p.thumbnailUrl.length < 50000)
+          ? p.thumbnailUrl
+          : SVG_PLACEHOLDER;
         return {
           ...p,
-          url: p.thumbnailUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260"><rect fill="%231e293b" width="400" height="260"/><text fill="%2394a3b8" font-size="14" x="200" y="130" text-anchor="middle">ภาพถ่ายหลักฐาน (จัดเก็บใน IndexedDB / คลาวด์)</text></svg>',
+          url: safeThumb,
+          thumbnailUrl: safeThumb,
           isCachedInIndexedDb: true
         };
       }
@@ -99,7 +105,7 @@ export function sanitizeOrdersForLocalStorage(orders) {
 
     const safeEvidenceFiles = (ord.evidenceFiles || []).map((ef) => {
       const url = ef.url || '';
-      if (url.startsWith('data:') && url.length > 100000) {
+      if (url.startsWith('data:') && url.length > 50000) {
         return {
           ...ef,
           url: null,
@@ -118,26 +124,67 @@ export function sanitizeOrdersForLocalStorage(orders) {
 }
 
 /**
- * Robust, failsafe order saving that never throws QuotaExceededError
+ * Robust, failsafe order saving that never throws QuotaExceededError and never wipes photos
  */
 export async function saveOrdersSafely(orders) {
-  if (!orders) return;
+  if (!orders || !Array.isArray(orders)) return;
 
   // 1. Always save full high-res orders to IndexedDB (virtually unlimited quota)
-  saveOrdersToIndexedDb(orders).catch(() => {});
+  // Check that we don't accidentally overwrite existing photos with stripped photos
+  loadOrdersFromIndexedDb().then((existingIdb) => {
+    let ordersToSave = orders;
+    if (existingIdb && existingIdb.length > 0) {
+      ordersToSave = orders.map((newOrd) => {
+        const idbMatch = existingIdb.find((i) => i.id === newOrd.id);
+        if (idbMatch && (idbMatch.actualPhotos || []).length > (newOrd.actualPhotos || []).length) {
+          return {
+            ...newOrd,
+            actualPhotos: idbMatch.actualPhotos,
+            evidenceFiles: (idbMatch.evidenceFiles && idbMatch.evidenceFiles.length > (newOrd.evidenceFiles || []).length)
+              ? idbMatch.evidenceFiles
+              : newOrd.evidenceFiles
+          };
+        }
+        return newOrd;
+      });
+    }
+    saveOrdersToIndexedDb(ordersToSave).catch(() => {});
+  }).catch(() => {
+    saveOrdersToIndexedDb(orders).catch(() => {});
+  });
 
-  // 2. Try saving to LocalStorage
+  // 2. Try saving to LocalStorage with progressive sanitization
   try {
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    const sanitized = sanitizeOrdersForLocalStorage(orders);
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(sanitized));
   } catch (quotaErr) {
     console.warn('[StorageManager] LocalStorage quota exceeded, applying compression fallback:', quotaErr);
     try {
-      const sanitized = sanitizeOrdersForLocalStorage(orders);
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(sanitized));
+      // More aggressive stripping for LocalStorage cache while IndexedDB retains full photos
+      const compact = orders.map(o => ({
+        ...o,
+        actualPhotos: (o.actualPhotos || []).map(p => ({
+          id: p.id,
+          name: p.name || p.title,
+          size: p.size,
+          uploadedAt: p.uploadedAt,
+          url: (p.url && !p.url.startsWith('data:image/')) ? p.url : null,
+          isCachedInIndexedDb: true
+        })),
+        evidenceFiles: (o.evidenceFiles || []).map(f => ({
+          id: f.id,
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          uploadedAt: f.uploadedAt,
+          url: (f.url && !f.url.startsWith('data:')) ? f.url : null,
+          isCachedInIndexedDb: true
+        }))
+      }));
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(compact));
     } catch (secondErr) {
-      console.error('[StorageManager] LocalStorage critically full, storing only order IDs:', secondErr);
+      console.error('[StorageManager] LocalStorage critically full, storing essential meta:', secondErr);
       try {
-        // Strip everything except essential meta
         const barebones = orders.map(o => ({
           id: o.id,
           orderNumber: o.orderNumber,
@@ -147,7 +194,10 @@ export async function saveOrdersSafely(orders) {
           category: o.category,
           status: o.status,
           facultyId: o.facultyId,
-          facultyAssigned: o.facultyAssigned
+          facultyAssigned: o.facultyAssigned,
+          workloadType: o.workloadType,
+          workloadScore: o.workloadScore,
+          score: o.score
         }));
         localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(barebones));
       } catch (finalErr) {
@@ -173,17 +223,35 @@ export async function loadOrdersSafely() {
   try {
     const idbOrders = await loadOrdersFromIndexedDb();
     if (idbOrders && idbOrders.length > 0) {
+      if (!localOrders || localOrders.length === 0) {
+        return idbOrders;
+      }
       // Merge IndexedDB full photos into local orders
-      const merged = (localOrders.length > 0 ? localOrders : idbOrders).map(lOrd => {
+      const merged = localOrders.map(lOrd => {
         const idbMatch = idbOrders.find(i => i.id === lOrd.id);
-        if (idbMatch && idbMatch.actualPhotos && idbMatch.actualPhotos.length > (lOrd.actualPhotos || []).length) {
-          return {
-            ...lOrd,
-            actualPhotos: idbMatch.actualPhotos
-          };
+        if (idbMatch && idbMatch.actualPhotos && idbMatch.actualPhotos.length > 0) {
+          const lPhotos = lOrd.actualPhotos || [];
+          const lHasRealPhotos = lPhotos.some(p => p.url && !p.isCachedInIndexedDb && !p.url.includes('<svg'));
+          if (!lHasRealPhotos || idbMatch.actualPhotos.length > lPhotos.length) {
+            return {
+              ...lOrd,
+              actualPhotos: idbMatch.actualPhotos,
+              evidenceFiles: (idbMatch.evidenceFiles && idbMatch.evidenceFiles.length > (lOrd.evidenceFiles || []).length)
+                ? idbMatch.evidenceFiles
+                : lOrd.evidenceFiles
+            };
+          }
         }
         return lOrd;
       });
+
+      // Also include any orders that exist in IndexedDB but missing in localOrders
+      const localIds = new Set(localOrders.map(l => l.id));
+      for (const idbOrd of idbOrders) {
+        if (!localIds.has(idbOrd.id)) {
+          merged.push(idbOrd);
+        }
+      }
       return merged;
     }
   } catch (e) {}

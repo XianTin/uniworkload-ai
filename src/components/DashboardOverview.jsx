@@ -14,8 +14,10 @@ import {
   UploadCloud,
   Bell,
   AlertTriangle,
-  Camera
+  Camera,
+  Award
 } from 'lucide-react';
+import { getOrderScore, getOrderWorkloadType, formatScore } from '../utils/workloadScoring';
 
 function formatThaiDate(dateStr) {
   if (!dateStr) return '-';
@@ -167,6 +169,14 @@ export default function DashboardOverview({
                             <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200/70 text-slate-700 font-medium">
                               {order.category}
                             </span>
+                            <span 
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300 shadow-2xs"
+                              title={`เกณฑ์คะแนนภาระงาน: ${getOrderWorkloadType(order)} (+${formatScore(getOrderScore(order))} คะแนน)`}
+                            >
+                              <Award className="w-3 h-3 text-amber-600" />
+                              <span>+{formatScore(getOrderScore(order))} คะแนน</span>
+                              <span className="text-amber-800 font-medium">({getOrderWorkloadType(order)})</span>
+                            </span>
                           </div>
                           <h4 className="text-xs font-semibold text-slate-800 line-clamp-1">
                             {order.title}
@@ -291,13 +301,20 @@ export default function DashboardOverview({
                         <h4 className="text-xs font-semibold text-slate-800 line-clamp-1">
                           {evt.title}
                         </h4>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                          <span 
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-950 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300"
+                            title={`เกณฑ์คะแนนภาระงาน: ${getOrderWorkloadType(evt)} (+${formatScore(getOrderScore(evt))} คะแนน)`}
+                          >
+                            <Award className="w-3 h-3 text-amber-600" />
+                            <span>+{formatScore(getOrderScore(evt))} คะแนน</span>
+                          </span>
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3 text-slate-400" />
                             {evt.eventTime || 'ตามเวลาราชการ'}
                           </span>
                           {evt.location && (
-                            <span className="flex items-center gap-1 truncate max-w-[220px]">
+                            <span className="flex items-center gap-1 truncate max-w-[200px]">
                               <MapPin className="w-3 h-3 text-slate-400" />
                               {evt.location}
                             </span>

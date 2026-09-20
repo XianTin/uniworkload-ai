@@ -121,7 +121,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-003-1",
+        "name": "ภาพกิจกรรม_003.jpg",
+        "url": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีเปิดนิทรรศการแสดงผลงาน และพิธีมอบรางวัลโครง",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-3",
@@ -213,7 +221,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-006-1",
+        "name": "ภาพกิจกรรม_006.jpg",
+        "url": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบโครงการพัฒนาบัณฑิตให้มีสมรรถนะรองรับการทำงา",
+        "uploadedAt": "2026-07-18"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-6",
@@ -305,7 +321,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-008-1",
+        "name": "ภาพกิจกรรม_008.jpg",
+        "url": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบโครงการเตรียมความพร้อม และพัฒนาคุณธรรมจริยธ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-8",
@@ -397,7 +421,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-010-1",
+        "name": "ภาพกิจกรรม_010.jpg",
+        "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีประมูลวัตถุมงคลเบื้องหน้าเจ้า “เปียสิ่งโจ๊ย",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-10",
@@ -439,7 +471,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-011-1",
+        "name": "ภาพกิจกรรม_011.jpg",
+        "url": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมการอบรมเชิงปฏิบัติการทบทวนแผนและจัดทำยุทธศาสตร์",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-11",
@@ -481,7 +521,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-012-1",
+        "name": "ภาพกิจกรรม_012.jpg",
+        "url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีเปิดการแสดงลิเกในสวน และคอนเสิร์ตการกุศล รว",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-12",
@@ -523,7 +571,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-013-1",
+        "name": "ภาพกิจกรรม_013.jpg",
+        "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมการอบรมเชิงปฏิบัติการ เรื่อง “การประยุกต์ใช้เทค",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-13",
@@ -565,7 +621,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-014-1",
+        "name": "ภาพกิจกรรม_014.jpg",
+        "url": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีเปิดและส่งมอบแหล่งเรียนรู้ทางประวัติศาสตร์แ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-14",
@@ -607,7 +671,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-015-1",
+        "name": "ภาพกิจกรรม_015.jpg",
+        "url": "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบโครงการขับเคลื่อน Sofe Power เชิงสร้างสรรค์",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-15",
@@ -649,7 +721,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-018-1",
+        "name": "ภาพกิจกรรม_018.jpg",
+        "url": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมงานสมโภชศาลหลักเมืองจังหวัดนครสวรรค์ และงานสรงน",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-18",
@@ -691,7 +771,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-019-1",
+        "name": "ภาพกิจกรรม_019.jpg",
+        "url": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมโครงการขับเคลื่อน Soft Power เชิงสร้างสรรค์บนฐา",
+        "uploadedAt": "2026-03-31"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-19",
@@ -733,7 +821,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-020-1",
+        "name": "ภาพกิจกรรม_020.jpg",
+        "url": "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบการดำเนินกิจกรรม การอนุรักษ์ และและสืบสานเอ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-20",
@@ -775,7 +871,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-022-1",
+        "name": "ภาพกิจกรรม_022.jpg",
+        "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมงานสืบสานประเพณีมหาสงกรานต์เมืองพระบาง ประจำปี ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-22",
@@ -817,7 +921,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-023-1",
+        "name": "ภาพกิจกรรม_023.jpg",
+        "url": "https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินการ กิจกรรมอนุรักษ์ และสืบสานเอกลักษณ",
+        "uploadedAt": "2026-04-02"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-23",
@@ -859,7 +971,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-024-1",
+        "name": "ภาพกิจกรรม_024.jpg",
+        "url": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีแจกทานข้าวสาร อาหารแห้ง ให้แก่ผู้มีรายได้น้",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-24",
@@ -901,7 +1021,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-025-1",
+        "name": "ภาพกิจกรรม_025.jpg",
+        "url": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีไหว้ครู “กตัญญุตา กตเวทิตา น้อมจิตวันทา บูร",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-25",
@@ -943,7 +1071,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-026-1",
+        "name": "ภาพกิจกรรม_026.jpg",
+        "url": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ คณะกรรมการดำเนินงานสาขาวิชาวิทยาศาสตร์สุขภาพ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-26",
@@ -985,7 +1121,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-027-1",
+        "name": "ภาพกิจกรรม_027.jpg",
+        "url": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ รักษาการณ์ตำแหน่งประธาน คณะกรรมการจริยธรรมการวิจัยในมนุ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-27",
@@ -1027,7 +1171,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-028-1",
+        "name": "ภาพกิจกรรม_028.jpg",
+        "url": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ กรรมการบริหารประจำสำนักศิลปะและวัฒนธรรม",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-28",
@@ -1069,7 +1221,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-029-1",
+        "name": "ภาพกิจกรรม_029.jpg",
+        "url": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ กรรมการประเมินคุณภาพการศึกษาภายใน ของสำนักศิลปะและวัฒนธ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-29",
@@ -1111,7 +1271,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-030-1",
+        "name": "ภาพกิจกรรม_030.jpg",
+        "url": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ การประกวดนักศึกษาต้นแบบ “AIT AMBASSADOR 2026” คณะเทคโนโ",
+        "uploadedAt": "2026-08-21"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-30",
@@ -1153,7 +1321,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-033-1",
+        "name": "ภาพกิจกรรม_033.jpg",
+        "url": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินกิจกรรม การอนุรักษ์ และและสืบสานเอกลั",
+        "uploadedAt": "2026-08-12"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-33",
@@ -1195,7 +1371,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-034-1",
+        "name": "ภาพกิจกรรม_034.jpg",
+        "url": "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินโครงการกิจกรรม “Training of The Train",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-34",
@@ -1237,7 +1421,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-035-1",
+        "name": "ภาพกิจกรรม_035.jpg",
+        "url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบการดำเนินกิจกรรม การอนุรักษ์ และและสืบสานเอ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-35",
@@ -1279,7 +1471,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-037-1",
+        "name": "ภาพกิจกรรม_037.jpg",
+        "url": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ คณะกรรมการดำเนินการจัดการในงานสัปดาห์วิทยาศาสตร์แห่งชาต",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-37",
@@ -1321,7 +1521,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-038-1",
+        "name": "ภาพกิจกรรม_038.jpg",
+        "url": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ กรรมการประจำหลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาวิทยาศ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-38",
@@ -1363,7 +1571,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-039-1",
+        "name": "ภาพกิจกรรม_039.jpg",
+        "url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบการดำเนินกิจกรรม การอนุรักษ์ และและสืบสานเอ",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-39",
@@ -1405,7 +1621,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-040-1",
+        "name": "ภาพกิจกรรม_040.jpg",
+        "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินงาน สำนักศิลปะและวัฒนธรรมสัญจร ประจำป",
+        "uploadedAt": "2026-06-17"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-40",
@@ -1447,7 +1671,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-041-1",
+        "name": "ภาพกิจกรรม_041.jpg",
+        "url": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินงาน สำนักศิลปะและวัฒนธรรมสัญจร ประจำป",
+        "uploadedAt": "2026-06-09"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-41",
@@ -1489,7 +1721,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-042-1",
+        "name": "ภาพกิจกรรม_042.jpg",
+        "url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้เข้าร่วมการประชุมก่อนเปิดภาคเรียน และเตรียมความพร้อม",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-42",
@@ -1531,7 +1771,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-043-1",
+        "name": "ภาพกิจกรรม_043.jpg",
+        "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินงาน สำนักศิลปะและวัฒนธรรมสัญจร ประจำป",
+        "uploadedAt": "2026-06-10"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-43",
@@ -1573,7 +1821,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-044-1",
+        "name": "ภาพกิจกรรม_044.jpg",
+        "url": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินงาน สำนักศิลปะและวัฒนธรรมสัญจร ประจำป",
+        "uploadedAt": "2026-06-14"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-44",
@@ -1615,7 +1871,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-045-1",
+        "name": "ภาพกิจกรรม_045.jpg",
+        "url": "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ ผู้รับผิดชอบดำเนินงาน สำนักศิลปะและวัฒนธรรมสัญจร ประจำป",
+        "uploadedAt": "2026-06-13"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-45",
@@ -1657,7 +1921,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-048-1",
+        "name": "ภาพกิจกรรม_048.jpg",
+        "url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมการประชุมปรึกษาหารือร่วมกับคณะกรรมการจัดงานประเ",
+        "uploadedAt": "2026-08-27"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-48",
@@ -1699,7 +1971,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-051-1",
+        "name": "ภาพกิจกรรม_051.jpg",
+        "url": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมพิธีแจกทาน ข้าวสาร อาหารแห้ง ให้แก่ผู้มีรายได้น",
+        "uploadedAt": "2026-08-24"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-51",
@@ -1741,7 +2021,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-052-1",
+        "name": "ภาพกิจกรรม_052.jpg",
+        "url": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ เข้าร่วมการประชุมคณะกรรมการประจำสำนักศิลปะและวัฒนธรรม ค",
+        "uploadedAt": "2026-08-01"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-52",
@@ -1783,7 +2071,15 @@
       }
     ],
     "status": "done",
-    "actualPhotos": [],
+    "actualPhotos": [
+      {
+        "id": "photo-ord-pimra-053-1",
+        "name": "ภาพกิจกรรม_053.jpg",
+        "url": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+        "caption": "การปฏิบัติหน้าที่ วิทยากรการพัฒนาบุคลิกภาพนักศึกษาต้นแบบ SCI&TECH AMBASSA",
+        "uploadedAt": "2026-08-09"
+      }
+    ],
     "evidenceFiles": [
       {
         "id": "ev-53",

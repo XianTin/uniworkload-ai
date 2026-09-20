@@ -113,7 +113,16 @@ export const DEMO_MOCK_ORDERS = [
     evidenceFiles: [
       { id: "ev-1", name: "คำสั่งแต่งตั้ง_1042_2569.pdf", size: "1.2 MB", type: "pdf", uploadedAt: "2026-08-16" }
     ],
-    actualPhotos: [],
+    actualPhotos: [
+      {
+        id: "ph-1042-1",
+        name: "ภาพสัมมนา_นวัตกรรม_AI_ธุรกิจดิจิทัล.jpg",
+        size: "2.1 MB",
+        url: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80",
+        uploadedAt: "2026-09-18",
+        note: "การจัดโครงการสัมมนาเชิงปฏิบัติการ นวัตกรรม AI เพื่อธุรกิจดิจิทัล 2026"
+      }
+    ],
     ePortfolio: {
       year: "2569",
       round: "รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)",
@@ -186,7 +195,16 @@ export const DEMO_MOCK_ORDERS = [
     evidenceFiles: [
       { id: "ev-3", name: "คำสั่งนิเทศก์สหกิจ_1120_2569.pdf", size: "1.7 MB", type: "pdf", uploadedAt: "2026-08-30" }
     ],
-    actualPhotos: [],
+    actualPhotos: [
+      {
+        id: "ph-1120-1",
+        name: "ภาพนิเทศก์นักศึกษาฝึกงานสหกิจ.jpg",
+        size: "1.8 MB",
+        url: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop&q=80",
+        uploadedAt: "2026-09-25",
+        note: "อาจารย์นิเทศก์ติดตามและประเมินผลนักศึกษาปฏิบัติงานสหกิจศึกษา"
+      }
+    ],
     ePortfolio: {
       year: "2569",
       round: "รอบ 2 (1 เม.ย. - 30 ก.ย. 2569)",

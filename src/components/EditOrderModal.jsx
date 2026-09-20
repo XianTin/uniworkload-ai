@@ -410,8 +410,8 @@ export default function EditOrderModal({
             </div>
           </div>
 
-          {/* Role & Hours & Status Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Role & Status Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 บทบาทหน้าที่ตามคำสั่ง
@@ -421,20 +421,6 @@ export default function EditOrderModal({
                 value={formData.role}
                 placeholder="เช่น กรรมการดำเนินงาน, วิทยากร"
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                จำนวนชั่วโมงภาระงาน
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={40}
-                value={formData.workloadHours}
-                onChange={(e) => setFormData({ ...formData, workloadHours: Number(e.target.value) || 3 })}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 outline-hidden"
               />
             </div>

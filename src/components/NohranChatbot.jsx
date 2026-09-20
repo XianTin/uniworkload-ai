@@ -184,7 +184,8 @@ export default function NohranChatbot({
       if (ord.fullDescription && ord.fullDescription !== ord.title) {
         text += `• 📝 **สาระสำคัญ**: ${ord.fullDescription.slice(0, 160)}...\n`;
       }
-      text += `• 💼 **หมวดภาระงาน**: ${ord.category} (${ord.workloadHours || ord.score || 3} ชั่วโมง)\n`;
+      text += `• 💼 **หมวดหมู่งาน**: ${ord.category}\n`;
+      text += `• 🎯 **เกณฑ์และคะแนนภาระงาน**: ${getOrderWorkloadType(ord)} (+${formatScore(getOrderScore(ord))} คะแนน)\n`;
       text += `• 🗓️ **กำหนดการจัดงาน**: ${displayDate} (${ord.eventTime || '08:30 - 16:30 น.'})\n`;
       if (ord.signDate && ord.signDate !== ord.eventDate) {
         text += `• 🟦 **วันลงนามคำสั่ง (Sign Date)**: ${ord.signDate}\n`;
@@ -433,7 +434,7 @@ export default function NohranChatbot({
         roleOrders.forEach((ord, i) => {
           const displayDate = ord.eventDateDisplay || ord.eventDate || ord.signDate || '-';
           text += `**${i + 1}. [${ord.orderNumber}]** ${ord.title}\n`;
-          text += `• วันที่: ${displayDate} | หมวด: ${ord.category} (${ord.workloadHours || ord.score || 3} ชม.)\n\n`;
+          text += `• วันที่: ${displayDate} | หมวด: ${ord.category} | เกณฑ์: ${getOrderWorkloadType(ord)} (+${formatScore(getOrderScore(ord))} คะแนน)\n\n`;
         });
 
         return {
@@ -609,24 +610,25 @@ export default function NohranChatbot({
         if (c.id !== 'all') catCount[c.name] = { count: 0, hours: 0 };
       });
 
+      let totalPts = 0;
       targetOrders.forEach(o => {
         const cat = o.category || 'อื่นๆ';
-        const hrs = Number(o.workloadHours || o.score || 3);
-        totalHours += hrs;
-        if (!catCount[cat]) catCount[cat] = { count: 0, hours: 0 };
+        const pts = getOrderScore(o);
+        totalPts += pts;
+        if (!catCount[cat]) catCount[cat] = { count: 0, points: 0 };
         catCount[cat].count++;
-        catCount[cat].hours += hrs;
+        catCount[cat].points += pts;
       });
 
       Object.entries(catCount).forEach(([catName, data]) => {
         if (data.count > 0) {
           const bar = '█'.repeat(Math.min(8, Math.max(1, data.count))) + '░'.repeat(Math.max(0, 8 - data.count));
-          responseText += `• **${catName}**: **${data.count}** คำสั่ง (${data.hours} ชม.) \`${bar}\`\n`;
+          responseText += `• **${catName}**: **${data.count}** คำสั่ง (+${formatScore(data.points)} คะแนน) \`${bar}\`\n`;
         }
       });
 
-      responseText += `\n🎯 **ภาระงานรวมทั้งสิ้น**: **${totalHours} ชั่วโมง ก.พอ.** จาก ${targetOrders.length} คำสั่ง\n`;
-      responseText += `✨ *โนห์รันแนะนำให้อาจารย์ตรวจสอบสัดส่วนชั่วโมงให้ครบตามเกณฑ์สำหรับรอบการประเมินนี้ครับ*`;
+      responseText += `\n🎯 **คะแนนภาระงานสะสมรวมทั้งสิ้น**: **${formatScore(totalPts)} คะแนน** (ตาม 15 เกณฑ์มาตรฐาน NSRU) จาก ${targetOrders.length} คำสั่ง\n`;
+      responseText += `✨ *โนห์รันแนะนำให้อาจารย์ตรวจสอบความสมบูรณ์ของหลักฐานรูปถ่ายเพื่อเตรียมส่งประเมินครับ*`;
 
       return {
         text: responseText,
